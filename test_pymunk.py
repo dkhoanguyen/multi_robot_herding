@@ -22,16 +22,16 @@ def update(space, dt, surface):
     # tank_control_body.angular_velocity = math.copysign(2,-turn)
     print(tank_control_body.angle)
 
-    # # drive the tank towards the mouse
-    # if (mouse_pos - tank_body.position).get_length_sqrd() < 1 ** 2:
-    #     tank_control_body.velocity = 0, 0
-    # else:
-    #     if mouse_delta.dot(tank_body.rotation_vector) > 0.0:
-    #         direction = 1.0
-    #     else:
-    #         direction = -1.0
-    #     dv = Vec2d(30.0 * direction, 0.0)
-    #     tank_control_body.velocity = tank_body.rotation_vector.cpvrotate(dv)
+    # drive the tank towards the mouse
+    if (mouse_pos - tank_body.position).get_length_sqrd() < 1 ** 2:
+        tank_control_body.velocity = 0, 0
+    else:
+        if mouse_delta.dot(tank_body.rotation_vector) > 0.0:
+            direction = 1.0
+        else:
+            direction = -1.0
+        dv = Vec2d(30.0 * direction, 0.0)
+        tank_control_body.velocity = tank_body.rotation_vector.cpvrotate(dv)
 
     space.step(dt)
 

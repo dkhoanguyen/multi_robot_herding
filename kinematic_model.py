@@ -6,7 +6,6 @@ from abc import ABC, abstractmethod
 
 class KinematicModel(ABC):
     def __init__(self) -> None:
-        self._pose = np.identity(3)
         self._forward_matrix = np.zeros([3, 1])
         self._inverse_matrix = np.zeros([3, 1])
 
@@ -25,11 +24,9 @@ class KinematicModel(ABC):
 
 class DifferentialDrive(KinematicModel):
     def __init__(self,
-                 pose: np.ndarray,
                  wheel_base: float,
                  wheel_radius: float):
         super().__init__()
-        self._pose = pose
         self._wheel_base = wheel_base
         self._wheel_radius = wheel_radius
 

@@ -8,16 +8,14 @@ import pymunk
 import pymunk.pygame_util
 from pymunk.vec2d import Vec2d
 
-
-from agent import Agent
 from animation_handle import AnimationHandle
 from kinematic_model import KinematicModel, DifferentialDrive
 
 
 class Environment(object):
 
-    SCREEN_WIDTH = 1000
-    SCREEN_HEIGHT = 1000
+    SCREEN_WIDTH = 700  
+    SCREEN_HEIGHT = 700
 
     def __init__(self):
         pygame.init()
@@ -28,6 +26,7 @@ class Environment(object):
         self._pm_space = pymunk.Space()
         self._pm_space.iterations = 10
         self._pm_space.sleep_time_threshold = 0.5
+        pymunk.pygame_util.positive_y_is_up = True
 
         self._static_body = self._pm_space.static_body
 
@@ -42,8 +41,6 @@ class Environment(object):
         # Add all bodies and shape
         self._pm_space.add(robot._body)
         self._pm_space.add(robot._control_body)
-
-        self._pm_space.add(robot._shape_body)
         self._pm_space.add(robot._shape)
 
         self._pm_space.add(robot._pivot)
