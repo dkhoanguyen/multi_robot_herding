@@ -47,6 +47,9 @@ class AnimationHandle(pygame.sprite.Sprite):
     def update(self, dt: float):
         print("Hey")
 
+    def set_pose(self, pose):
+        self._pose = pose
+
 
 class DDAnimationHandle(AnimationHandle):
     def __init__(self,
@@ -58,5 +61,25 @@ class DDAnimationHandle(AnimationHandle):
         self._shape.mass = 1
         self._shape.friction = 0.7
 
-    def update(self, dt: float):
-        pass
+    def update(self, screen, dt: float):
+        self._control_body.angle = self._pose[2]
+        self._control_body.position = self._pose[0],self._pose[1]
+        self._body.position = self._pose[0],self._pose[1]
+        # mpos = pygame.mouse.get_pos()
+        # mouse_pos = pymunk.pygame_util.from_pygame(Vec2d(*mpos), screen)
+
+        # mouse_delta = mouse_pos - self._body.position
+        # turn = self._body.rotation_vector.cpvunrotate(mouse_delta).angle
+        # self._control_body.angle = (self._body.angle - turn)
+        # # self._control_body.angular_velocity = math.copysign(2,-turn)
+
+        # # drive the tank towards the mouse
+        # if (mouse_pos - self._body.position).get_length_sqrd() < 1 ** 2:
+        #     self._control_body.velocity = 0, 0
+        # else:
+        #     if mouse_delta.dot(self._body.rotation_vector) > 0.0:
+        #         direction = 1.0
+        #     else:
+        #         direction = -1.0
+        #     dv = Vec2d(50.0, 0.0)
+        #     self._control_body.velocity = self._body.rotation_vector.cpvrotate(dv)

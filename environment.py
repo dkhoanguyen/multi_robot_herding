@@ -30,28 +30,26 @@ class Environment(object):
 
         self._static_body = self._pm_space.static_body
 
-        self._robots_list = None
+        self._fps = 60
 
-    def update_robots(self, robots: list):
-        self._robots_list = robots
-        for robot in robots:
-            self.update_robot(robot)
+    @property
+    def fps(self):
+        return self._fps
 
-    def update_robot(self, robot: AnimationHandle):
+    @fps.setter
+    def fps(self, value):
+        self._fps = value
+
+    def add(self, robot: AnimationHandle):
         # Add all bodies and shape
+        # TODO: abstract this into a list of bodies to support future additions
+        # of more physic objects
         self._pm_space.add(robot._body)
         self._pm_space.add(robot._control_body)
         self._pm_space.add(robot._shape)
 
         self._pm_space.add(robot._pivot)
-        self._pm_space.add(robot._gear)
-
-    def update(self, dt):
-        robot: AnimationHandle
-        if self._robots_list:
-            for robot in self._robots_list:
-                robot.update(dt)
-        self._pm_space.step(dt)
+        self._pm_space.add(robot._gear)        
 
     def spin_once(self):
         # handle "global" events
@@ -63,10 +61,14 @@ class Environment(object):
         # draw everything
         self._pg_screen.fill(pygame.Color('white'))
         self._pm_space.debug_draw(self._draw_options)
-        self.update(1/60)
+
+        # Update pymunk space
+        self._pm_space.step(1/self._fps)
+
+        # Update pygame visualisation
         pygame.display.flip()
 
-        self._dt = self._clock.tick(60)
+        self._dt = self._clock.tick(self._fps)
 
     @staticmethod
     def body_to_world(body_vel: np.ndarray, pose: np.ndarray) -> np.ndarray:
