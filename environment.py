@@ -14,12 +14,12 @@ from kinematic_model import KinematicModel, DifferentialDrive
 
 class Environment(object):
 
-    SCREEN_WIDTH = 700  
-    SCREEN_HEIGHT = 700
-
-    def __init__(self):
+    def __init__(self,
+                 width: int = 700,
+                 height: int = 700):
         pygame.init()
-        self._pg_screen = pygame.display.set_mode((Environment.SCREEN_WIDTH, Environment.SCREEN_HEIGHT))
+        self._pg_screen = pygame.display.set_mode(
+            (width, height))
         self._clock = pygame.time.Clock()
         self._draw_options = pymunk.pygame_util.DrawOptions(self._pg_screen)
 
@@ -49,9 +49,9 @@ class Environment(object):
         self._pm_space.add(robot._shape)
 
         self._pm_space.add(robot._pivot)
-        self._pm_space.add(robot._gear)        
+        self._pm_space.add(robot._gear)
 
-    def spin_once(self):
+    def visualise(self):
         # handle "global" events
         events = pygame.event.get()
         for e in events:
