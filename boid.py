@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 
+import math
 import numpy as np
 
 from environment import Environment
@@ -13,7 +14,7 @@ class Boid(object):
                  initial_velocity: np.ndarray):
         self._pose = pose
 
-        self._max_v = 15
+        self._max_v = 50
         self._max_w = 100000
 
         # Robot
@@ -25,7 +26,7 @@ class Boid(object):
 
         self._initial_velocity = initial_velocity
 
-        self._perception = 100
+        self._perception = 200
 
     @property
     def model(self):
@@ -44,7 +45,7 @@ class Boid(object):
         i = 0
         boid: Boid
         for boid in flock:
-            if np.linalg.norm(boid.pose[0:1] - self._pose[0:1]) <= self._perception:
+            if np.linalg.norm(boid.pose[0:2] - self._pose[0:2]) <= self._perception:
                 avg_heading += boid.pose[2]
                 i += 1
 
@@ -53,39 +54,49 @@ class Boid(object):
         return steering
 
     def cohesion(self, flock: list):
-        pass
+        steering = 0
+        total = 0
+        center_of_mass = np.zeros(2)
+        for boid in flock:
+            if np.linalg.norm(boid.pose[0:2] - self._pose[0:2]) < self._perception:
+                center_of_mass += boid.pose[0:2]
+                total += 1
+  
+        if total > 0:
+            center_of_mass /= total
+            vec_to_com = center_of_mass - self._pose[0:2]
+            steering = steering = math.atan2(vec_to_com[1], vec_to_com[0]) - self._pose[2]
+
+        return steering
 
     def separation(self, flock: list):
-        steering = np.zeros(2)
+        steering = 0
         total = 0
         avg_vector = np.zeros(2)
 
         boid: Boid
         for boid in flock:
-            distance = np.linalg.norm(boid.pose[0:1] - self._pose[0:1])
-            if self._pose[0:1] != boid.pose[0:1] and distance < self._perception:
-                diff = self._pose[0:1] - boid.pose[0:1]
+            distance = np.linalg.norm(boid.pose[0:2] - self._pose[0:2])
+            if not np.array_equal(self._pose[0:2],boid.pose[0:2]) \
+               and distance < 50:
+                diff = self._pose[0:2] - boid.pose[0:2]
+                # This is to get the unit vector
                 diff /= distance
                 avg_vector += diff
                 total += 1
 
-        print(avg_vector)
-
-        # if total > 0:
-        #     avg_vector /= total
-        #     if np.linalg.norm(steering) > 0:
-        #         avg_vector = (avg_vector / np.linalg.norm(steering)) * self.max_speed
-        #     steering = avg_vector - self.velocity
-        #     if np.linalg.norm(steering)> self.max_force:
-        #         steering = (steering /np.linalg.norm(steering)) * self.max_force
+        if total > 0:
+            avg_vector /= total
+            steering = math.atan2(avg_vector[1], avg_vector[0]) - self._pose[2]
         return steering
 
     def apply_behavior(self, flock: list, sample_time: float):
         # Potential inefficiency in code if we add more behaviors in the future
-        alignment = self.alignment(flock)
+        cohesion = self.cohesion(flock)
         separation = self.separation(flock)
+        alignment = self.alignment(flock)
 
-        avg_steering = alignment
+        avg_steering = 1.5 * separation + alignment + 0.1 * cohesion
 
         if avg_steering > self._max_w:
             avg_steering = (
@@ -98,15 +109,15 @@ class Boid(object):
         vel = Environment.body_to_world(v, self._pose)
         poses = self._pose + vel * sample_time
 
-        if poses[0] >= 700:
+        if poses[0] >= 1000:
             poses[0] = 0
         elif poses[0] < 0:
-            poses[0] = 700
+            poses[0] = 1000
 
-        if poses[1] >= 700:
+        if poses[1] >= 1000:
             poses[1] = 0
         elif poses[1] < 0:
-            poses[1] = 700
+            poses[1] = 1000
         
         self._pose = poses
         self._animation.set_pose(poses)

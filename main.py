@@ -6,9 +6,6 @@ import numpy as np
 
 from environment import Environment
 
-from animation_handle import DDAnimationHandle
-from kinematic_model import DifferentialDrive
-
 from boid import Boid
 
 from spatialmath.base import *
@@ -21,16 +18,13 @@ def rand(low, high):
 def main():
 
     # Environment initialization
-    width = 700
-    height = 700
+    width = 1000
+    height = 1000
 
     env = Environment(width, height)
 
-     # Create agents
-    poses = np.array([300, 100, 0])
-
     sample_time = 1/60
-    num_agents = 3
+    num_agents = 30
     flock = [Boid(np.array([rand(10, 690), rand(10, 600), rand(-3.14, 3.14)]),
                  np.array([rand(9, 50), 0, rand(-50, 50)])) for _ in range (num_agents)]
     

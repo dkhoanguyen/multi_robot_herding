@@ -57,7 +57,7 @@ class DDAnimationHandle(AnimationHandle):
         super().__init__(pose)
 
         # Draw the shape
-        self._shape = pymunk.Poly.create_box(self._body, (20, 20), 1.0)
+        self._shape = pymunk.Poly.create_box(self._body, (30, 15), 1.0)
         self._shape.mass = 1
         self._shape.friction = 0.7
 
