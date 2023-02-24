@@ -26,8 +26,10 @@ def main():
     sample_time = 1/60
     num_agents = 30
     flock = [Boid(np.array([rand(10, 690), rand(10, 600), rand(-3.14, 3.14)]),
-                 np.array([rand(9, 50), 0, rand(-50, 50)])) for _ in range (num_agents)]
-    
+                  np.array([rand(0, 0), 0, rand(-50, 50)]),
+                  width,
+                  height) for _ in range(num_agents)]
+
     for boid in flock:
         env.add(boid.animation)
 

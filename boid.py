@@ -11,7 +11,9 @@ from animation_handle import DDAnimationHandle
 class Boid(object):
     def __init__(self,
                  pose: np.ndarray,
-                 initial_velocity: np.ndarray):
+                 initial_velocity: np.ndarray,
+                 map_width: int,
+                 map_height: int):
         self._pose = pose
 
         self._max_v = 50
@@ -25,8 +27,10 @@ class Boid(object):
         self._animation = DDAnimationHandle(pose)
 
         self._initial_velocity = initial_velocity
+        self._map_width = map_width
+        self._map_height = map_height
 
-        self._perception = 200
+        self._perception = 150
 
     @property
     def model(self):
@@ -65,7 +69,7 @@ class Boid(object):
         if total > 0:
             center_of_mass /= total
             vec_to_com = center_of_mass - self._pose[0:2]
-            steering = steering = math.atan2(vec_to_com[1], vec_to_com[0]) - self._pose[2]
+            steering = math.atan2(vec_to_com[1], vec_to_com[0]) - self._pose[2]
 
         return steering
 
@@ -96,7 +100,7 @@ class Boid(object):
         separation = self.separation(flock)
         alignment = self.alignment(flock)
 
-        avg_steering = 1.5 * separation + alignment + 0.1 * cohesion
+        avg_steering = separation + alignment + 0.3 * cohesion
 
         if avg_steering > self._max_w:
             avg_steering = (
@@ -109,15 +113,15 @@ class Boid(object):
         vel = Environment.body_to_world(v, self._pose)
         poses = self._pose + vel * sample_time
 
-        if poses[0] >= 1000:
+        if poses[0] >= self._map_width:
             poses[0] = 0
         elif poses[0] < 0:
-            poses[0] = 1000
+            poses[0] = self._map_width
 
-        if poses[1] >= 1000:
+        if poses[1] >= self._map_height:
             poses[1] = 0
         elif poses[1] < 0:
-            poses[1] = 1000
+            poses[1] = self._map_height
         
         self._pose = poses
         self._animation.set_pose(poses)
