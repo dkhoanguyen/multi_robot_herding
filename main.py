@@ -4,9 +4,9 @@ import time
 
 import numpy as np
 
-from environment import Environment
+from environment.environment import Environment
 
-from boid import Boid
+from behavior.boid import Boid
 
 from spatialmath.base import *
 

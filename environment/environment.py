@@ -6,10 +6,8 @@ import pygame
 
 import pymunk
 import pymunk.pygame_util
-from pymunk.vec2d import Vec2d
 
 from animation.animation_handle import AnimationHandle
-from kinematic_model import KinematicModel, DifferentialDrive
 
 
 class Environment(object):
