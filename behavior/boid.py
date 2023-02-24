@@ -3,9 +3,9 @@
 import math
 import numpy as np
 
-from environment import Environment
-from kinematic_model import DifferentialDrive
-from animation_handle import DDAnimationHandle
+from environment.environment import Environment
+from kinematic.kinematic_model import DifferentialDrive
+from animation.animation_handle import DDAnimationHandle
 
 
 class Boid(object):

@@ -8,7 +8,7 @@ import pymunk
 import pymunk.pygame_util
 from pymunk.vec2d import Vec2d
 
-from animation_handle import AnimationHandle
+from animation.animation_handle import AnimationHandle
 from kinematic_model import KinematicModel, DifferentialDrive
 
 
