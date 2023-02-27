@@ -38,16 +38,11 @@ class Environment(object):
     def fps(self, value):
         self._fps = value
 
-    def add(self, robot: AnimationHandle):
+    def add(self, entity: AnimationHandle):
         # Add all bodies and shape
-        # TODO: abstract this into a list of bodies to support future additions
-        # of more physic objects
-        self._pm_space.add(robot._body)
-        self._pm_space.add(robot._control_body)
-        self._pm_space.add(robot._shape)
-
-        self._pm_space.add(robot._pivot)
-        self._pm_space.add(robot._gear)
+        bodies = entity.get_bodies()
+        for _, body in bodies.items():
+            self._pm_space.add(body)
 
     def visualise(self):
         # handle "global" events

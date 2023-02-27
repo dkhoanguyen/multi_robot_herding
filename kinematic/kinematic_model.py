@@ -52,3 +52,7 @@ class DifferentialDrive(KinematicModel):
 
     def compute_kinematic_matrices(self):
         return
+    
+class AckermanSteering(KinematicModel):
+    def __init__(self):
+        super().__init__()
