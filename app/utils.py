@@ -1,16 +1,24 @@
-#!/usr/bin/python3
+"""Utility functions and classes."""
 
 import numpy as np
 import math
+from . import params
 
-def angle_between(v1: np.ndarray, v2: np.ndarray):
-    v1_u = v1 / np.linalg.norm(v1)
-    v2_u = v2 / np.linalg.norm(v2)
-    return np.arccos(np.clip(np.dot(v1_u, v2_u), -1.0, 1.0))
 
 def randrange(a, b):
     """Random number between a and b."""
     return a + np.random.random() * (b - a)
+
+
+def px_to_grid(px_pos):
+    """Convert pixel position to grid position."""
+    return np.array([px_pos[0] / params.COL, px_pos[1] / params.ROW])
+
+
+def grid_to_px(grid_pos):
+    """Convert grid position to pixel position."""
+    return np.array([grid_pos[0] * params.COL, grid_pos[1] * params.ROW])
+
 
 def norm(vector):
     """Compute the norm of a vector."""
