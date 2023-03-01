@@ -87,6 +87,8 @@ class Autonomous(Entity):
         self._min_v = min_v
         self._max_v = max_v
 
+        self._speed = 0.5 * self._max_v
+
     @property
     def wandering_angle(self):
         return self._wandering_angle
@@ -95,12 +97,20 @@ class Autonomous(Entity):
     def wandering_angle(self, value):
         self._wandering_angle = value
 
+    @property
+    def speed(self):
+        return self._speed
+
+    @speed.setter
+    def speed(self, value):
+        self._speed = value
+
     def steer(self, force, alt_max):
         self._steering += utils.truncate(force / self.mass, alt_max)
 
     def update(self):
         self.velocity = utils.truncate(
-            self.velocity + self._steering, params.BOID_MAX_SPEED)
+            self.velocity + self._steering, self._speed)
         self.pose = self.pose + self.velocity
 
     def display(self, screen: pygame.Surface, debug=False):

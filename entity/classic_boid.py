@@ -2,21 +2,18 @@
 import pygame
 import numpy as np
 
-from entity.entity import Autonomous
+from entity.entity import Entity,Autonomous
 from utils.math_utils import *
-from app import params
-from app import utils
+
 
 
 class ClassicBoid(Autonomous):
     def __init__(self,
                  pose: np.ndarray,
                  velocity: np.ndarray,
-                 alighment_weight: float,
-                 cohesion_weight: float,
-                 separation_weight: float,
                  local_perception: float,
                  local_boundary: float,
+                 personal_space: float,
                  mass: float,
                  min_v: float,
                  max_v: float):
@@ -28,11 +25,27 @@ class ClassicBoid(Autonomous):
             min_v=min_v,
             max_v=max_v)
 
-        self._alighment_weight = alighment_weight
-        self._cohesion_weight = cohesion_weight
-        self._separation_weight = separation_weight
-
         self._local_perception = local_perception
         self._local_boundary = local_boundary
+        self._personal_space = personal_space
+
+        # Internal var for grazing
+
+    @property
+    def local_perception(self):
+        return self._local_perception
+    
+    @property
+    def local_boundary(self):
+        return self._local_boundary
+    
+    @property
+    def personal_space(self):
+        return self._personal_space
+    
+    def in_local_perception(self, entity: Entity):
+        pass
 
     # Implement interaction behaviours here in the future
+    def graze(self):
+        pass

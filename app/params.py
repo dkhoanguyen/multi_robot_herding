@@ -66,7 +66,7 @@ MAX_SEE_AHEAD = 50  # pixels
 MAX_AVOID_FORCE = 10.
 # Boid separation parameters
 SEPARATION_DIST = 70
-MAX_SEPARATION_FORCE = 8.
+MAX_SEPARATION_FORCE = 10.
 # Leader following parameters
 LEADER_BEHIND_DIST = 10  # pixels
 LEADER_AHEAD_DIST = 40

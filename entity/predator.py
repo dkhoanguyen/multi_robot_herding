@@ -32,7 +32,7 @@ class Predator(Autonomous):
         mouse_pose = pygame.mouse.get_pos()
         force = np.array(mouse_pose) - self.pose
         self.steer(force - self.velocity,
-                   alt_max=params.BOID_MAX_FORCE * 10)
+                   alt_max=params.BOID_MAX_FORCE)
         # print(force)
 
     def wander(self, other_predators: list):

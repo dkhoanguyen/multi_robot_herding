@@ -1,5 +1,6 @@
 # !/usr/bin/python3
-
+import random
+from time import time
 import pygame
 import numpy as np
 from app import params, utils
@@ -9,9 +10,19 @@ from entity.predator import Predator
 
 class Flock():
 
-    def __init__(self):
+    def __init__(self,
+                 alignment_weight: float,
+                 cohesion_weight: float,
+                 separation_weight: float,
+                 fleeing_weight: float):
         super().__init__()
+        self._alignment_weight = alignment_weight
+        self._cohesion_weight = cohesion_weight
+        self._separation_weight = separation_weight
+        self._fleeing_weight = fleeing_weight
+
         self._boids = pygame.sprite.Group()
+        self._grazing_time = []
 
     def add_member(self, boid: ClassicBoid):
         self._boids.add(boid)
@@ -50,23 +61,22 @@ class Flock():
                            alt_max=params.BOID_MAX_FORCE)
                 boid.wandering_angle += params.WANDER_ANGLE * rands[i]
 
-    def separate(self, boid: ClassicBoid):
+    def separate(self, boid: ClassicBoid, distance: float):
         number_of_neighbors = 0
         force = np.zeros(2)
         other_boid: ClassicBoid
         for other_boid in self._boids:
             if boid == other_boid:
                 continue
-            if pygame.sprite.collide_rect(boid, other_boid):
+            if utils.dist2(boid.pose, other_boid.pose) < distance ** 2:
                 force -= other_boid.pose - boid.pose
                 number_of_neighbors += 1
         if number_of_neighbors:
             force /= number_of_neighbors
-        boid.steer(utils.normalize(force) * params.MAX_SEPARATION_FORCE,
+        boid.steer(utils.normalize(force) * self._separation_weight,
                    alt_max=params.BOID_MAX_FORCE)
 
     def align(self, boid: ClassicBoid):
-        r2 = params.ALIGN_RADIUS * params.ALIGN_RADIUS
         # find the neighbors
         desired = np.zeros(2)
         number_of_neighbors = 0
@@ -79,32 +89,61 @@ class Flock():
                 desired += other_boid.velocity
 
         if number_of_neighbors > 0:
-            boid.steer(desired / number_of_neighbors -
-                       boid.velocity, alt_max=params.BOID_MAX_FORCE)
+            boid.steer((desired / number_of_neighbors - boid.velocity) * self._alignment_weight,
+                       alt_max=params.BOID_MAX_FORCE)
+
+    def coherse(self, boid: ClassicBoid):
+        center = np.zeros(2)
+        number_of_neighbors = 0
+        other_boid: ClassicBoid
+        for other_boid in self._boids:
+            distance2 = utils.dist2(boid.pose, other_boid.pose)
+            if distance2 < boid._local_perception ** 2 and \
+               distance2 >= boid._local_boundary ** 2:
+                number_of_neighbors += 1
+                center += other_boid.pose
+
+        if number_of_neighbors > 0:
+            desired = center / number_of_neighbors - boid.pose
+            boid.steer((desired - boid.velocity) * self._cohesion_weight,
+                       alt_max=params.BOID_MAX_FORCE / 10)
 
     # Interaction with predators
+    def in_danger(self, boid: ClassicBoid,
+                  predators: list, danger_radius: float):
+        predator: Predator
+        for predator in predators:
+            if utils.norm(boid.pose - predator.pose) <= danger_radius:
+                return True
+        return False
+
     def flee(self, predator: Predator, boid: ClassicBoid):
         pred_pose = predator.pose
         pred_vel = predator.velocity
         t = int(utils.norm(pred_pose - boid.pose) / params.BOID_MAX_SPEED)
         pred_future_pose = pred_pose + t * pred_vel
 
-        too_close = utils.dist2(boid.pose, pred_future_pose) < params.R_FLEE**2
+        too_close = utils.dist2(boid.pose, pred_future_pose) < 400**2
         if too_close:
             steering = (utils.normalize(boid.pose - pred_future_pose) *
                         params.BOID_MAX_SPEED -
                         boid.velocity)
-            boid.steer(steering, alt_max=params.BOID_MAX_FORCE / 10)
+            boid.steer(steering * self._fleeing_weight,
+                       alt_max=params.BOID_MAX_FORCE)
 
     def update(self, motion_event, click_event, predators):
         boid: ClassicBoid
         predator: Predator
-        for boid in self._boids:
-            for predator in predators:
-                self.flee(predator,boid)
-            self.wander(boid)
-            self.align(boid)
-            self.separate(boid)
+        for i, boid in enumerate(self._boids):
+            if self.in_danger(boid, predators, 400):
+                self.align(boid)
+                self.separate(boid, boid.local_boundary)
+                self.coherse(boid)
+                for predator in predators:
+                    self.flee(predator, boid)
+            else:
+                self.wander(boid)
+                # self.separate(boid, boid.personal_space)
             self.remain_in_screen(boid)
 
         for boid in self._boids:
