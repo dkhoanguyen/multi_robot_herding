@@ -1,80 +1,46 @@
 #!/usr/bin/python3
 
+import pygame
 import numpy as np
 
-import pygame
+from app import params, utils
 
-import pymunk
-import pymunk.pygame_util
-
-from animation.animation_handle import AnimationHandle
+from entity.entity import Entity, Autonomous
+from behavior.behavior import Behavior
 
 
 class Environment(object):
 
-    def __init__(self,
-                 width: int = 700,
-                 height: int = 700):
-        pygame.init()
-        self._pg_screen = pygame.display.set_mode(
-            (width, height))
+    def __init__(self):
+        self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
+        self._running = True
         self._clock = pygame.time.Clock()
-        self._draw_options = pymunk.pygame_util.DrawOptions(self._pg_screen)
 
-        self._pm_space = pymunk.Space()
-        self._pm_space.iterations = 10
-        self._pm_space.sleep_time_threshold = 0.5
-        pymunk.pygame_util.positive_y_is_up = True
+        self._behaviors = []
 
-        self._static_body = self._pm_space.static_body
+    def add_behaviour(self, behavior: Behavior):
+        self._behaviors.append(behavior)
 
-        self._fps = 60
+    def update(self):
+        behavior: Behavior
+        motion_event, click_event = None, None
+        for behavior in self._behaviors:
+            behavior.update(motion_event, click_event)
 
-    @property
-    def fps(self):
-        return self._fps
+    def display(self):
+        behavior: Behavior
+        for behavior in self._behaviors:
+            behavior.display(self._screen)
 
-    @fps.setter
-    def fps(self, value):
-        self._fps = value
-
-    def add(self, entity: AnimationHandle):
-        # Add all bodies and shape
-        bodies = entity.get_bodies()
-        for _, body in bodies.items():
-            self._pm_space.add(body)
-
-    def visualise(self):
-        # handle "global" events
-        events = pygame.event.get()
-        for e in events:
-            if e.type == pygame.QUIT:
-                exit()
-
-        # draw everything
-        self._pg_screen.fill(pygame.Color('white'))
-        self._pm_space.debug_draw(self._draw_options)
-
-        # Update pymunk space
-        self._pm_space.step(1/self._fps)
-
-        # Update pygame visualisation
-        pygame.display.flip()
-
-        self._dt = self._clock.tick(self._fps)
-
-    @staticmethod
-    def body_to_world(body_vel: np.ndarray, pose: np.ndarray) -> np.ndarray:
-        theta = pose[2]
-        return np.array([
-            [np.cos(theta), -np.sin(theta), 0],
-            [np.sin(theta),  np.cos(theta), 0],
-            [0,              0,             1]]) @ body_vel
-
-    @staticmethod
-    def world_to_body(world_vel: np.ndarray, pose: np.ndarray) -> np.ndarray:
-        theta = pose[2]
-        return np.array([
-            [np.cos(theta),  np.sin(theta), 0],
-            [-np.sin(theta), np.cos(theta), 0],
-            [0,              0,             1]]) @ world_vel
+    def run(self):
+        while self._running:
+            self._clock.tick(params.FPS)
+            self._screen.fill(params.SIMULATION_BACKGROUND)
+            motion_event, click_event = None, None
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.running = False
+            
+            self.update()
+            self.display()
+            pygame.display.flip()

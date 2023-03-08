@@ -2,10 +2,15 @@
 
 from abc import ABC, abstractmethod
 
+
 class Behavior(ABC):
-    def __init__(self):
-        pass
 
     @abstractmethod
-    def interact(self, *args, **kwargs):
-        pass
+    def update(self, *args, **kwargs):
+        '''
+        '''
+
+    @abstractmethod
+    def display(self, screen):
+        '''
+        '''

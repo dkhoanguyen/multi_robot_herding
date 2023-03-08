@@ -4,11 +4,12 @@ from time import time
 import pygame
 import numpy as np
 from app import params, utils
+from behavior.behavior import Behavior
 from entity.classic_boid import ClassicBoid
 from entity.predator import Predator
 
 
-class Flock():
+class Flock(Behavior):
 
     def __init__(self,
                  alignment_weight: float,
@@ -22,6 +23,7 @@ class Flock():
         self._fleeing_weight = fleeing_weight
 
         self._boids = pygame.sprite.Group()
+        self._predators = []
         self._grazing_time = []
 
     def add_member(self, boid: ClassicBoid):
@@ -116,6 +118,9 @@ class Flock():
             if utils.norm(boid.pose - predator.pose) <= danger_radius:
                 return True
         return False
+    
+    def add_predators(self, predators: list):
+        self._predators = predators
 
     def flee(self, predator: Predator, boid: ClassicBoid):
         pred_pose = predator.pose
@@ -131,21 +136,24 @@ class Flock():
             boid.steer(steering * self._fleeing_weight,
                        alt_max=params.BOID_MAX_FORCE)
 
-    def update(self, motion_event, click_event, predators):
+    def update(self, motion_event, click_event):
         boid: ClassicBoid
         predator: Predator
         for i, boid in enumerate(self._boids):
-            if self.in_danger(boid, predators, 400):
+            if self.in_danger(boid, self._predators, 450):
                 self.align(boid)
                 self.separate(boid, boid.local_boundary)
                 self.coherse(boid)
-                for predator in predators:
+                for predator in self._predators:
                     self.flee(predator, boid)
             else:
                 self.wander(boid)
-                # self.separate(boid, boid.personal_space)
+                self.separate(boid, boid.personal_space)
             self.remain_in_screen(boid)
 
+        # Questionable loop here,
+        # SHould investigate whether moving update back to the above loop
+        # affects the overall interactions
         for boid in self._boids:
             boid.update()
 

@@ -1,10 +1,10 @@
 # !/usr/bin/python3
+import time
 import pygame
 import numpy as np
 
-from entity.entity import Entity,Autonomous
+from entity.entity import Entity, Autonomous
 from utils.math_utils import *
-
 
 
 class ClassicBoid(Autonomous):
@@ -29,23 +29,17 @@ class ClassicBoid(Autonomous):
         self._local_boundary = local_boundary
         self._personal_space = personal_space
 
-        # Internal var for grazing
-
     @property
     def local_perception(self):
         return self._local_perception
-    
+
     @property
     def local_boundary(self):
         return self._local_boundary
-    
+
     @property
     def personal_space(self):
         return self._personal_space
-    
-    def in_local_perception(self, entity: Entity):
-        pass
 
-    # Implement interaction behaviours here in the future
-    def graze(self):
+    def in_local_perception(self, entity: Entity):
         pass

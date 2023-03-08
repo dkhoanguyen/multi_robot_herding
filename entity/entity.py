@@ -3,7 +3,6 @@
 import pygame
 from utils.math_utils import *
 from enum import Enum
-from app import assets
 from app import utils
 from app import params
 
@@ -29,8 +28,9 @@ class Entity(pygame.sprite.Sprite):
             pose = np.zeros(2)
         if velocity is None:
             velocity = np.zeros(2)
-        self._image_path = image_path
-        self.base_image, self.rect = assets.image_with_rect(self._image_path)
+        self._image_path = "/Users/khoanguyen/Projects/mrp_sims/assets/img/" + image_path
+        self.base_image = pygame.image.load(self._image_path)
+        self.rect = self.base_image.get_rect()
         self.image = self.base_image
 
         self.type = type
@@ -54,11 +54,11 @@ class Entity(pygame.sprite.Sprite):
     @velocity.setter
     def velocity(self, velocity):
         self._velocity = velocity
-        self._rotate_image()
+        # self._rotate_image(self._velocity)
 
-    def _rotate_image(self):
+    def _rotate_image(self, vector: np.ndarray):
         """Rotate base image using the velocity and assign to image."""
-        angle = -np.rad2deg(np.angle(self.velocity[0] + 1j * self.velocity[1]))
+        angle = -np.rad2deg(np.angle(vector[0] + 1j * vector[1]))
         self.image = pygame.transform.rotate(self.base_image, angle)
         self.rect = self.image.get_rect(center=self.rect.center)
 
@@ -88,6 +88,8 @@ class Autonomous(Entity):
         self._max_v = max_v
 
         self._speed = 0.5 * self._max_v
+        self._pre_vel = np.array([0, 0])
+        self._at_pose = False
 
     @property
     def wandering_angle(self):
@@ -105,13 +107,27 @@ class Autonomous(Entity):
     def speed(self, value):
         self._speed = value
 
+    @property
+    def at_pose(self):
+        return self._at_pose
+
     def steer(self, force, alt_max):
         self._steering += utils.truncate(force / self.mass, alt_max)
 
     def update(self):
-        self.velocity = utils.truncate(
-            self.velocity + self._steering, self._speed)
-        self.pose = self.pose + self.velocity
+        if self._speed == 0.0 and \
+                not np.array_equal(self._velocity, np.array([0.0, 0.0])):
+            self._pre_vel = self._velocity.copy()
+            self._rotate_image(self._pre_vel)
+            self._velocity = utils.truncate(
+                self._velocity + self._steering, self._speed)
+            
+        elif self._speed != 0.0:
+            self._velocity = utils.truncate(
+                self._velocity + self._steering, self._speed)
+            self._rotate_image(self._velocity)
+
+        self.pose = self.pose + self._velocity
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
@@ -125,3 +141,16 @@ class Autonomous(Entity):
 
     def reset_steering(self):
         self._steering = np.zeros(2)
+
+    # Higher level control
+    def move_to_pose(self, pose: np.ndarray):
+        force = pose - self.pose
+        desired_speed = utils.norm(force)
+        if desired_speed <= 1.0:
+            desired_speed = 0
+            self._at_pose = True
+        else:
+            self._at_pose = False
+        self._speed = np.clip(desired_speed, self._min_v, self._max_v)
+        self.steer(force - self.velocity,
+                   alt_max=params.BOID_MAX_FORCE)

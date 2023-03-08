@@ -1,123 +1,119 @@
-"""Simulation classes."""
 import pygame
 import numpy as np
 from entity.classic_boid import ClassicBoid
 from entity.predator import Predator
 from behavior.flock import Flock
-from app import params, utils
-from time import time
+from behavior.leader_follower import LeaderFollower, LeaderFollowerType
+from environment.environment import Environment
 
 
-class Simulation:
-    """Represent a simulation of a flock."""
+def main():
+    # Create cows
+    num_cows = 10
+    cows = []
+    # Cow's properties
+    local_perception = 200.0
+    local_boundary = 30.0
+    personal_space = 60.0
+    mass = 20.0
+    min_v = 0.0
+    max_v = 3.5
 
-    def __init__(self, screen):
-        self.running = True
-        self.screen = screen
-        self.clock = pygame.time.Clock()
-        self.boids = []
-        self.flock = Flock(
-            alignment_weight=1.0,
-            cohesion_weight=0.1,
-            separation_weight=10.0,
-            fleeing_weight=10.0
-        )
-        self.predators = []
-        self.to_update = pygame.sprite.Group()
-        self.to_display = pygame.sprite.Group()
-
-    def add_boid(self, pos):
+    rand_x = np.linspace(200, 800, num_cows)
+    rand_y = np.linspace(200, 500, num_cows)
+    rand_pos = np.vstack((rand_x, rand_y))
+    for i in range(num_cows):
+        pos = rand_pos.transpose()[i, :]
         angle = np.pi * (2 * np.random.rand() - 1)
         vel = 3.5 * np.array([np.cos(angle), np.sin(angle)])
-        member = ClassicBoid(pose=pos,
-                             velocity=vel,
-                             local_perception=200.0,
-                             local_boundary=50.0,
-                             personal_space=100.0,
-                             mass=20.0,
-                             min_v=0.0,
-                             max_v=3.5)
-        self.boids.append(member)
-        self.flock.add_member(member)
+        cow = ClassicBoid(pose=pos,
+                          velocity=vel,
+                          local_perception=local_perception,
+                          local_boundary=local_boundary,
+                          personal_space=personal_space,
+                          mass=mass,
+                          min_v=min_v,
+                          max_v=max_v)
+        cows.append(cow)
 
-    def add_predator(self, pos):
+    # Create shepherds
+    num_shepherds = 5
+    shepherds = []
+    # Shepherd's properties
+    local_perception = 200.0
+    local_boundary = 30.0
+    personal_space = 60.0
+    mass = 20.0
+    min_v = 0.0
+    max_v = 5.0
+
+    pos = np.array([500,500])
+    angle = 0
+    vel = 5.0 * np.array([np.cos(angle), np.sin(angle)])
+    # Leader shepherds
+    leader = Predator(pose=pos,
+                      velocity=vel,
+                      local_perception=local_perception,
+                      local_boundary=local_boundary,
+                      mass=mass,
+                      min_v=min_v,
+                      max_v=max_v)
+
+    shepherds.append(leader)
+
+    # Follower shepherds
+    rand_pos = np.linspace((200), (200, 800), num_shepherds)
+    for i in range(num_shepherds):
+        pos = rand_pos[i, :]
         angle = np.pi * (2 * np.random.rand() - 1)
-        vel = params.BOID_MAX_SPEED * np.array([np.cos(angle), np.sin(angle)])
-        predator = Predator(pose=pos,
+        vel = 5.0 * np.array([np.cos(angle), np.sin(angle)])
+        shepherd = Predator(pose=pos,
                             velocity=vel,
-                            local_perception=200.0,
-                            local_boundary=0.0,
-                            mass=20,
-                            min_v=0,
-                            max_v=4.0)
-        self.predators.append(predator)
+                            local_perception=local_perception,
+                            local_boundary=local_boundary,
+                            mass=mass,
+                            min_v=min_v,
+                            max_v=max_v)
+        shepherds.append(shepherd)
 
-    def update(self, motion_event, click_event):
-        self.to_update.update(motion_event, click_event)
+    # Create behaviors
+    # Flock properties
+    alignment_weight = 1.0
+    cohesion_weight = 0.1
+    separation_weight = 10.0
+    fleeing_weight = 10.0
+    flock = Flock(
+        alignment_weight=alignment_weight,
+        cohesion_weight=cohesion_weight,
+        separation_weight=separation_weight,
+        fleeing_weight=fleeing_weight)
 
-    def display(self):
-        # for sprite in self.to_display:
-        #     sprite.display(self.screen)
-        self.flock.display(self.screen)
-        if params.DEBUG:
-            pygame.draw.polygon(
-                self.screen, pygame.Color("papayawhip"),
-                [
-                    (params.BOX_MARGIN, params.BOX_MARGIN),
-                    (params.SCREEN_WIDTH - params.BOX_MARGIN,
-                        params.BOX_MARGIN),
-                    (params.SCREEN_WIDTH - params.BOX_MARGIN,
-                        params.SCREEN_HEIGHT - params.BOX_MARGIN),
-                    (params.BOX_MARGIN,
-                        params.SCREEN_HEIGHT - params.BOX_MARGIN),
-                ], 1)
+    # Add cows
+    for cow in cows:
+        flock.add_member(cow)
 
-    def init_run(self):
-        # # add 40 boids to the flock
-        # for x in range(1, 11):
-        #     for y in range(1, 7):
-        #         self.add_boid(utils.grid_to_px((x, y)))
-        self.add_boid(utils.grid_to_px((5, 5)))
-        # self.add_boid(utils.grid_to_px((6, 5)))
-        # for x in range(5, 7):
-        #     for y in range(5, 7):
-        #         self.add_predator(utils.grid_to_px((x, y)))
-        # self.add_predator(utils.grid_to_px((0, 0)))
-        self.to_display = pygame.sprite.Group(
-            self.boids,
-        )
+    # Add shepherd
+    # for shepherd in shepherds:
+    flock.add_predators(shepherds)
 
-    def run(self):
-        self.init_run()
-        dt = 0
-        self.flock._grazing_time = [0 for _ in range(len(self.flock._boids))]
-        while self.running:
-            self.clock.tick(params.FPS)
-            t = time()
-            motion_event, click_event = None, None
-            self.screen.fill(params.SIMULATION_BACKGROUND)
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-                    return "PYGAME_QUIT"
-            predator: Predator
-            for predator in self.predators:
-                predator.follow_mouse()
-                # predator.wander(self.predators)
-                predator.remain_in_screen()
-                predator.update()
-                predator.display(self.screen)
-                predator.reset_steering()
-            self.flock.update(motion_event, click_event, self.predators)
-            self.display()
-            pygame.display.flip()
-            dt = time() - t
+    # Formation
+    formation = LeaderFollower(
+        LeaderFollowerType.LINE,
+        formation_weight=1.0,
+        spacing=25.0)
 
-    def quit(self):
-        self.running = False
+    formation.add_leader(shepherds[0])
+    for i in range(1, num_shepherds):
+        formation.add_follower(shepherds[i])
+
+    # Environment
+    env = Environment()
+
+    env.add_behaviour(flock)
+    env.add_behaviour(formation)
+
+    env.run()
 
 
-if __name__ == "__main__":
-    screen = pygame.display.set_mode(params.SCREEN_SIZE)
-    s = Simulation(screen)
-    s.run()
+if __name__ == '__main__':
+    main()
