@@ -5,7 +5,6 @@ import numpy as np
 from entity.entity import Autonomous
 from utils.math_utils import *
 from app import params
-from app import utils
 
 
 class Predator(Autonomous):
@@ -40,7 +39,7 @@ class Predator(Autonomous):
         predator: Predator
         for i, predator in enumerate(other_predators):
             if self == predator:
-                nvel = utils.normalize(self.velocity)
+                nvel = normalize(self.velocity)
                 # calculate circle center
                 circle_center = nvel * params.WANDER_DIST
                 # calculate displacement force

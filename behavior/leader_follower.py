@@ -14,7 +14,7 @@ from spatialmath.base import *
 
 class LeaderFollowerType(Enum):
     LINE = 1
-    WEDGE = 2
+    COLUMN = 2
 
 
 class LeaderFollower(Behavior):
@@ -77,7 +77,7 @@ class LeaderFollower(Behavior):
 
         follower: Autonomous
         for i, follower in enumerate(self._followers_list):
-            target_pose = self._followers_poses[i,0:2]
+            target_pose = self._followers_poses[i, 0:2]
             follower.move_to_pose(target_pose)
         self._leader.follow_mouse()
 
@@ -89,19 +89,11 @@ class LeaderFollower(Behavior):
         for member in self._members_list:
             member.update()
 
-    def display(self, screen):
-        member: Autonomous
-        for member in self._members_list:
-            member.display(screen, debug=False)
-        for member in self._members_list:
-            member.reset_steering()
-
     def _construct_entity_pose(self, entity: Autonomous):
         return np.array([
             entity.pose[0],
             entity.pose[1],
-            math.atan2(entity.velocity[1], entity.velocity[0])
-        ])
+            entity.heading])
 
     def _generate_formation_link(self,
                                  type: LeaderFollowerType,
@@ -118,6 +110,17 @@ class LeaderFollower(Behavior):
             line_links = np.vstack((line_links_x, line_links_y))
             return line_links
 
+        if type == LeaderFollowerType.COLUMN:
+            # Get number of followers
+            num_members = len(members)
+            mid = np.round(num_members / 2)
+            line_links_y = np.linspace(-mid * spacing,
+                                       (mid - 1 + ((num_members) % 2)) * spacing,
+                                       num_members)
+            line_links_x = np.zeros(line_links_y.shape)
+            line_links = np.vstack((line_links_x, line_links_y))
+            return line_links
+
     def _generate_followers_poses(self,
                                   links: list,
                                   leader_pose: np.ndarray,
@@ -130,7 +133,9 @@ class LeaderFollower(Behavior):
             else:
                 # Perform a transformation from the leader pose to the
                 # formation pose
-                formation_pose = transl2(leader_pose[0:2]) @ transl2(link)
+                formation_pose = transl2(leader_pose[0:2]) @ \
+                    trot2(np.pi - leader_pose[2]) @ \
+                    transl2(link)
                 formation_pose = np.array(
                     [formation_pose[0, 2], formation_pose[1, 2], leader_pose[2]])
                 followers_poses = np.vstack(

@@ -156,10 +156,3 @@ class Flock(Behavior):
         # affects the overall interactions
         for boid in self._boids:
             boid.update()
-
-    def display(self, screen):
-        boid: ClassicBoid
-        for boid in self._boids:
-            boid.display(screen, debug=False)
-        for boid in self._boids:
-            boid.reset_steering()

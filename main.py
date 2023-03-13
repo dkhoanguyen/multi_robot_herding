@@ -17,15 +17,29 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 3.5
+    max_v = 35
 
-    rand_x = np.linspace(200, 800, num_cows)
-    rand_y = np.linspace(200, 500, num_cows)
-    rand_pos = np.vstack((rand_x, rand_y))
-    for i in range(num_cows):
-        pos = rand_pos.transpose()[i, :]
+    # rand_x = np.linspace(200, 800, num_cows)
+    # rand_y = np.linspace(200, 500, num_cows)
+
+    # Create cow grid
+    grid_x = np.linspace(200, 800, num_cows)
+    grid_y_100 = np.ones((1, num_cows)) * 100
+    grid_100 = np.vstack((grid_x, grid_y_100))
+
+    grid_x = np.linspace(200, 800, num_cows)
+    grid_y_200 = np.ones((1, num_cows)) * 200
+    grid_200 = np.vstack((grid_x, grid_y_200))
+
+    grid_x = np.linspace(200, 800, num_cows)
+    grid_y_300 = np.ones((1, num_cows)) * 300
+    grid_300 = np.vstack((grid_x, grid_y_300))
+
+    grid = np.hstack((grid_100, grid_200, grid_300))
+    for i in range(grid.shape[1]):
+        pos = grid.transpose()[i, :]
         angle = np.pi * (2 * np.random.rand() - 1)
-        vel = 3.5 * np.array([np.cos(angle), np.sin(angle)])
+        vel = max_v * np.array([np.cos(angle), np.sin(angle)])
         cow = ClassicBoid(pose=pos,
                           velocity=vel,
                           local_perception=local_perception,
@@ -47,7 +61,7 @@ def main():
     min_v = 0.0
     max_v = 5.0
 
-    pos = np.array([500,500])
+    pos = np.array([500, 500])
     angle = 0
     vel = 5.0 * np.array([np.cos(angle), np.sin(angle)])
     # Leader shepherds
@@ -94,13 +108,13 @@ def main():
 
     # Add shepherd
     # for shepherd in shepherds:
-    flock.add_predators(shepherds)
+    # flock.add_predators(shepherds)
 
     # Formation
     formation = LeaderFollower(
-        LeaderFollowerType.LINE,
+        LeaderFollowerType.COLUMN,
         formation_weight=1.0,
-        spacing=25.0)
+        spacing=40.0)
 
     formation.add_leader(shepherds[0])
     for i in range(1, num_shepherds):
@@ -109,10 +123,17 @@ def main():
     # Environment
     env = Environment()
 
-    env.add_behaviour(flock)
-    env.add_behaviour(formation)
+    # Add entities
+    for cow in cows:
+        env.add_entity(cow)
+    # for shepherd in shepherds:
+    #     env.add_entity(shepherd)
 
-    env.run()
+    # Add behavior models
+    env.add_behaviour(flock)
+    # env.add_behaviour(formation)
+    while True:
+        env.run_once()
 
 
 if __name__ == '__main__':

@@ -9,8 +9,3 @@ class Behavior(ABC):
     def update(self, *args, **kwargs):
         '''
         '''
-
-    @abstractmethod
-    def display(self, screen):
-        '''
-        '''
