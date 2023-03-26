@@ -27,14 +27,38 @@ class Environment(object):
 
         self._behaviors = []
         self._entities = []
+        self._bodies = []
+
+        screen_width = params.SCREEN_SIZE[0]
+        screen_height = params.SCREEN_SIZE[1]
+
+        # Add boundaries
+        left_segment = pymunk.Segment(self._static_body,
+                                      (0.0, 0.0),
+                                      (0.0, screen_height), 5.0)
+        top_segment = pymunk.Segment(self._static_body,
+                                     (0.0, 0.0),
+                                     (screen_width, 0.0), 5.0)
+        right_segment = pymunk.Segment(self._static_body,
+                                       (screen_width, 0.0),
+                                       (screen_width, screen_height), 5.0)
+        bottom_segment = pymunk.Segment(self._static_body,
+                                        (0.0, screen_height),
+                                        (screen_width, screen_height), 5.0)
+        self._space.add(left_segment)
+        self._space.add(top_segment)
+        self._space.add(right_segment)
+        self._space.add(bottom_segment)
 
     def add_entity(self, entity: Entity):
         self._entities.append(entity)
 
         # Added pymunk physic elements
         addables = entity.get_pymunk_addables()
-        for _, addable in addables.items():
+        for key, addable in addables.items():
             self._space.add(addable)
+            if key == 'body':
+                self._bodies.append(addable)
 
     def add_behaviour(self, behavior: Behavior):
         self._behaviors.append(behavior)
@@ -47,6 +71,9 @@ class Environment(object):
         motion_event, click_event = None, None
         for behavior in self._behaviors:
             behavior.update(motion_event, click_event)
+
+        # for body in self._bodies:
+        #     self._space.reindex_shapes_for_body(body)
 
     def display(self):
         entity: Entity
@@ -67,9 +94,7 @@ class Environment(object):
             pygame.display.flip()
 
     def run_once(self):
-        self._clock.tick(params.FPS)
         self._screen.fill(params.SIMULATION_BACKGROUND)
-        self._space.debug_draw(self._draw_options)
         motion_event, click_event = None, None
 
         for event in pygame.event.get():
@@ -78,6 +103,8 @@ class Environment(object):
 
         self.update()
         self._space.step(1/params.FPS)
-        # self.display()
+        self.display()
+        # self._space.debug_draw(self._draw_options)
         pygame.display.flip()
-        # self._clock.tick(params.FPS)
+        self._clock.tick(params.FPS)
+        pygame.display.set_caption("fps: " + str(self._clock.get_fps()))

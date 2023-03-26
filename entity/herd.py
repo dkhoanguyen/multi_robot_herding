@@ -7,7 +7,7 @@ from entity.entity import Entity, Autonomous
 from utils.math_utils import *
 
 
-class ClassicBoid(Autonomous):
+class Herd(Autonomous):
     def __init__(self,
                  pose: np.ndarray,
                  velocity: np.ndarray,

@@ -5,7 +5,7 @@ from time import time
 from behavior.behavior import Behavior
 import numpy as np
 from entity.entity import Autonomous
-from entity.predator import Predator
+from entity.shepherd import Shepherd
 from app import params, utils
 from enum import Enum
 
@@ -80,6 +80,7 @@ class LeaderFollower(Behavior):
             target_pose = self._followers_poses[i, 0:2]
             follower.move_to_pose(target_pose)
         self._leader.follow_mouse()
+        self.remain_in_screen(self._leader)
 
     def update(self, motion_event, click_event):
         self.init_formation()
@@ -88,6 +89,20 @@ class LeaderFollower(Behavior):
         member: Autonomous
         for member in self._members_list:
             member.update()
+
+    def remain_in_screen(self, herd):
+        if herd.pose[0] > params.SCREEN_WIDTH - params.BOX_MARGIN:
+            herd.steer(np.array([-params.STEER_INSIDE, 0.]),
+                       alt_max=params.BOID_MAX_FORCE)
+        if herd.pose[0] < params.BOX_MARGIN:
+            herd.steer(np.array([params.STEER_INSIDE, 0.]),
+                       alt_max=params.BOID_MAX_FORCE)
+        if herd.pose[1] < params.BOX_MARGIN:
+            herd.steer(np.array([0., params.STEER_INSIDE]),
+                       alt_max=params.BOID_MAX_FORCE)
+        if herd.pose[1] > params.SCREEN_HEIGHT - params.BOX_MARGIN:
+            herd.steer(np.array([0., -params.STEER_INSIDE]),
+                       alt_max=params.BOID_MAX_FORCE)
 
     def _construct_entity_pose(self, entity: Autonomous):
         return np.array([

@@ -1,7 +1,7 @@
 import pygame
 import numpy as np
-from entity.classic_boid import ClassicBoid
-from entity.predator import Predator
+from entity.herd import Herd
+from entity.shepherd import Shepherd
 from behavior.flock import Flock
 from behavior.leader_follower import LeaderFollower, LeaderFollowerType
 from environment.environment import Environment
@@ -17,7 +17,7 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 35
+    max_v = 7
 
     # rand_x = np.linspace(200, 800, num_cows)
     # rand_y = np.linspace(200, 500, num_cows)
@@ -40,7 +40,7 @@ def main():
         pos = grid.transpose()[i, :]
         angle = np.pi * (2 * np.random.rand() - 1)
         vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-        cow = ClassicBoid(pose=pos,
+        cow = Herd(pose=pos,
                           velocity=vel,
                           local_perception=local_perception,
                           local_boundary=local_boundary,
@@ -63,9 +63,9 @@ def main():
 
     pos = np.array([500, 500])
     angle = 0
-    vel = 5.0 * np.array([np.cos(angle), np.sin(angle)])
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     # Leader shepherds
-    leader = Predator(pose=pos,
+    leader = Shepherd(pose=pos,
                       velocity=vel,
                       local_perception=local_perception,
                       local_boundary=local_boundary,
@@ -80,8 +80,8 @@ def main():
     for i in range(num_shepherds):
         pos = rand_pos[i, :]
         angle = np.pi * (2 * np.random.rand() - 1)
-        vel = 5.0 * np.array([np.cos(angle), np.sin(angle)])
-        shepherd = Predator(pose=pos,
+        vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+        shepherd = Shepherd(pose=pos,
                             velocity=vel,
                             local_perception=local_perception,
                             local_boundary=local_boundary,
@@ -92,10 +92,10 @@ def main():
 
     # Create behaviors
     # Flock properties
-    alignment_weight = 1.0
-    cohesion_weight = 0.1
-    separation_weight = 10.0
-    fleeing_weight = 10.0
+    alignment_weight = 5.0
+    cohesion_weight = 0.05
+    separation_weight = 20.0
+    fleeing_weight = 5.0
     flock = Flock(
         alignment_weight=alignment_weight,
         cohesion_weight=cohesion_weight,
@@ -107,8 +107,7 @@ def main():
         flock.add_member(cow)
 
     # Add shepherd
-    # for shepherd in shepherds:
-    # flock.add_predators(shepherds)
+    flock.add_predators(shepherds)
 
     # Formation
     formation = LeaderFollower(
@@ -126,12 +125,13 @@ def main():
     # Add entities
     for cow in cows:
         env.add_entity(cow)
-    # for shepherd in shepherds:
-    #     env.add_entity(shepherd)
+    for shepherd in shepherds:
+        env.add_entity(shepherd)
 
     # Add behavior models
     env.add_behaviour(flock)
-    # env.add_behaviour(formation)
+    env.add_behaviour(formation)
+    
     while True:
         env.run_once()
 

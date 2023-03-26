@@ -7,7 +7,7 @@ from utils.math_utils import *
 from app import params
 
 
-class Predator(Autonomous):
+class Shepherd(Autonomous):
     def __init__(self,
                  pose: np.ndarray,
                  velocity: np.ndarray,
@@ -36,9 +36,9 @@ class Predator(Autonomous):
         cos = np.cos([b.wandering_angle for b in other_predators])
         sin = np.sin([b.wandering_angle for b in other_predators])
 
-        predator: Predator
-        for i, predator in enumerate(other_predators):
-            if self == predator:
+        shepherd: Shepherd
+        for i, shepherd in enumerate(other_predators):
+            if self == shepherd:
                 nvel = normalize(self.velocity)
                 # calculate circle center
                 circle_center = nvel * params.WANDER_DIST
