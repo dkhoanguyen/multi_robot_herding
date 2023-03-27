@@ -37,6 +37,7 @@ class Entity(pygame.sprite.Sprite):
         self.mass = mass
         self._pose = pose
         self._velocity = velocity
+        self._state = np.hstack((pose, velocity))
 
         angle = -np.rad2deg(np.angle(velocity[0] + 1j * velocity[1]))
         self._heading = np.deg2rad(angle)
@@ -63,6 +64,14 @@ class Entity(pygame.sprite.Sprite):
     @property
     def heading(self):
         return self._heading
+    
+    @property
+    def state(self):
+        return self._state
+    
+    @state.setter
+    def state(self, state):
+        self._state = state
 
     def get_pymunk_addables(self):
         return self._pymunk_addables
@@ -110,7 +119,7 @@ class Autonomous(Entity):
         inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
         body = pymunk.Body(mass, inertia)
         body.position = tuple(pose)
-        body.velocity = tuple(velocity) 
+        body.velocity = tuple(velocity)
 
         shape = pymunk.Circle(body, radius, (0, 0))
         shape.density = 1
@@ -155,7 +164,7 @@ class Autonomous(Entity):
                 self._velocity + self._steering, self._speed)
             self._rotate_image(self._velocity)
 
-        self.pose = self.pose + self._velocity
+        self.pose = self.pose + self._velocity        
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)

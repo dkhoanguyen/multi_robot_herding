@@ -68,9 +68,9 @@ class Environment(object):
         Function to update behaviors and interaction between entities
         '''
         behavior: Behavior
-        motion_event, click_event = None, None
+        # motion_event, click_event = None, None
         for behavior in self._behaviors:
-            behavior.update(motion_event, click_event)
+            behavior.update(1/params.FPS)
 
         # for body in self._bodies:
         #     self._space.reindex_shapes_for_body(body)

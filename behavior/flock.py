@@ -145,7 +145,7 @@ class Flock(Behavior):
             herd.steer(steering * self._fleeing_weight,
                        alt_max=params.BOID_MAX_FORCE)
 
-    def update(self, motion_event, click_event):
+    def update(self,dt):
         herd: Herd
         shepherd: Shepherd
         for i, herd in enumerate(self._boids):
