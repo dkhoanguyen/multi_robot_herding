@@ -9,6 +9,10 @@ from utils.math_utils import *
 class Obstacle(Entity):
 
     @abstractmethod
+    def in_entity_radius(self, entity: Entity, r: float):
+        pass
+
+    @abstractmethod
     def induce_beta_agent(self, alpha_agent: Entity):
         pass
 
@@ -19,6 +23,12 @@ class Hyperplane(Obstacle):
         self._yk = yk.reshape((2,1))
 
         self._P = np.eye(2) - self._ak @ self._ak.transpose()
+
+    def in_entity_radius(self, entity: Entity, r: float):
+        # Project entity position onto the plane
+        qi = entity.pose.reshape((2,1))
+        projected_q = self._P @ qi + (np.eye(2) - self._P) @ self._yk
+        return np.linalg.norm(projected_q - qi) <= r
 
     def induce_beta_agent(self, alpha_agent: Entity) -> np.ndarray:
         qi = alpha_agent.pose.reshape((2,1))
