@@ -8,6 +8,7 @@ from app import params, utils
 from behavior.behavior import Behavior
 from entity.herd import Herd
 from entity.shepherd import Shepherd
+from entity.obstacle import Obstacle
 
 
 class MathematicalFlock(Behavior):
@@ -70,11 +71,13 @@ class MathematicalFlock(Behavior):
     def __init__(self, range=RANGE, distance=DISTANCE):
         self._herds = []
         self._shepherds = []
+        self._obstacles = []
 
         self._range = range
         self._distance = distance
 
-        self._sample_t = time.time()
+        self._sample_t = 0
+        self._pause_agents = np.zeros(1)
 
     def add_herd(self, herd: Herd):
         self._herds.append(herd)
@@ -82,21 +85,27 @@ class MathematicalFlock(Behavior):
     def add_shepherd(self, shepherd: Shepherd):
         self._shepherds.append(shepherd)
 
+    def add_obstacle(self, obstacle: Obstacle):
+        self._obstacles.append(obstacle)
+
     def update(self, dt: float):
-        # self._flocking(dt)
-        self._pause_agents = np.random.random_integers(low=0, high=len(
-            self._herds) - 1, size=(round(len(self._herds)/2),))
-        herd: Herd
-        for idx, herd in enumerate(self._herds):
-            if idx in self._pause_agents:
-                self._wander(herd)
-                self._separate(herd, herd.personal_space)
-                self._old_remain_in_screen(herd)
-                herd.update()
-            else:
-                herd.velocity = np.zeros(2)
-                herd.pose = herd.pose + herd.velocity
-                herd.update()
+        self._flocking(dt)
+        # if time.time() - self._sample_t > 3.0:
+        #     self._pause_agents = np.random.random_integers(low=0, high=len(
+        #         self._herds) - 1, size=(round(len(self._herds)/5),))
+        #     self._sample_t = time.time()
+
+        # herd: Herd
+        # for idx, herd in enumerate(self._herds):
+        #     if idx not in self._pause_agents:
+        #         herd.speed = 1
+        #         self._wander(herd)
+        #         self._separate(herd, herd.personal_space)
+        #         self._old_remain_in_screen(herd)
+        #         herd.update()
+        #     else:
+        #         herd.speed = 0.0
+        #         herd.update()
 
     # Old basic herd behaviors
     def _wander(self, herd: Herd):
@@ -161,25 +170,34 @@ class MathematicalFlock(Behavior):
 
     def _flocking(self, dt: float):
         herd: Herd
-        states = np.array([]).reshape((0, 4))
+        agent_states = np.array([]).reshape((0, 4))
         for herd in self._herds:
             # Grab and put all poses into a matrix
-            states = np.vstack((states, np.hstack((herd.pose, herd.velocity))))
+            agent_states = np.vstack(
+                (agent_states, np.hstack((herd.pose, herd.velocity))))
+
+        obstacle: Obstacle
+        obs_states = np.array([]).reshape((0, 2))
+        for obstacle in self._obstacles:
+            obs_states = np.vstack((obs_states, obstacle.pose.reshape((1, 2))))
 
         u = np.zeros((len(self._herds), 2))
-        alpha_adjacency_matrix = self._get_adjacency_matrix(states)
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states)
+        beta_adjacency_matrix = self._get_beta_adjacency_matrix(agent_states,
+                                                                obs_states,
+                                                                r=1000)
         mouse_pose = pygame.mouse.get_pos()
 
         for idx, herd in enumerate(self._herds):
-            qi = states[idx, :2]
-            pi = states[idx, 2:]
+            qi = agent_states[idx, :2]
+            pi = agent_states[idx, 2:]
 
             # Alpha agent
             u_alpha = 0
             neighbor_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_idxs) > 1:
-                qj = states[neighbor_idxs, :2]
-                pj = states[neighbor_idxs, 2:]
+                qj = agent_states[neighbor_idxs, :2]
+                pj = agent_states[neighbor_idxs, 2:]
 
                 alpha_grad = self._gradient_term(
                     c=MathematicalFlock.C2_alpha,
@@ -194,6 +212,10 @@ class MathematicalFlock(Behavior):
 
             # Beta agent
             u_beta = 0
+            obstacle_idxs = beta_adjacency_matrix[idx]
+            if sum(obstacle_idxs) > 0:
+                # Create beta agent
+                beta_agent_state = obstacle.induce_beta_agent(herd)
 
             # Gamma agent
             u_gamma = self._group_objective_term(
@@ -207,15 +229,15 @@ class MathematicalFlock(Behavior):
             u[idx] = u_alpha + u_beta + u_gamma
 
         qdot = u
-        states[:, 2:] += qdot * 0.1
-        pdot = states[:, 2:]
-        states[:, :2] += pdot * 0.1
+        agent_states[:, 2:] += qdot * 0.1
+        pdot = agent_states[:, 2:]
+        agent_states[:, :2] += pdot * 0.1
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
-            # herd.state = states[idx, :]
-            herd.velocity = states[idx, 2:]
-            herd.pose = states[idx, :2]
+            # herd.state = agent_states[idx, :]
+            herd.velocity = agent_states[idx, 2:]
+            herd.pose = agent_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray):
@@ -236,8 +258,15 @@ class MathematicalFlock(Behavior):
         # Group objective term
         return -c1 * MathematicalFlock.MathUtils.sigma_1(qi - pos) - c2 * (pi)
 
-    def _get_adjacency_matrix(self, agents: np.ndarray, r=RANGE):
-        return np.array([np.linalg.norm(agents[i, :2]-agents[:, :2], axis=-1) <= r for i in range(len(agents))])
+    def _get_alpha_adjacency_matrix(self, agents: np.ndarray, r=RANGE) -> np.ndarray:
+        return np.array([np.linalg.norm(agents[i, :2]-agents[:, :2], axis=-1) <= r
+                         for i in range(len(agents))])
+
+    def _get_beta_adjacency_matrix(self, agents: np.ndarray,
+                                   obstacles: np.ndarray, r=RANGE) -> np.ndarray:
+        adj_matrix = []
+        return np.array([np.linalg.norm(agents[i, :2]-obstacles, axis=-1) <= r
+                         for i in range(len(agents))])
 
     def _get_a_ij(self, q_i, q_js, range):
         r_alpha = MathematicalFlock.MathUtils.sigma_norm([range])

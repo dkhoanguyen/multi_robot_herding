@@ -1,8 +1,11 @@
 import pygame
 import numpy as np
 import matplotlib.pyplot as plt
+
 from entity.herd import Herd
 from entity.shepherd import Shepherd
+from entity.obstacle import Hyperplane, Sphere
+
 from behavior.flock import Flock
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.leader_follower import LeaderFollower, LeaderFollowerType
@@ -20,7 +23,7 @@ class MultiAgent:
         p_dot = self.agents[:,2:]
         self.agents[:,:2] += p_dot * self.dt
 
-NUMBER_OF_AGENTS = 50
+NUMBER_OF_AGENTS = 1
 multi_agent_system = MultiAgent(number=NUMBER_OF_AGENTS)
 
 def main():
@@ -33,7 +36,7 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 4
+    max_v = 2
 
     # rand_x = np.linspace(200, 800, num_cows)
     # rand_y = np.linspace(200, 500, num_cows)
@@ -78,6 +81,29 @@ def main():
                     min_v=min_v,
                     max_v=max_v)
         cows.append(cow)
+
+    # Create obstacles
+    obstacles = []
+    # Environment boundaries
+    ak = np.array([0,1])
+    yk = np.array([0,0])
+    lower_boundary = Hyperplane(ak,yk)
+    obstacles.append(lower_boundary)
+
+    ak = np.array([1,0])
+    yk = np.array([0,0])
+    left_boundary = Hyperplane(ak,yk)
+    obstacles.append(left_boundary)
+
+    ak = np.array([-1,0])
+    yk = np.array([1,0])
+    right_boundary = Hyperplane(ak,yk)
+    obstacles.append(right_boundary)
+
+    ak = np.array([0,-1])
+    yk = np.array([0,1])
+    upper_boundary = Hyperplane(ak,yk)
+    obstacles.append(upper_boundary)
 
     # # Create shepherds
     # num_shepherds = 5
@@ -138,6 +164,10 @@ def main():
     for cow in cows:
         flock.add_member(cow)
         math_flock.add_herd(cow)
+    
+    # Add obstacles
+    for obstacle in obstacles:
+        math_flock.add_obstacle(obstacle)
 
     # # Add shepherd
     # for shepherd in shepherds:
