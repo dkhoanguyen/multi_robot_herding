@@ -12,27 +12,9 @@ from behavior.mathematical_flock import MathematicalFlock
 from behavior.leader_follower import LeaderFollower, LeaderFollowerType
 from environment.environment import Environment
 
-
-class MultiAgent:
-    def __init__(self, number, sample_time=0.1):
-        self.dt = sample_time
-        self.agents = np.random.randint(50, 700, (number, 2)).astype('float')
-        self.agents = np.hstack([self.agents, np.zeros((number, 2))])
-
-    def update_state(self, u):
-        q_dot = u
-        self.agents[:, 2:] += q_dot * self.dt
-        p_dot = self.agents[:, 2:]
-        self.agents[:, :2] += p_dot * self.dt
-
-
-NUMBER_OF_AGENTS = 30
-multi_agent_system = MultiAgent(number=NUMBER_OF_AGENTS)
-
-
 def main():
     # Create cows
-    num_cows = 100
+    NUMBER_OF_AGENTS = 100
     cows = []
     # Cow's properties
     local_perception = 200.0
@@ -73,10 +55,12 @@ def main():
     #                 max_v=max_v)
     #     cows.append(cow)
 
+    agents = np.random.randint(50, 700, (NUMBER_OF_AGENTS, 2)).astype('float')
+
     for i in range(NUMBER_OF_AGENTS):
         angle = np.pi * (2 * np.random.rand() - 1)
         vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-        cow = Herd(pose=multi_agent_system.agents[i, :2],
+        cow = Herd(pose=agents[i, :2],
                    velocity=vel,
                    local_perception=local_perception,
                    local_boundary=local_boundary,
@@ -91,23 +75,52 @@ def main():
     # Environment boundaries
     ak = np.array([0, 1])
     yk = np.array([0, 0])
-    lower_boundary = Hyperplane(ak, yk)
-    obstacles.append(lower_boundary)
+    def display_upper_boundary(screen):
+        pygame.draw.rect(screen, pygame.Color(
+            'slate gray'), (0, 0, params.SCREEN_SIZE[0], 10), 0)
+    upper_boundary = Hyperplane(ak, yk, display_upper_boundary)
+    obstacles.append(upper_boundary)
 
     ak = np.array([1, 0])
     yk = np.array([0, 0])
-    left_boundary = Hyperplane(ak, yk)
+    def display_left_boundary(screen):
+        pygame.draw.rect(screen,
+                         pygame.Color('slate gray'),
+                         (0, 0, 10, params.SCREEN_SIZE[1]), 0)
+    left_boundary = Hyperplane(ak, yk, display_left_boundary)
     obstacles.append(left_boundary)
 
     ak = np.array([1, 0])
-    yk = np.array([1279,0])
-    right_boundary = Hyperplane(ak, yk)
+    yk = np.array([1279, 0])
+    def display_right_boundary(screen):
+        pygame.draw.rect(screen,
+                         pygame.Color('slate gray'),
+                         (params.SCREEN_SIZE[0] - 10, 0,
+                          params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
+
+    right_boundary = Hyperplane(ak, yk, display_right_boundary)
     obstacles.append(right_boundary)
 
     ak = np.array([0, 1])
     yk = np.array([0, 719])
-    upper_boundary = Hyperplane(ak, yk)
-    obstacles.append(upper_boundary)
+    def display_lower_boundary(screen):
+        pygame.draw.rect(screen,
+                         pygame.Color('slate gray'),
+                         (0, params.SCREEN_SIZE[1] - 10,
+                             params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
+    lower_boundary = Hyperplane(ak, yk, display_lower_boundary)
+    obstacles.append(lower_boundary)
+
+    # Spherial obstacles
+    yk = np.array([800,250])
+    Rk = 100
+    circle1 = Sphere(yk,Rk)
+    obstacles.append(circle1)
+
+    yk = np.array([800,500])
+    Rk = 100
+    circle2 = Sphere(yk,Rk)
+    obstacles.append(circle2)
 
     # # Create shepherds
     # num_shepherds = 5
@@ -195,6 +208,8 @@ def main():
         env.add_entity(cow)
     # for shepherd in shepherds:
     #     env.add_entity(shepherd)
+    for obstacle in obstacles:
+        env.add_entity(obstacle)
 
     # # Add behavior models
     # env.add_behaviour(flock)

@@ -53,12 +53,12 @@ class Environment(object):
     def add_entity(self, entity: Entity):
         self._entities.append(entity)
 
-        # Added pymunk physic elements
-        addables = entity.get_pymunk_addables()
-        for key, addable in addables.items():
-            self._space.add(addable)
-            if key == 'body':
-                self._bodies.append(addable)
+        # # Added pymunk physic elements
+        # addables = entity.get_pymunk_addables()
+        # for key, addable in addables.items():
+        #     self._space.add(addable)
+        #     if key == 'body':
+        #         self._bodies.append(addable)
 
     def add_behaviour(self, behavior: Behavior):
         self._behaviors.append(behavior)
@@ -104,19 +104,6 @@ class Environment(object):
 
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)
-        pygame.draw.rect(self._screen, pygame.Color(
-            'slate gray'), (0, 0, params.SCREEN_SIZE[0], 10), 0)
-        pygame.draw.rect(self._screen,
-                         pygame.Color('slate gray'),
-                         (0, params.SCREEN_SIZE[1] - 10,
-                             params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
-        pygame.draw.rect(self._screen,
-                         pygame.Color('slate gray'),
-                         (0, 0, 10, params.SCREEN_SIZE[1]), 0)
-        pygame.draw.rect(self._screen,
-                         pygame.Color('slate gray'),
-                         (params.SCREEN_SIZE[0] - 10, 0, 
-                          params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
         self.display()
         pygame.display.flip()
         self._clock.tick(params.FPS)

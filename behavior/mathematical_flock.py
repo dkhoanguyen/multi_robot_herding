@@ -16,7 +16,7 @@ class MathematicalFlock(Behavior):
     C2_alpha = 2 * np.sqrt(C1_alpha)
     C1_beta = 20
     C2_beta = 2 * np.sqrt(C1_beta)
-    C1_gamma = 2
+    C1_gamma = 5
     C2_gamma = 0.2 * np.sqrt(C1_gamma)
 
     ALPHA_RANGE = 40
@@ -91,23 +91,23 @@ class MathematicalFlock(Behavior):
         self._obstacles.append(obstacle)
 
     def update(self, dt: float):
-        # self._flocking(dt)
-        if time.time() - self._sample_t > 3.0:
-            self._pause_agents = np.random.random_integers(low=0, high=len(
-                self._herds) - 1, size=(round(len(self._herds)/2),))
-            self._sample_t = time.time()
+        self._flocking(dt)
+        # if time.time() - self._sample_t > 3.0:
+        #     self._pause_agents = np.random.random_integers(low=0, high=len(
+        #         self._herds) - 1, size=(round(len(self._herds)/2),))
+        #     self._sample_t = time.time()
 
-        herd: Herd
-        for idx, herd in enumerate(self._herds):
-            if idx in self._pause_agents:
-                herd.speed = 1
-                self._wander(herd)
-                self._separate(herd, herd.personal_space)
-                self._old_remain_in_screen(herd)
-                herd.update()
-            else:
-                herd.speed = 0.0
-                herd.update()
+        # herd: Herd
+        # for idx, herd in enumerate(self._herds):
+        #     if idx in self._pause_agents:
+        #         herd.speed = 1
+        #         self._wander(herd)
+        #         self._separate(herd, herd.personal_space)
+        #         self._old_remain_in_screen(herd)
+        #         herd.update()
+        #     else:
+        #         herd.speed = 0.0
+        #         herd.update()
 
     # Old basic herd behaviors
     def _wander(self, herd: Herd):

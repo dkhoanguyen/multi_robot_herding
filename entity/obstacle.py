@@ -9,6 +9,13 @@ from utils.math_utils import *
 
 class Obstacle(Entity):
 
+    def __init__(self, display_func=None):
+        self._display_func = display_func
+
+    def display(self, screen: pygame.Surface):
+        if self._display_func is not None:
+            self._display_func(screen)
+
     @abstractmethod
     def in_entity_radius(self, qi: np.ndarray, r: float):
         pass
@@ -20,7 +27,9 @@ class Obstacle(Entity):
 
 class Hyperplane(Obstacle):
     def __init__(self, ak: np.ndarray,
-                 yk: np.ndarray):
+                 yk: np.ndarray,
+                 display_func=None):
+        super().__init__(display_func=display_func)
         self._ak = ak.reshape((2, 1))
         self._yk = yk.reshape((2, 1))
         self._P = np.eye(2) - self._ak @ self._ak.transpose()
@@ -41,6 +50,26 @@ class Hyperplane(Obstacle):
 
 class Sphere(Obstacle):
     def __init__(self, yk: np.ndarray,
-                 R: float):
-        self._yk = yk
-        self._R = R
+                 Rk: float):
+        self._yk = yk.reshape((2, 1))
+        self._Rk = Rk
+
+    def display(self, screen: pygame.Surface):
+        pygame.draw.circle(screen, pygame.Color(
+            'slate gray'), center=self._yk.transpose()[0], radius=self._Rk)
+
+    def in_entity_radius(self, qi: np.ndarray, r: float):
+        # Project entity posit
+        return np.linalg.norm(self._yk - qi.reshape((2, 1))) <= r + self._Rk
+
+    def induce_beta_agent(self, alpha_agent: Entity) -> np.ndarray:
+        qi = alpha_agent.pose.reshape((2, 1))
+        pi = alpha_agent.velocity.reshape((2, 1))
+
+        mu = self._Rk / np.linalg.norm(qi - self._yk)
+        ak = (qi - self._yk)/np.linalg.norm(qi - self._yk)
+        P = np.eye(2) - ak @ ak.transpose()
+
+        qik = mu * qi + (1 - mu) * self._yk
+        pik = mu * P @ pi
+        return np.hstack((qik.transpose(), pik.transpose())).reshape(4,)
