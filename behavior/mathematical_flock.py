@@ -14,10 +14,15 @@ from entity.obstacle import Obstacle
 class MathematicalFlock(Behavior):
     C1_alpha = 3
     C2_alpha = 2 * np.sqrt(C1_alpha)
-    C1_gamma = 5
+    C1_beta = 20
+    C2_beta = 2 * np.sqrt(C1_beta)
+    C1_gamma = 2
     C2_gamma = 0.2 * np.sqrt(C1_gamma)
-    RANGE = 100
-    DISTANCE = 100
+
+    ALPHA_RANGE = 30
+    ALPHA_DISTANCE = 30
+    BETA_RANGE = 30
+    BETA_DISTANCE = 30
 
     class MathUtils():
 
@@ -68,13 +73,10 @@ class MathematicalFlock(Behavior):
             else:
                 return np.array(v) / n
 
-    def __init__(self, range=RANGE, distance=DISTANCE):
+    def __init__(self):
         self._herds = []
         self._shepherds = []
         self._obstacles = []
-
-        self._range = range
-        self._distance = distance
 
         self._sample_t = 0
         self._pause_agents = np.zeros(1)
@@ -176,15 +178,11 @@ class MathematicalFlock(Behavior):
             agent_states = np.vstack(
                 (agent_states, np.hstack((herd.pose, herd.velocity))))
 
-        obstacle: Obstacle
-        obs_states = np.array([]).reshape((0, 2))
-        for obstacle in self._obstacles:
-            obs_states = np.vstack((obs_states, obstacle.pose.reshape((1, 2))))
-
         u = np.zeros((len(self._herds), 2))
-        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states)
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states,
+                                                                  r=MathematicalFlock.ALPHA_RANGE)
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(agent_states,
-                                                                obs_states,
+                                                                self._obstacles,
                                                                 r=1000)
         mouse_pose = pygame.mouse.get_pos()
 
@@ -200,14 +198,15 @@ class MathematicalFlock(Behavior):
                 pj = agent_states[neighbor_idxs, 2:]
 
                 alpha_grad = self._gradient_term(
-                    c=MathematicalFlock.C2_alpha,
-                    qi=qi,
-                    qj=qj)
+                    c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
+                    r=MathematicalFlock.ALPHA_RANGE,
+                    d=MathematicalFlock.ALPHA_DISTANCE)
 
                 alpha_consensus = self._velocity_consensus_term(
                     c=MathematicalFlock.C2_alpha,
                     qi=qi, qj=qj,
-                    pi=pi, pj=pj)
+                    pi=pi, pj=pj,
+                    r=MathematicalFlock.ALPHA_RANGE)
                 u_alpha = alpha_grad + alpha_consensus
 
             # Beta agent
@@ -215,7 +214,26 @@ class MathematicalFlock(Behavior):
             obstacle_idxs = beta_adjacency_matrix[idx]
             if sum(obstacle_idxs) > 0:
                 # Create beta agent
-                beta_agent_state = obstacle.induce_beta_agent(herd)
+                obs_in_radius = np.where(beta_adjacency_matrix[idx] > 0)
+                beta_agents = np.array([]).reshape((0, 4))
+                for obs_idx in obs_in_radius[0]:
+                    beta_agent = self._obstacles[obs_idx].induce_beta_agent(
+                        herd)
+                    beta_agents = np.vstack((beta_agents, beta_agent))
+
+                qik = beta_agents[:, :2]
+                pik = beta_agents[:, 2:]
+                beta_grad = self._gradient_term(
+                    c=MathematicalFlock.C2_beta, qi=qi, qj=qik,
+                    r=MathematicalFlock.BETA_RANGE,
+                    d=MathematicalFlock.BETA_DISTANCE)
+
+                beta_consensus = self._velocity_consensus_term(
+                    c=MathematicalFlock.C2_beta,
+                    qi=qi, qj=qik,
+                    pi=pi, pj=pik,
+                    r=MathematicalFlock.BETA_RANGE)
+                u_beta = beta_grad + beta_consensus
 
             # Gamma agent
             u_gamma = self._group_objective_term(
@@ -228,7 +246,9 @@ class MathematicalFlock(Behavior):
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma
 
+        qdot = np.clip(u, a_min=-5.0, a_max=5.0)
         qdot = u
+
         agent_states[:, 2:] += qdot * 0.1
         pdot = agent_states[:, 2:]
         agent_states[:, :2] += pdot * 0.1
@@ -240,17 +260,19 @@ class MathematicalFlock(Behavior):
             herd.pose = agent_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
-    def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray):
+    def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
+                       r: float, d: float):
         n_ij = self._get_n_ij(qi, qj)
         return c * np.sum(MathematicalFlock.MathUtils.phi_alpha(
             MathematicalFlock.MathUtils.sigma_norm(qj-qi),
-            r=MathematicalFlock.RANGE,
-            d=MathematicalFlock.DISTANCE)*n_ij, axis=0)
+            r=r,
+            d=d)*n_ij, axis=0)
 
     def _velocity_consensus_term(self, c: float, qi: np.ndarray,
-                                 qj: np.ndarray, pi: np.ndarray, pj: np.ndarray):
+                                 qj: np.ndarray, pi: np.ndarray, 
+                                 pj: np.ndarray, r: float):
         # Velocity consensus term
-        a_ij = self._get_a_ij(qi, qj, self._range)
+        a_ij = self._get_a_ij(qi, qj, r)
         return c * np.sum(a_ij*(pj-pi), axis=0)
 
     def _group_objective_term(self, c1: float, c2: float,
@@ -258,15 +280,20 @@ class MathematicalFlock(Behavior):
         # Group objective term
         return -c1 * MathematicalFlock.MathUtils.sigma_1(qi - pos) - c2 * (pi)
 
-    def _get_alpha_adjacency_matrix(self, agents: np.ndarray, r=RANGE) -> np.ndarray:
+    def _get_alpha_adjacency_matrix(self, agents: np.ndarray, r: float) -> np.ndarray:
         return np.array([np.linalg.norm(agents[i, :2]-agents[:, :2], axis=-1) <= r
                          for i in range(len(agents))])
 
     def _get_beta_adjacency_matrix(self, agents: np.ndarray,
-                                   obstacles: np.ndarray, r=RANGE) -> np.ndarray:
-        adj_matrix = []
-        return np.array([np.linalg.norm(agents[i, :2]-obstacles, axis=-1) <= r
-                         for i in range(len(agents))])
+                                   obstacles: list, r: float) -> np.ndarray:
+        adj_matrix = np.array([]).reshape((0, len(obstacles)))
+        for i in range(len(agents)):
+            adj_vec = []
+            obstacle: Obstacle
+            for obstacle in obstacles:
+                adj_vec.append(obstacle.in_entity_radius(agents[i, :2], r=r))
+            adj_matrix = np.vstack((adj_matrix, np.array(adj_vec)))
+        return adj_matrix
 
     def _get_a_ij(self, q_i, q_js, range):
         r_alpha = MathematicalFlock.MathUtils.sigma_norm([range])

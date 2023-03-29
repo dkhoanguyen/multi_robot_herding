@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+from app import params
 import matplotlib.pyplot as plt
 
 from entity.herd import Herd
@@ -23,12 +24,12 @@ class MultiAgent:
         p_dot = self.agents[:,2:]
         self.agents[:,:2] += p_dot * self.dt
 
-NUMBER_OF_AGENTS = 1
+NUMBER_OF_AGENTS = 50
 multi_agent_system = MultiAgent(number=NUMBER_OF_AGENTS)
 
 def main():
     # Create cows
-    num_cows = 10
+    num_cows = 100
     cows = []
     # Cow's properties
     local_perception = 200.0
@@ -36,7 +37,7 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 2
+    max_v = 10
 
     # rand_x = np.linspace(200, 800, num_cows)
     # rand_y = np.linspace(200, 500, num_cows)
@@ -96,12 +97,12 @@ def main():
     obstacles.append(left_boundary)
 
     ak = np.array([-1,0])
-    yk = np.array([1,0])
+    yk = np.array([params.SCREEN_SIZE[0],0])
     right_boundary = Hyperplane(ak,yk)
     obstacles.append(right_boundary)
 
     ak = np.array([0,-1])
-    yk = np.array([0,1])
+    yk = np.array([0,params.SCREEN_SIZE[1]])
     upper_boundary = Hyperplane(ak,yk)
     obstacles.append(upper_boundary)
 
@@ -199,6 +200,7 @@ def main():
     
     while True:
         env.run_once()
+        env.render()
 
 
 if __name__ == '__main__':

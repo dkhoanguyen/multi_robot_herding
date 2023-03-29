@@ -23,7 +23,7 @@ class Environment(object):
         self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
         self._running = True
         self._clock = pygame.time.Clock()
-        self._draw_options = pymunk.pygame_util.DrawOptions(self._screen)
+        # self._draw_options = pymunk.pygame_util.DrawOptions(self._screen)
 
         self._behaviors = []
         self._entities = []
@@ -102,9 +102,9 @@ class Environment(object):
                 self.running = False
 
         self.update()
-        self._space.step(1/params.FPS)
+
+    def render(self):
         self.display()
-        # self._space.debug_draw(self._draw_options)
         pygame.display.flip()
         self._clock.tick(params.FPS)
         pygame.display.set_caption("fps: " + str(self._clock.get_fps()))
