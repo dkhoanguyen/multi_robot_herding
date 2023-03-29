@@ -40,4 +40,7 @@ class Hyperplane(Obstacle):
 
 
 class Sphere(Obstacle):
-    pass
+    def __init__(self, yk: np.ndarray,
+                 R: float):
+        self._yk = yk
+        self._R = R

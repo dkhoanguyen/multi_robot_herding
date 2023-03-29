@@ -94,7 +94,6 @@ class Environment(object):
             pygame.display.flip()
 
     def run_once(self):
-        self._screen.fill(params.SIMULATION_BACKGROUND)
         motion_event, click_event = None, None
 
         for event in pygame.event.get():
@@ -104,6 +103,20 @@ class Environment(object):
         self.update()
 
     def render(self):
+        self._screen.fill(params.SIMULATION_BACKGROUND)
+        pygame.draw.rect(self._screen, pygame.Color(
+            'slate gray'), (0, 0, params.SCREEN_SIZE[0], 10), 0)
+        pygame.draw.rect(self._screen,
+                         pygame.Color('slate gray'),
+                         (0, params.SCREEN_SIZE[1] - 10,
+                             params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
+        pygame.draw.rect(self._screen,
+                         pygame.Color('slate gray'),
+                         (0, 0, 10, params.SCREEN_SIZE[1]), 0)
+        pygame.draw.rect(self._screen,
+                         pygame.Color('slate gray'),
+                         (params.SCREEN_SIZE[0] - 10, 0, 
+                          params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
         self.display()
         pygame.display.flip()
         self._clock.tick(params.FPS)
