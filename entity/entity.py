@@ -28,7 +28,7 @@ class Entity(pygame.sprite.Sprite):
             pose = np.zeros(2)
         if velocity is None:
             velocity = np.zeros(2)
-        self._image_path = "/Users/khoanguyen/Projects/mrp_sims/assets/img/" + image_path
+        self._image_path = "/Users/khoanguyen/Projects/research/mrp_sims/assets/img/" + image_path
         self.base_image = pygame.image.load(self._image_path)
         self.rect = self.base_image.get_rect()
         self.image = self.base_image

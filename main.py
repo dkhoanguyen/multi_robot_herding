@@ -12,9 +12,10 @@ from behavior.mathematical_flock import MathematicalFlock
 from behavior.leader_follower import LeaderFollower, LeaderFollowerType
 from environment.environment import Environment
 
+
 def main():
     # Create cows
-    NUMBER_OF_AGENTS = 100
+    NUMBER_OF_AGENTS = 50
     cows = []
     # Cow's properties
     local_perception = 200.0
@@ -75,6 +76,7 @@ def main():
     # Environment boundaries
     ak = np.array([0, 1])
     yk = np.array([0, 0])
+
     def display_upper_boundary(screen):
         pygame.draw.rect(screen, pygame.Color(
             'slate gray'), (0, 0, params.SCREEN_SIZE[0], 10), 0)
@@ -83,6 +85,7 @@ def main():
 
     ak = np.array([1, 0])
     yk = np.array([0, 0])
+
     def display_left_boundary(screen):
         pygame.draw.rect(screen,
                          pygame.Color('slate gray'),
@@ -92,6 +95,7 @@ def main():
 
     ak = np.array([1, 0])
     yk = np.array([1279, 0])
+
     def display_right_boundary(screen):
         pygame.draw.rect(screen,
                          pygame.Color('slate gray'),
@@ -103,6 +107,7 @@ def main():
 
     ak = np.array([0, 1])
     yk = np.array([0, 719])
+
     def display_lower_boundary(screen):
         pygame.draw.rect(screen,
                          pygame.Color('slate gray'),
@@ -112,40 +117,50 @@ def main():
     obstacles.append(lower_boundary)
 
     # Spherial obstacles
-    yk = np.array([800,250])
+    yk = np.array([800, 150])
     Rk = 100
-    circle1 = Sphere(yk,Rk)
+    circle1 = Sphere(yk, Rk)
     obstacles.append(circle1)
 
-    yk = np.array([800,500])
+    yk = np.array([800, 500])
     Rk = 100
-    circle2 = Sphere(yk,Rk)
+    circle2 = Sphere(yk, Rk)
     obstacles.append(circle2)
 
-    # # Create shepherds
-    # num_shepherds = 5
-    # shepherds = []
-    # # Shepherd's properties
-    # local_perception = 200.0
-    # local_boundary = 30.0
-    # personal_space = 60.0
-    # mass = 20.0
-    # min_v = 0.0
-    # max_v = 5.0
+    yk = np.array([800, 250])
+    Rk = 100
+    circle3 = Sphere(yk, Rk)
+    obstacles.append(circle3)
 
-    # pos = np.array([500, 500])
-    # angle = 0
-    # vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    # # Leader shepherds
-    # leader = Shepherd(pose=pos,
-    #                   velocity=vel,
-    #                   local_perception=local_perception,
-    #                   local_boundary=local_boundary,
-    #                   mass=mass,
-    #                   min_v=min_v,
-    #                   max_v=max_v)
+    yk = np.array([800, 600])
+    Rk = 100
+    circle4 = Sphere(yk, Rk)
+    obstacles.append(circle4)
 
-    # shepherds.append(leader)
+    # Create shepherds
+    num_shepherds = 5
+    shepherds = []
+    # Shepherd's properties
+    local_perception = 200.0
+    local_boundary = 30.0
+    personal_space = 60.0
+    mass = 20.0
+    min_v = 0.0
+    max_v = 3.0
+
+    pos = np.array([500, 500])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    # Leader shepherds
+    leader = Shepherd(pose=pos,
+                      velocity=vel,
+                      local_perception=local_perception,
+                      local_boundary=local_boundary,
+                      mass=mass,
+                      min_v=min_v,
+                      max_v=max_v)
+
+    shepherds.append(leader)
 
     # # Follower shepherds
     # rand_pos = np.linspace((200), (200, 800), num_shepherds)
@@ -162,41 +177,45 @@ def main():
     #                         max_v=max_v)
     #     shepherds.append(shepherd)
 
-    # Create behaviors
-    # Flock properties
-    alignment_weight = 5.0
-    cohesion_weight = 0.05
-    separation_weight = 20.0
-    fleeing_weight = 5.0
-    flock = Flock(
-        alignment_weight=alignment_weight,
-        cohesion_weight=cohesion_weight,
-        separation_weight=separation_weight,
-        fleeing_weight=fleeing_weight)
+    # # Create behaviors
+    # # Flock properties
+    # alignment_weight = 5.0
+    # cohesion_weight = 0.05
+    # separation_weight = 20.0
+    # fleeing_weight = 5.0
+    # flock = Flock(
+    #     alignment_weight=alignment_weight,
+    #     cohesion_weight=cohesion_weight,
+    #     separation_weight=separation_weight,
+    #     fleeing_weight=fleeing_weight)
 
     # Mathematical flock
-    math_flock = MathematicalFlock()
+    follow_cursor = False
+    initial_consensus = np.array([500, 500])
+    math_flock = MathematicalFlock(
+        follow_cursor=follow_cursor,
+        initial_consensus=initial_consensus)
 
     # Add cows
     for cow in cows:
-        flock.add_member(cow)
+        # flock.add_member(cow)
         math_flock.add_herd(cow)
 
     # Add obstacles
     for obstacle in obstacles:
         math_flock.add_obstacle(obstacle)
 
-    # # Add shepherd
-    # for shepherd in shepherds:
-    #     math_flock.add_shepherd(shepherd)
+    # Add shepherd
+    for shepherd in shepherds:
+        math_flock.add_shepherd(shepherd)
 
-    # # Formation
-    # formation = LeaderFollower(
-    #     LeaderFollowerType.COLUMN,
-    #     formation_weight=1.0,
-    #     spacing=40.0)
+    # Formation
+    formation = LeaderFollower(
+        LeaderFollowerType.COLUMN,
+        formation_weight=1.0,
+        spacing=40.0)
 
-    # formation.add_leader(shepherds[0])
+    formation.add_leader(shepherds[0])
     # for i in range(1, num_shepherds):
     #     formation.add_follower(shepherds[i])
 
@@ -206,15 +225,15 @@ def main():
     # Add entities
     for cow in cows:
         env.add_entity(cow)
-    # for shepherd in shepherds:
-    #     env.add_entity(shepherd)
+    for shepherd in shepherds:
+        env.add_entity(shepherd)
     for obstacle in obstacles:
         env.add_entity(obstacle)
 
     # # Add behavior models
     # env.add_behaviour(flock)
     env.add_behaviour(math_flock)
-    # # env.add_behaviour(formation)
+    env.add_behaviour(formation)
 
     while True:
         env.run_once()

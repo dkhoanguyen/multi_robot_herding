@@ -82,7 +82,7 @@ class LeaderFollower(Behavior):
         self._leader.follow_mouse()
         self.remain_in_screen(self._leader)
 
-    def update(self, motion_event, click_event):
+    def update(self, dt):
         self.init_formation()
         self.maintain_formation()
 

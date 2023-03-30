@@ -73,13 +73,17 @@ class MathematicalFlock(Behavior):
             else:
                 return np.array(v) / n
 
-    def __init__(self):
+    def __init__(self, follow_cursor: bool,
+                        initial_consensus: np.ndarray):
         self._herds = []
         self._shepherds = []
         self._obstacles = []
 
         self._sample_t = 0
         self._pause_agents = np.zeros(1)
+
+        self._follow_cursor = follow_cursor
+        self._consensus_pose = initial_consensus
 
     def add_herd(self, herd: Herd):
         self._herds.append(herd)
@@ -89,6 +93,9 @@ class MathematicalFlock(Behavior):
 
     def add_obstacle(self, obstacle: Obstacle):
         self._obstacles.append(obstacle)
+
+    def set_consensus(self, consensus: np.ndarray):
+        self._consensus = consensus
 
     def update(self, dt: float):
         self._flocking(dt)
@@ -183,7 +190,10 @@ class MathematicalFlock(Behavior):
                                                                   r=MathematicalFlock.ALPHA_RANGE)
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(agent_states,
                                                                 self._obstacles,
-                                                                r=2000)
+                                                                r=100)
+        delta_adjacency_matrix = self._get_delta_adjacency_matrix(agent_states,
+                                                                  self._shepherds,
+                                                                  r=2000)
         mouse_pose = pygame.mouse.get_pos()
 
         for idx, herd in enumerate(self._herds):
@@ -236,15 +246,41 @@ class MathematicalFlock(Behavior):
                 u_beta = beta_grad + beta_consensus
 
             # Gamma agent
+            target = self._consensus_pose
+            if self._follow_cursor:
+                target = np.array(mouse_pose)
+
             u_gamma = self._group_objective_term(
                 c1=MathematicalFlock.C1_gamma,
                 c2=MathematicalFlock.C2_gamma,
-                pos=np.array(mouse_pose),
+                pos=target,
                 qi=qi,
                 pi=pi)
-            
+
             # Delta agent (shepherd)
             u_delta = 0
+            delta_idxs = delta_adjacency_matrix[idx]
+            if sum(delta_idxs) > 0:
+                # Create delta_agent
+                delta_in_radius = np.where(delta_adjacency_matrix[idx] > 0)
+                delta_agents = np.array([]).reshape((0, 4))
+                for del_idx in delta_in_radius[0]:
+                    delta_agent = self._shepherds[del_idx].induce_delta_agent(
+                        herd)
+                    delta_agents = np.vstack((delta_agents, delta_agent))
+
+                qid = delta_agents[:, :2]
+                pid = delta_agents[:, 2:]
+                delta_grad = self._gradient_term(
+                    c=MathematicalFlock.C2_beta, qi=qi, qj=qid,
+                    r=MathematicalFlock.BETA_RANGE,
+                    d=MathematicalFlock.BETA_DISTANCE)
+                delta_consensus = self._velocity_consensus_term(
+                    c=MathematicalFlock.C2_beta,
+                    qi=qi, qj=qid,
+                    pi=pi, pj=pid,
+                    r=MathematicalFlock.BETA_RANGE)
+                u_delta = delta_grad + delta_consensus
 
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
@@ -272,7 +308,7 @@ class MathematicalFlock(Behavior):
             d=d)*n_ij, axis=0)
 
     def _velocity_consensus_term(self, c: float, qi: np.ndarray,
-                                 qj: np.ndarray, pi: np.ndarray, 
+                                 qj: np.ndarray, pi: np.ndarray,
                                  pj: np.ndarray, r: float):
         # Velocity consensus term
         a_ij = self._get_a_ij(qi, qj, r)
@@ -295,6 +331,18 @@ class MathematicalFlock(Behavior):
             obstacle: Obstacle
             for obstacle in obstacles:
                 adj_vec.append(obstacle.in_entity_radius(agents[i, :2], r=r))
+            adj_matrix = np.vstack((adj_matrix, np.array(adj_vec)))
+        return adj_matrix
+
+    def _get_delta_adjacency_matrix(self, agents: np.ndarray,
+                                    delta_agents: list, r: float) -> np.ndarray:
+        adj_matrix = np.array([]).reshape((0, len(delta_agents)))
+        for i in range(len(agents)):
+            adj_vec = []
+            delta_agent: Shepherd
+            for delta_agent in delta_agents:
+                adj_vec.append(
+                    delta_agent.in_entity_radius(agents[i, :2], r=r))
             adj_matrix = np.vstack((adj_matrix, np.array(adj_vec)))
         return adj_matrix
 
