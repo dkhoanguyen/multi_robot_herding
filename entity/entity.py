@@ -168,13 +168,9 @@ class Autonomous(Entity):
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
-        if debug:
-            pygame.draw.line(
-                screen, pygame.Color("red"),
-                tuple(self.pose), tuple(self.pose + 2 * self.velocity))
-            pygame.draw.line(
-                screen, pygame.Color("blue"), tuple(self.pose),
-                tuple(self.pose + 30 * self._steering))
+        pygame.draw.line(
+            screen, pygame.Color("yellow"),
+            tuple(self.pose), tuple(self.pose + 2 * self.velocity))
         self.reset_steering()
 
     def reset_steering(self):

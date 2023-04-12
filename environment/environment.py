@@ -70,7 +70,7 @@ class Environment(object):
         behavior: Behavior
         # motion_event, click_event = None, None
         for behavior in self._behaviors:
-            behavior.update(1/params.FPS)
+            behavior.update(self._screen)
 
         # for body in self._bodies:
         #     self._space.reindex_shapes_for_body(body)

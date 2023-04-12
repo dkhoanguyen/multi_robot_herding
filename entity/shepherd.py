@@ -1,6 +1,9 @@
 # !/usr/bin/python3
+
 import pygame
 import numpy as np
+from spatialmath import SE2
+from spatialmath.base import *
 
 from entity.entity import Autonomous, Entity
 from utils.math_utils import *
@@ -28,14 +31,19 @@ class Shepherd(Autonomous):
         self._local_boundary = local_boundary
 
         self._r = 100
+        self._consensus_r = 200
+
+        self._consensus_point = np.zeros((2,))
 
     def follow_mouse(self):
         mouse_pose = pygame.mouse.get_pos()
         self.move_to_pose(np.array(mouse_pose))
 
     def display(self, screen: pygame.Surface, debug=False):
-        pygame.draw.circle(screen, pygame.Color(
-            'white'), center=self._pose, radius=self._r, width=3)
+        # pygame.draw.circle(screen, pygame.Color(
+        #     'white'), center=self._pose, radius=self._r, width=3)
+        # pygame.draw.circle(screen, pygame.Color(
+        #     'white'), center=self._consensus_point, radius=10, width=3)
         return super().display(screen, debug)
 
     def in_entity_radius(self, qi: np.ndarray, r: float):
@@ -64,3 +72,17 @@ class Shepherd(Autonomous):
             qik = mu * qi + (1 - mu) * yk
             pik = mu * P @ pi
             return np.hstack((qik.transpose(), pik.transpose())).reshape(4,)
+
+    # Immitate how herds should be moving away from shepherds
+    def induce_consesus_point(self, r=400):
+        angle = -self._heading
+        consensus_point = transl2(
+            self._pose) @ trot2(angle) @ transl2(np.array([r, 0]))
+
+        # Save this value for visualisation purpose only
+        self._consensus_point = consensus_point[0:2, 2]
+        return self._consensus_point
+    
+    ## For formation control
+    def ideal_position(self):
+        pass

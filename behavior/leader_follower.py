@@ -1,7 +1,5 @@
 # !/usr/bin/python3
-
-import math
-from time import time
+import pygame
 from behavior.behavior import Behavior
 import numpy as np
 from entity.entity import Autonomous
@@ -85,6 +83,8 @@ class LeaderFollower(Behavior):
     def update(self, dt):
         self.init_formation()
         self.maintain_formation()
+        
+        consensus_point = self._leader.induce_consesus_point()
 
         member: Autonomous
         for member in self._members_list:

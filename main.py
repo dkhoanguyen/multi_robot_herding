@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import pygame
 import numpy as np
 from app import params
@@ -10,6 +12,7 @@ from entity.obstacle import Hyperplane, Sphere
 from behavior.flock import Flock
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.leader_follower import LeaderFollower, LeaderFollowerType
+from behavior.formation_control import MathematicalFormation
 from environment.environment import Environment
 
 
@@ -23,38 +26,7 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 2
-
-    # rand_x = np.linspace(200, 800, num_cows)
-    # rand_y = np.linspace(200, 500, num_cows)
-
-    # # Create cow grid
-    # grid_x = np.linspace(200, 800, num_cows)
-    # grid_y_100 = np.ones((1, num_cows)) * 100
-    # grid_100 = np.vstack((grid_x, grid_y_100))
-
-    # grid_x = np.linspace(200, 800, num_cows)
-    # grid_y_200 = np.ones((1, num_cows)) * 200
-    # grid_200 = np.vstack((grid_x, grid_y_200))
-
-    # # grid_x = np.linspace(200, 800, num_cows)
-    # # grid_y_300 = np.ones((1, num_cows)) * 300
-    # # grid_300 = np.vstack((grid_x, grid_y_300))
-
-    # grid = np.hstack((grid_100, grid_200))
-    # for i in range(grid.shape[1]):
-    #     pos = grid.transpose()[i, :]
-    #     angle = np.pi * (2 * np.random.rand() - 1)
-    #     vel = vel = np.zeros((2))
-    #     cow = Herd(pose=pos,
-    #                 velocity=vel,
-    #                 local_perception=local_perception,
-    #                 local_boundary=local_boundary,
-    #                 personal_space=personal_space,
-    #                 mass=mass,
-    #                 min_v=min_v,
-    #                 max_v=max_v)
-    #     cows.append(cow)
+    max_v = 5
 
     agents = np.random.randint(50, 700, (NUMBER_OF_AGENTS, 2)).astype('float')
 
@@ -138,7 +110,7 @@ def main():
     obstacles.append(circle4)
 
     # Create shepherds
-    num_shepherds = 5
+    num_shepherds = 4
     shepherds = []
     # Shepherd's properties
     local_perception = 200.0
@@ -146,9 +118,9 @@ def main():
     personal_space = 60.0
     mass = 20.0
     min_v = 0.0
-    max_v = 3.0
+    max_v = 3
 
-    pos = np.array([500, 500])
+    pos = np.array([1000, 500])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     # Leader shepherds
@@ -162,35 +134,23 @@ def main():
 
     shepherds.append(leader)
 
-    # # Follower shepherds
-    # rand_pos = np.linspace((200), (200, 800), num_shepherds)
-    # for i in range(num_shepherds):
-    #     pos = rand_pos[i, :]
-    #     angle = np.pi * (2 * np.random.rand() - 1)
-    #     vel = np.zeros((1,2))
-    #     shepherd = Shepherd(pose=pos,
-    #                         velocity=vel,
-    #                         local_perception=local_perception,
-    #                         local_boundary=local_boundary,
-    #                         mass=mass,
-    #                         min_v=min_v,
-    #                         max_v=max_v)
-    #     shepherds.append(shepherd)
-
-    # # Create behaviors
-    # # Flock properties
-    # alignment_weight = 5.0
-    # cohesion_weight = 0.05
-    # separation_weight = 20.0
-    # fleeing_weight = 5.0
-    # flock = Flock(
-    #     alignment_weight=alignment_weight,
-    #     cohesion_weight=cohesion_weight,
-    #     separation_weight=separation_weight,
-    #     fleeing_weight=fleeing_weight)
+    # Follower shepherds
+    rand_pos = np.linspace((200), (200, 800), num_shepherds)
+    for i in range(num_shepherds):
+        pos = np.array([1000, 500])
+        angle = 0
+        vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+        shepherd = Shepherd(pose=pos,
+                            velocity=vel,
+                            local_perception=local_perception,
+                            local_boundary=local_boundary,
+                            mass=mass,
+                            min_v=min_v,
+                            max_v=max_v)
+        shepherds.append(shepherd)
 
     # Mathematical flock
-    follow_cursor = False
+    follow_cursor = True
     initial_consensus = np.array([500, 500])
     math_flock = MathematicalFlock(
         follow_cursor=follow_cursor,
@@ -209,15 +169,29 @@ def main():
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
 
-    # Formation
-    formation = LeaderFollower(
-        LeaderFollowerType.COLUMN,
-        formation_weight=1.0,
-        spacing=40.0)
+    # # Formation
+    # formation = LeaderFollower(
+    #     LeaderFollowerType.COLUMN,
+    #     formation_weight=1.0,
+    #     spacing=40.0)
 
-    formation.add_leader(shepherds[0])
+    # formation.add_leader(shepherds[0])
     # for i in range(1, num_shepherds):
     #     formation.add_follower(shepherds[i])
+
+    # Mathematical formation
+    math_formation = MathematicalFormation()
+    math_formation.set_herd_mean(initial_consensus)
+    math_formation.add_herd(math_flock)
+
+    # Add cows
+    for cow in cows:
+        # flock.add_member(cow)
+        math_formation.add_herd(cow)
+
+    # Add shepherd
+    for shepherd in shepherds:
+        math_formation.add_shepherd(shepherd)
 
     # Environment
     env = Environment()
@@ -231,9 +205,9 @@ def main():
         env.add_entity(obstacle)
 
     # # Add behavior models
-    # env.add_behaviour(flock)
-    env.add_behaviour(math_flock)
-    env.add_behaviour(formation)
+    # env.add_behaviour(math_flock)
+    # env.add_behaviour(formation)
+    env.add_behaviour(math_formation)
 
     while True:
         env.run_once()

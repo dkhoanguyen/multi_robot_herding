@@ -74,7 +74,7 @@ class MathematicalFlock(Behavior):
                 return np.array(v) / n
 
     def __init__(self, follow_cursor: bool,
-                        initial_consensus: np.ndarray):
+                 initial_consensus: np.ndarray):
         self._herds = []
         self._shepherds = []
         self._obstacles = []
@@ -85,17 +85,31 @@ class MathematicalFlock(Behavior):
         self._follow_cursor = follow_cursor
         self._consensus_pose = initial_consensus
 
+        # Fleeing behavior
+
+    # Herd
     def add_herd(self, herd: Herd):
         self._herds.append(herd)
 
+    # Shepherd
     def add_shepherd(self, shepherd: Shepherd):
         self._shepherds.append(shepherd)
 
+    # Obstacle
     def add_obstacle(self, obstacle: Obstacle):
         self._obstacles.append(obstacle)
 
     def set_consensus(self, consensus: np.ndarray):
         self._consensus = consensus
+
+    def get_herd_mean(self):
+        herd: Herd
+        agent_states = np.array([]).reshape((0, 2))
+        for herd in self._herds:
+            # Grab and put all poses into a matrix
+            agent_states = np.vstack(
+                (agent_states, herd.pose))
+        return np.sum(agent_states, axis=0) / agent_states.shape[0]
 
     def update(self, dt: float):
         self._flocking(dt)
@@ -139,7 +153,7 @@ class MathematicalFlock(Behavior):
                 herd.steer(circle_center + displacement, alt_max=10)
                 herd.wandering_angle += WANDER_ANGLE * rands[i]
 
-    def _old_remain_in_screen(self, herd: Herd):
+    def _remain_in_screen(self, herd: Herd):
         if herd.pose[0] > params.SCREEN_WIDTH - params.BOX_MARGIN:
             herd.steer(np.array([-params.STEER_INSIDE, 0.]),
                        alt_max=params.BOID_MAX_FORCE)
@@ -152,15 +166,6 @@ class MathematicalFlock(Behavior):
         if herd.pose[1] > params.SCREEN_HEIGHT - params.BOX_MARGIN:
             herd.steer(np.array([0., -params.STEER_INSIDE]),
                        alt_max=params.BOID_MAX_FORCE)
-
-        if herd.pose[0] > params.SCREEN_WIDTH:
-            herd.pose[0] = params.SCREEN_WIDTH
-        if herd.pose[0] < 0:
-            herd.pose[0] = 0
-        if herd.pose[1] < 0:
-            herd.pose[1] = 0
-        if herd.pose[1] > params.SCREEN_HEIGHT:
-            herd.pose[1] = params.SCREEN_HEIGHT
 
     def _separate(self, herd: Herd, distance: float):
         number_of_neighbors = 0
@@ -177,7 +182,21 @@ class MathematicalFlock(Behavior):
         herd.steer(utils.normalize(force) * 10.0,
                    alt_max=params.BOID_MAX_FORCE)
 
-    def _flocking(self, dt: float):
+    def _flee(self, shepherd: Shepherd, herd: Herd):
+        pred_pose = shepherd.pose
+        pred_vel = shepherd.velocity
+        t = int(utils.norm(pred_pose - herd.pose) / params.BOID_MAX_SPEED)
+        pred_future_pose = pred_pose + t * pred_vel
+
+        too_close = utils.dist2(herd.pose, pred_future_pose) < 300**2
+        if too_close:
+            steering = (utils.normalize(herd.pose - pred_future_pose) *
+                        params.BOID_MAX_SPEED -
+                        herd.velocity)
+            herd.steer(steering, alt_max=params.BOID_MAX_FORCE)
+
+    # Mathematical model of flocking
+    def _flocking(self, dt):
         herd: Herd
         agent_states = np.array([]).reshape((0, 4))
         for herd in self._herds:
@@ -247,8 +266,14 @@ class MathematicalFlock(Behavior):
 
             # Gamma agent
             target = self._consensus_pose
-            if self._follow_cursor:
-                target = np.array(mouse_pose)
+            # if self._follow_cursor:
+            #     target = np.array(mouse_pose)
+
+            # shepherd_induced_consensus = self._shepherds[0].induce_consesus_point(
+            # )
+            # herd_mean = self.get_herd_mean()
+            # # target = shepherd_induced_consensus
+            # target = np.array(mouse_pose)
 
             u_gamma = self._group_objective_term(
                 c1=MathematicalFlock.C1_gamma,
@@ -285,19 +310,20 @@ class MathematicalFlock(Behavior):
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
 
-        qdot = np.clip(u, a_min=-5.0, a_max=5.0)
         qdot = u
-
         agent_states[:, 2:] += qdot * 0.1
         pdot = agent_states[:, 2:]
-        agent_states[:, :2] += pdot * 0.1
+        agent_states[:, :2] += pdot * 0.2
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
+            for shepherd in self._shepherds:
+                self._flee(shepherd, herd)
             # herd.state = agent_states[idx, :]
-            herd.velocity = agent_states[idx, 2:]
+            herd.velocity = agent_states[idx, 2:] + herd._steering
             herd.pose = agent_states[idx, :2]
             herd._rotate_image(herd.velocity)
+            herd.reset_steering()
 
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
                        r: float, d: float):
