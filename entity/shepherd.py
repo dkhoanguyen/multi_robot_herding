@@ -40,8 +40,8 @@ class Shepherd(Autonomous):
         self.move_to_pose(np.array(mouse_pose))
 
     def display(self, screen: pygame.Surface, debug=False):
-        # pygame.draw.circle(screen, pygame.Color(
-        #     'white'), center=self._pose, radius=self._r, width=3)
+        pygame.draw.circle(screen, pygame.Color(
+            'white'), center=self._pose, radius=self._r, width=3)
         # pygame.draw.circle(screen, pygame.Color(
         #     'white'), center=self._consensus_point, radius=10, width=3)
         return super().display(screen, debug)

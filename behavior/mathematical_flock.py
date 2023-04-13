@@ -188,7 +188,7 @@ class MathematicalFlock(Behavior):
         t = int(utils.norm(pred_pose - herd.pose) / params.BOID_MAX_SPEED)
         pred_future_pose = pred_pose + t * pred_vel
 
-        too_close = utils.dist2(herd.pose, pred_future_pose) < 300**2
+        too_close = utils.dist2(herd.pose, pred_future_pose) < 200**2
         if too_close:
             steering = (utils.normalize(herd.pose - pred_future_pose) *
                         params.BOID_MAX_SPEED -
@@ -306,7 +306,8 @@ class MathematicalFlock(Behavior):
                     pi=pi, pj=pid,
                     r=MathematicalFlock.BETA_RANGE)
                 u_delta = delta_grad + delta_consensus
-
+                
+            u_gamma = 0
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
 

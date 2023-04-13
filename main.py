@@ -110,7 +110,7 @@ def main():
     obstacles.append(circle4)
 
     # Create shepherds
-    num_shepherds = 4
+    num_shepherds = 6
     shepherds = []
     # Shepherd's properties
     local_perception = 200.0
@@ -120,38 +120,105 @@ def main():
     min_v = 0.0
     max_v = 3
 
-    pos = np.array([1000, 500])
+    # pos = np.array([1000, 500])
+    # angle = 0
+    # vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    # # Leader shepherds
+    # leader = Shepherd(pose=pos,
+    #                   velocity=vel,
+    #                   local_perception=local_perception,
+    #                   local_boundary=local_boundary,
+    #                   mass=mass,
+    #                   min_v=min_v,
+    #                   max_v=max_v)
+
+    # shepherds.append(leader)
+
+    # # Follower shepherds
+    # for i in range(num_shepherds):
+    #     pos = np.array([1000, 500])
+    #     angle = 0
+    #     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    #     shepherd = Shepherd(pose=pos,
+    #                         velocity=vel,
+    #                         local_perception=local_perception,
+    #                         local_boundary=local_boundary,
+    #                         mass=mass,
+    #                         min_v=min_v,
+    #                         max_v=max_v)
+    #     shepherds.append(shepherd)
+
+    pos = np.array([600, 800])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    # Leader shepherds
-    leader = Shepherd(pose=pos,
-                      velocity=vel,
-                      local_perception=local_perception,
-                      local_boundary=local_boundary,
-                      mass=mass,
-                      min_v=min_v,
-                      max_v=max_v)
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+    
+    pos = np.array([300, 800])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+    
+    pos = np.array([100, 800])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
 
-    shepherds.append(leader)
-
-    # Follower shepherds
-    rand_pos = np.linspace((200), (200, 800), num_shepherds)
-    for i in range(num_shepherds):
-        pos = np.array([1000, 500])
-        angle = 0
-        vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-        shepherd = Shepherd(pose=pos,
-                            velocity=vel,
-                            local_perception=local_perception,
-                            local_boundary=local_boundary,
-                            mass=mass,
-                            min_v=min_v,
-                            max_v=max_v)
-        shepherds.append(shepherd)
+    pos = np.array([100, -100])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+    
+    pos = np.array([300, -100])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+    
+    pos = np.array([500,-100])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+    
+    
 
     # Mathematical flock
     follow_cursor = True
-    initial_consensus = np.array([500, 500])
+    initial_consensus = np.array([500, 300])
     math_flock = MathematicalFlock(
         follow_cursor=follow_cursor,
         initial_consensus=initial_consensus)
@@ -205,7 +272,7 @@ def main():
         env.add_entity(obstacle)
 
     # # Add behavior models
-    # env.add_behaviour(math_flock)
+    env.add_behaviour(math_flock)
     # env.add_behaviour(formation)
     env.add_behaviour(math_formation)
 

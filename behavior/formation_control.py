@@ -13,16 +13,28 @@ from entity.obstacle import Obstacle
 
 class MathematicalFormation(Behavior):
     def __init__(self):
-        self._radius = 10
+        self._radius = 200
         self._k = 0.01
         self._kd = 1
-        self._l = 12.5
-        self._herd_mean = np.zeros(2)
+        self._l = 20
+
         self._herds = []
         self._shepherds = []
 
+        self._herd_mean = np.zeros(2)
+        self._herd_velocity = np.array([1, 0])
+        self._herd_heading = 0
+
+        self._start = False
+
     def set_herd_mean(self, mean: np.ndarray):
         self._herd_mean = mean
+
+    def set_herd_velocity(self, velocity: np.ndarray):
+        self._herd_velocity = velocity
+
+    def set_herd_heading(self, heading: float):
+        self._herd_heading = heading
 
     def add_herd(self, herd):
         self._herds.append(herd)
@@ -31,37 +43,33 @@ class MathematicalFormation(Behavior):
         self._shepherds.append(shepherd)
 
     def update(self, dt):
-        s_i = self._herd_mean
-        ideal_phi = self._ideal_phi(s_i)
 
-        # Step 1: Controller for p_dot
-        p = self._offset(s_i, ideal_phi, l=12.5)
-        p_dot = -self._k * p
+        mouse_pose = pygame.mouse.get_pos()
+        self._herd_mean = np.array(mouse_pose)
 
-        # Step 2: Ideal heading phi_star and velocity v_star
-        phi_star = self._phi_star(s_i)
-        v_star = self._qx(ideal_phi) * p_dot
+        events = pygame.event.get()
+        for event in events:
+            if event.type == pygame.KEYDOWN and not self._start:
+                self._start = True
 
-        # Step 3: Find delta_j_star from v_star
-        delta = self._delta_from_v(v_star)
-        delta_j_star = self._distribute_deltas(delta)
+        if self._start:
+            s_i = self._herd_mean
+            s_dot_i = self._herd_velocity
+            ideal_phi = self._ideal_phi(s_dot_i)
 
-        # Step 4: Desired d_j_star
-        d_j_stars = self._calc_d_j_star(delta_j_star, phi_star)
+            p = self._offset(s_i, ideal_phi, l=self._l)
+            p_dot = -self._k * (p)
 
-        # Step 5: Radial controller
-        # r_dot = self._radius
+            thetas = self._custom_delta(ideal_phi)
 
-        # Step 6: Tracking controller
-        d_dot_js = self._tracking_controller(d_j_stars)
-
-        shepherd: Shepherd
-        for idx, shepherd in enumerate(self._shepherds):
-            shepherd.velocity = d_dot_js[idx]
-            shepherd.pose = shepherd.pose + d_dot_js[idx] * 0.1
-
-            shepherd._rotate_image(shepherd.velocity)
-            shepherd.reset_steering()
+            # # Step 4: Desired d_j_star
+            d_j_stars = self._custom_calc_dj_star(origin=s_i,
+                                                radius=self._radius,
+                                                thetas=thetas)
+            shepherd: Shepherd
+            for idx, shepherd in enumerate(self._shepherds):
+                shepherd.move_to_pose(d_j_stars[idx])
+                shepherd.update()
 
     def _qx(self, phi: float):
         return np.array([math.cos(phi), math.sin(phi)])
@@ -69,8 +77,13 @@ class MathematicalFormation(Behavior):
     def _offset(self, s_i: np.ndarray, phi: float, l: float):
         return np.add(s_i, l * self._qx(phi))
 
-    def _ideal_phi(self, s_i: np.ndarray):
-        return math.atan2(s_i[1], s_i[0]) + np.pi
+    def _ideal_phi(self, s_dot_i: np.ndarray):
+        '''
+        Get the current heading of velocity of the herd
+        '''
+        if np.array_equal(s_dot_i.reshape(2), np.zeros(2)):
+            return self._herd_heading
+        return math.atan2(s_dot_i[1], s_dot_i[0])
 
     def _phi_star(self, s_i: np.ndarray):
         return self._ideal_phi(s_i)
@@ -97,6 +110,30 @@ class MathematicalFormation(Behavior):
                 i1 = mid
         return (np.array(mn).reshape(2)[1])
 
+    def _custom_delta(self, ideal_angle: float):
+        sliced_angle = []
+        delta = 2 * np.pi / len(self._shepherds)
+        angle = 0
+        for i in range(len(self._shepherds)):
+            if i == 0:
+                angle = ideal_angle + (delta / 2)
+            else:
+                angle = sliced_angle[-1] + delta
+                while angle > np.pi:
+                    angle -= 2*np.pi
+            sliced_angle.append(angle)
+        return np.array(sliced_angle)
+
+    def _custom_calc_dj_star(self, origin: np.ndarray,
+                             radius: float,
+                             thetas: np.ndarray):
+        ideal_pos = []
+        for theta in thetas:
+            d_j_star = origin + radius * \
+                np.array([math.cos(theta), math.sin(theta)]).reshape(2)
+            ideal_pos.append(d_j_star)
+        return np.array(ideal_pos)
+
     def _distribute_deltas(self, delta):
         delta_j_star = []
         m = len(self._shepherds)
@@ -119,24 +156,6 @@ class MathematicalFormation(Behavior):
             ideal_pos.append(d_j_star)
 
         return np.array(ideal_pos)
-
-    # def radial_controller(self):
-    #     r_nought = 15
-    #     r_dot = (r_nought - self._radius)
-
-    #     s_bar = self._herd_mean
-    #     s_i_dots = [self.sheep_repulsion(i) for i in range(num_sheep)]
-    #     s_bar_dot = sum(s_i_dots) / num_sheep
-
-    #     for i in range(num_sheep):
-    #         s_i = self.coords[i]
-
-    #         a = (s_i - s_bar)
-    #         b = (s_i_dots[i] - s_bar_dot)
-    #         c = a[0] * b[0] + a[1] * b[1]
-    #         r_dot += c / len(self._shepherds)
-
-    #     return (r_dot)
 
     def _tracking_controller(self, d_j_stars):
         d_dot_js = []
