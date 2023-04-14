@@ -9,9 +9,7 @@ from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Hyperplane, Sphere
 
-from behavior.flock import Flock
 from behavior.mathematical_flock import MathematicalFlock
-from behavior.leader_follower import LeaderFollower, LeaderFollowerType
 from behavior.formation_control import MathematicalFormation
 from environment.environment import Environment
 
@@ -120,35 +118,7 @@ def main():
     min_v = 0.0
     max_v = 3
 
-    # pos = np.array([1000, 500])
-    # angle = 0
-    # vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    # # Leader shepherds
-    # leader = Shepherd(pose=pos,
-    #                   velocity=vel,
-    #                   local_perception=local_perception,
-    #                   local_boundary=local_boundary,
-    #                   mass=mass,
-    #                   min_v=min_v,
-    #                   max_v=max_v)
-
-    # shepherds.append(leader)
-
-    # # Follower shepherds
-    # for i in range(num_shepherds):
-    #     pos = np.array([1000, 500])
-    #     angle = 0
-    #     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    #     shepherd = Shepherd(pose=pos,
-    #                         velocity=vel,
-    #                         local_perception=local_perception,
-    #                         local_boundary=local_boundary,
-    #                         mass=mass,
-    #                         min_v=min_v,
-    #                         max_v=max_v)
-    #     shepherds.append(shepherd)
-
-    pos = np.array([600, 800])
+    pos = np.array([600, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -159,7 +129,7 @@ def main():
                               min_v=min_v,
                               max_v=max_v))
     
-    pos = np.array([300, 800])
+    pos = np.array([300, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -170,7 +140,7 @@ def main():
                               min_v=min_v,
                               max_v=max_v))
     
-    pos = np.array([100, 800])
+    pos = np.array([100, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -236,16 +206,6 @@ def main():
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
 
-    # # Formation
-    # formation = LeaderFollower(
-    #     LeaderFollowerType.COLUMN,
-    #     formation_weight=1.0,
-    #     spacing=40.0)
-
-    # formation.add_leader(shepherds[0])
-    # for i in range(1, num_shepherds):
-    #     formation.add_follower(shepherds[i])
-
     # Mathematical formation
     math_formation = MathematicalFormation()
     math_formation.set_herd_mean(initial_consensus)
@@ -253,7 +213,6 @@ def main():
 
     # Add cows
     for cow in cows:
-        # flock.add_member(cow)
         math_formation.add_herd(cow)
 
     # Add shepherd
@@ -271,12 +230,11 @@ def main():
     for obstacle in obstacles:
         env.add_entity(obstacle)
 
-    # # Add behavior models
+    # Add behavior models
     env.add_behaviour(math_flock)
-    # env.add_behaviour(formation)
     env.add_behaviour(math_formation)
 
-    while True:
+    while env.ok:
         env.run_once()
         env.render()
 

@@ -196,7 +196,8 @@ class MathematicalFlock(Behavior):
             herd.steer(steering, alt_max=params.BOID_MAX_FORCE)
 
     # Mathematical model of flocking
-    def _flocking(self, dt):
+    def _flocking(self, *args, **kwargs):
+
         herd: Herd
         agent_states = np.array([]).reshape((0, 4))
         for herd in self._herds:
@@ -213,7 +214,6 @@ class MathematicalFlock(Behavior):
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(agent_states,
                                                                   self._shepherds,
                                                                   r=2000)
-        mouse_pose = pygame.mouse.get_pos()
 
         for idx, herd in enumerate(self._herds):
             qi = agent_states[idx, :2]

@@ -42,12 +42,12 @@ class MathematicalFormation(Behavior):
     def add_shepherd(self, shepherd):
         self._shepherds.append(shepherd)
 
-    def update(self, dt):
-
+    def update(self, *args, **kwargs):
         mouse_pose = pygame.mouse.get_pos()
         self._herd_mean = np.array(mouse_pose)
 
-        events = pygame.event.get()
+        events = self._get_events(args)
+        
         for event in events:
             if event.type == pygame.KEYDOWN and not self._start:
                 self._start = True
@@ -61,11 +61,9 @@ class MathematicalFormation(Behavior):
             p_dot = -self._k * (p)
 
             thetas = self._custom_delta(ideal_phi)
-
-            # # Step 4: Desired d_j_star
             d_j_stars = self._custom_calc_dj_star(origin=s_i,
-                                                radius=self._radius,
-                                                thetas=thetas)
+                                                  radius=self._radius,
+                                                  thetas=thetas)
             shepherd: Shepherd
             for idx, shepherd in enumerate(self._shepherds):
                 shepherd.move_to_pose(d_j_stars[idx])

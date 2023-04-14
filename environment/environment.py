@@ -50,6 +50,10 @@ class Environment(object):
         self._space.add(right_segment)
         self._space.add(bottom_segment)
 
+    @property
+    def ok(self):
+        return self._running
+
     def add_entity(self, entity: Entity):
         self._entities.append(entity)
 
@@ -67,10 +71,7 @@ class Environment(object):
         '''
         Function to update behaviors and interaction between entities
         '''
-        behavior: Behavior
-        # motion_event, click_event = None, None
-        for behavior in self._behaviors:
-            behavior.update(self._screen)
+        
 
         # for body in self._bodies:
         #     self._space.reindex_shapes_for_body(body)
@@ -94,13 +95,15 @@ class Environment(object):
             pygame.display.flip()
 
     def run_once(self):
-        motion_event, click_event = None, None
-
+        events = pygame.event.get()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.running = False
+                self._running = False
 
-        self.update()
+        behavior: Behavior
+        # motion_event, click_event = None, None
+        for behavior in self._behaviors:
+            behavior.update(events)
 
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)
