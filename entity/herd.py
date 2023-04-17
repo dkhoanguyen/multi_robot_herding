@@ -4,7 +4,7 @@ import pygame
 import numpy as np
 
 from entity.entity import Entity, Autonomous
-from utils.math_utils import *
+from app.utils import *
 
 
 class Herd(Autonomous):

@@ -76,3 +76,6 @@ def truncate(vector, max_length):
         return normalize(vector, pre_computed=n) * max_length
     else:
         return vector
+
+def unit_vector(vector):
+    return np.array(vector) / np.linalg.norm(vector)

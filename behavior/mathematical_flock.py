@@ -74,6 +74,8 @@ class MathematicalFlock(Behavior):
                 return np.array(v) / n
 
     def __init__(self, follow_cursor: bool,
+                 sensing_range: float,
+                 danger_range: float,
                  initial_consensus: np.ndarray):
         self._herds = []
         self._shepherds = []
@@ -83,6 +85,8 @@ class MathematicalFlock(Behavior):
         self._pause_agents = np.zeros(1)
 
         self._follow_cursor = follow_cursor
+        self._sensing_range = sensing_range
+        self._danger_range = danger_range
         self._consensus_pose = initial_consensus
 
         # Fleeing behavior
@@ -197,6 +201,7 @@ class MathematicalFlock(Behavior):
 
     # Mathematical model of flocking
     def _flocking(self, *args, **kwargs):
+        events = self._get_events(args)
 
         herd: Herd
         agent_states = np.array([]).reshape((0, 4))
@@ -207,14 +212,14 @@ class MathematicalFlock(Behavior):
 
         u = np.zeros((len(self._herds), 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states,
-                                                                  r=MathematicalFlock.ALPHA_RANGE)
+                                                                  r=self._sensing_range)
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(agent_states,
                                                                 self._obstacles,
-                                                                r=100)
+                                                                r=self._sensing_range)
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(agent_states,
                                                                   self._shepherds,
-                                                                  r=2000)
-
+                                                                  r=self._danger_range)
+        force_mag_list = []
         for idx, herd in enumerate(self._herds):
             qi = agent_states[idx, :2]
             pi = agent_states[idx, 2:]
@@ -237,6 +242,14 @@ class MathematicalFlock(Behavior):
                     pi=pi, pj=pj,
                     r=MathematicalFlock.ALPHA_RANGE)
                 u_alpha = alpha_grad + alpha_consensus
+
+                # Density function with neighbors
+                herd._force = self._get_agent_density_vector(qi, qj, 0.375)
+                herd._force_mag = 50 * \
+                    self._get_agent_density_mag(qi, qj, 0.375)
+                force_mag_list.append(herd._force_mag)
+            else:
+                force_mag_list.append(0)
 
             # Beta agent
             u_beta = 0
@@ -266,14 +279,6 @@ class MathematicalFlock(Behavior):
 
             # Gamma agent
             target = self._consensus_pose
-            # if self._follow_cursor:
-            #     target = np.array(mouse_pose)
-
-            # shepherd_induced_consensus = self._shepherds[0].induce_consesus_point(
-            # )
-            # herd_mean = self.get_herd_mean()
-            # # target = shepherd_induced_consensus
-            # target = np.array(mouse_pose)
 
             u_gamma = self._group_objective_term(
                 c1=MathematicalFlock.C1_gamma,
@@ -306,21 +311,25 @@ class MathematicalFlock(Behavior):
                     pi=pi, pj=pid,
                     r=MathematicalFlock.BETA_RANGE)
                 u_delta = delta_grad + delta_consensus
-                
+
             u_gamma = 0
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
 
+        # Control for the agent
         qdot = u
         agent_states[:, 2:] += qdot * 0.1
         pdot = agent_states[:, 2:]
         agent_states[:, :2] += pdot * 0.2
 
+        force_mag_list = np.array(force_mag_list)
+        force_mag_list.sort()
+
         herd: Herd
         for idx, herd in enumerate(self._herds):
             for shepherd in self._shepherds:
                 self._flee(shepherd, herd)
-            # herd.state = agent_states[idx, :]
+            self._remain_in_screen(herd)
             herd.velocity = agent_states[idx, 2:] + herd._steering
             herd.pose = agent_states[idx, :2]
             herd._rotate_image(herd.velocity)
@@ -380,3 +389,32 @@ class MathematicalFlock(Behavior):
 
     def _get_n_ij(self, q_i, q_js):
         return MathematicalFlock.MathUtils.sigma_norm_grad(q_js - q_i)
+
+    def _get_all_agent_density_vectors(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
+        p = []
+        for s_j in s_js:
+            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
+                utils.unit_vector(s_i - s_j)
+            if not sum(np.isnan(wij)):
+                p.append(wij)
+        return np.array(p)
+
+    def _get_agent_density_vector(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
+        p = []
+        for s_j in s_js:
+            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
+                utils.unit_vector(s_i - s_j)
+            if not sum(np.isnan(wij)):
+                p.append(wij)
+        p = np.sum(np.array(p), axis=0)
+        return p
+
+    def _get_agent_density_mag(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
+        p = []
+        for s_j in s_js:
+            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
+                utils.unit_vector(s_i - s_j)
+            if not sum(np.isnan(wij)):
+                p.append(np.linalg.norm(wij))
+        p = sum(p)
+        return p

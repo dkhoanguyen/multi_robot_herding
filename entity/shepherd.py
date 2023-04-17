@@ -6,9 +6,7 @@ from spatialmath import SE2
 from spatialmath.base import *
 
 from entity.entity import Autonomous, Entity
-from utils.math_utils import *
-from app import params
-
+from app.utils import *
 
 class Shepherd(Autonomous):
     def __init__(self,
@@ -30,7 +28,7 @@ class Shepherd(Autonomous):
         self._local_perception = local_perception
         self._local_boundary = local_boundary
 
-        self._r = 100
+        self._r = 50
         self._consensus_r = 200
 
         self._consensus_point = np.zeros((2,))
@@ -82,7 +80,3 @@ class Shepherd(Autonomous):
         # Save this value for visualisation purpose only
         self._consensus_point = consensus_point[0:2, 2]
         return self._consensus_point
-    
-    ## For formation control
-    def ideal_position(self):
-        pass

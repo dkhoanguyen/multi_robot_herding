@@ -11,6 +11,8 @@ from entity.obstacle import Hyperplane, Sphere
 
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.formation_control import MathematicalFormation
+from behavior.spiral_motion import SpiralMotion
+
 from environment.environment import Environment
 
 
@@ -118,7 +120,8 @@ def main():
     min_v = 0.0
     max_v = 3
 
-    pos = np.array([600, 900])
+    # pos = np.array([600, 900])
+    pos = np.array([350, 350])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -128,7 +131,7 @@ def main():
                               mass=mass,
                               min_v=min_v,
                               max_v=max_v))
-    
+
     pos = np.array([300, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
@@ -139,7 +142,7 @@ def main():
                               mass=mass,
                               min_v=min_v,
                               max_v=max_v))
-    
+
     pos = np.array([100, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
@@ -161,7 +164,7 @@ def main():
                               mass=mass,
                               min_v=min_v,
                               max_v=max_v))
-    
+
     pos = np.array([300, -100])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
@@ -172,8 +175,8 @@ def main():
                               mass=mass,
                               min_v=min_v,
                               max_v=max_v))
-    
-    pos = np.array([500,-100])
+
+    pos = np.array([500, -100])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -183,14 +186,16 @@ def main():
                               mass=mass,
                               min_v=min_v,
                               max_v=max_v))
-    
-    
 
     # Mathematical flock
     follow_cursor = True
-    initial_consensus = np.array([500, 300])
+    sensing_range = 150
+    danger_range = 2000
+    initial_consensus = np.array([350, 350])
     math_flock = MathematicalFlock(
         follow_cursor=follow_cursor,
+        sensing_range=sensing_range,
+        danger_range=danger_range,
         initial_consensus=initial_consensus)
 
     # Add cows
@@ -219,6 +224,9 @@ def main():
     for shepherd in shepherds:
         math_formation.add_shepherd(shepherd)
 
+    spiral = SpiralMotion()
+    spiral.add_single_shepherd(shepherds[0])
+
     # Environment
     env = Environment()
 
@@ -231,8 +239,11 @@ def main():
         env.add_entity(obstacle)
 
     # Add behavior models
-    env.add_behaviour(math_flock)
-    env.add_behaviour(math_formation)
+    # env.add_behaviour(math_flock)
+    # env.add_behaviour(math_formation)
+    env.add_behaviour(spiral)
+
+    # shepherds[0].follow_velocity(np.array([1,0]))
 
     while env.ok:
         env.run_once()

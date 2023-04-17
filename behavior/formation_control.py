@@ -6,6 +6,7 @@ import pygame
 import numpy as np
 from app import params, utils
 from behavior.behavior import Behavior
+from behavior.mathematical_flock import MathematicalFlock
 from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Obstacle
@@ -20,6 +21,8 @@ class MathematicalFormation(Behavior):
 
         self._herds = []
         self._shepherds = []
+
+        self._flock_model = None
 
         self._herd_mean = np.zeros(2)
         self._herd_velocity = np.array([1, 0])
@@ -36,6 +39,9 @@ class MathematicalFormation(Behavior):
     def set_herd_heading(self, heading: float):
         self._herd_heading = heading
 
+    def set_flock_model(self, flock_model: MathematicalFlock):
+        self._flock_model = flock_model
+
     def add_herd(self, herd):
         self._herds.append(herd)
 
@@ -47,7 +53,6 @@ class MathematicalFormation(Behavior):
         self._herd_mean = np.array(mouse_pose)
 
         events = self._get_events(args)
-        
         for event in events:
             if event.type == pygame.KEYDOWN and not self._start:
                 self._start = True

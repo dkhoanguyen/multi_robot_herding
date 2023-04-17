@@ -2,9 +2,9 @@
 
 import pymunk
 import pygame
-from utils.math_utils import *
 from enum import Enum
 from app import params
+from app.utils import *
 
 import numpy as np
 
@@ -64,11 +64,11 @@ class Entity(pygame.sprite.Sprite):
     @property
     def heading(self):
         return self._heading
-    
+
     @property
     def state(self):
         return self._state
-    
+
     @state.setter
     def state(self, state):
         self._state = state
@@ -112,6 +112,10 @@ class Autonomous(Entity):
         self._speed = 0.5 * self._max_v
         self._pre_vel = np.array([0, 0])
         self._at_pose = False
+
+        # Additional params for testing
+        self._force = np.zeros(2)
+        self._force_mag = 0
 
         # Physics
         mass = 1
@@ -164,13 +168,18 @@ class Autonomous(Entity):
                 self._velocity + self._steering, self._speed)
             self._rotate_image(self._velocity)
 
-        self.pose = self.pose + self._velocity        
+        self.pose = self.pose + self._velocity
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
         pygame.draw.line(
             screen, pygame.Color("yellow"),
             tuple(self.pose), tuple(self.pose + 2 * self.velocity))
+        # pygame.draw.line(
+        #     screen, pygame.Color("white"),
+        #     tuple(self.pose), tuple(self.pose + 200 * self._force))
+        pygame.draw.circle(screen, pygame.Color(
+            'white'), center=self._pose, radius=self._force_mag, width=3)
         self.reset_steering()
 
     def reset_steering(self):
@@ -187,4 +196,22 @@ class Autonomous(Entity):
             self._at_pose = False
         self._speed = np.clip(desired_speed, self._min_v, self._max_v)
         self.steer(force - self.velocity,
+                   alt_max=params.BOID_MAX_FORCE)
+
+    def follow_velocity(self, velocity: np.ndarray):
+        v = velocity[0]
+        w = velocity[1]
+
+        # T_r0_r1 = np.array([[math.cos(w), -math.sin(w), v],
+        #                     [math.sin(w), math.cos(w), 0],
+        #                     [0, 0, 1]])
+
+        # T_w_r0 = np.array([[math.cos(self.heading), -math.sin(self.heading), self.pose[0]],
+        #                    [math.sin(self.heading), math.cos(
+        #                        self.heading), self.pose[1]],
+        #                    [0, 0, 1]])
+        # T_w_r1 = T_w_r0 @ T_r0_r1
+        self.velocity = np.array([math.cos(w) * v,
+                                              math.sin(w) * v])
+        self.steer(self.velocity,
                    alt_max=params.BOID_MAX_FORCE)
