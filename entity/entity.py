@@ -6,6 +6,9 @@ from enum import Enum
 from app import params
 from app.utils import *
 
+from spatialmath import SE2
+from spatialmath.base import *
+
 import numpy as np
 
 
@@ -116,21 +119,8 @@ class Autonomous(Entity):
         # Additional params for testing
         self._force = np.zeros(2)
         self._force_mag = 0
-
-        # Physics
-        mass = 1
-        radius = 10
-        inertia = pymunk.moment_for_circle(mass, 0, radius, (0, 0))
-        body = pymunk.Body(mass, inertia)
-        body.position = tuple(pose)
-        body.velocity = tuple(velocity)
-
-        shape = pymunk.Circle(body, radius, (0, 0))
-        shape.density = 1
-        shape.elasticity = 1
-
-        self._pymunk_addables['body'] = body
-        self._pymunk_addables['shape'] = shape
+        self._plot_force = False
+        self._plot_force_mag = False
 
     @property
     def wandering_angle(self):
@@ -172,14 +162,18 @@ class Autonomous(Entity):
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
-        pygame.draw.line(
-            screen, pygame.Color("yellow"),
-            tuple(self.pose), tuple(self.pose + 2 * self.velocity))
         # pygame.draw.line(
-        #     screen, pygame.Color("white"),
-        #     tuple(self.pose), tuple(self.pose + 200 * self._force))
-        pygame.draw.circle(screen, pygame.Color(
-            'white'), center=self._pose, radius=self._force_mag, width=3)
+        #     screen, pygame.Color("yellow"),
+        #     tuple(self.pose), tuple(self.pose + 2 * self.velocity))
+        if self._plot_force:
+            pygame.draw.line(
+                screen, pygame.Color("white"),
+                tuple(self.pose), tuple(self.pose + 200 * self._force))
+        if self._plot_force_mag:
+            pygame.draw.circle(screen, pygame.Color(
+                'white'), center=self._pose, radius=5, width=3)
+            pygame.draw.circle(screen, pygame.Color(
+                'white'), center=self._pose, radius=self._force_mag, width=3)
         self.reset_steering()
 
     def reset_steering(self):
@@ -199,19 +193,17 @@ class Autonomous(Entity):
                    alt_max=params.BOID_MAX_FORCE)
 
     def follow_velocity(self, velocity: np.ndarray):
-        v = velocity[0]
-        w = velocity[1]
+        v = 100
+        w = 1
+        dt = 0.05
 
-        # T_r0_r1 = np.array([[math.cos(w), -math.sin(w), v],
-        #                     [math.sin(w), math.cos(w), 0],
-        #                     [0, 0, 1]])
+        self._heading += w * dt
+        self.pose = self.pose + np.array([math.cos(self._heading),
+                                          math.sin(self._heading)]) * v * dt
+        self.velocity = np.array([math.cos(self._heading),
+                                  math.sin(self._heading)]) * v * dt
+        angle = np.rad2deg(-self._heading)
 
-        # T_w_r0 = np.array([[math.cos(self.heading), -math.sin(self.heading), self.pose[0]],
-        #                    [math.sin(self.heading), math.cos(
-        #                        self.heading), self.pose[1]],
-        #                    [0, 0, 1]])
-        # T_w_r1 = T_w_r0 @ T_r0_r1
-        self.velocity = np.array([math.cos(w) * v,
-                                              math.sin(w) * v])
-        self.steer(self.velocity,
-                   alt_max=params.BOID_MAX_FORCE)
+        self.image = pygame.transform.rotate(self.base_image, angle)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        print(self.pose)

@@ -10,6 +10,8 @@ from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Obstacle
 
+from behavior.concave_hull import *
+
 
 class MathematicalFlock(Behavior):
     C1_alpha = 3
@@ -77,6 +79,7 @@ class MathematicalFlock(Behavior):
                  sensing_range: float,
                  danger_range: float,
                  initial_consensus: np.ndarray):
+        super().__init__()
         self._herds = []
         self._shepherds = []
         self._obstacles = []
@@ -88,8 +91,6 @@ class MathematicalFlock(Behavior):
         self._sensing_range = sensing_range
         self._danger_range = danger_range
         self._consensus_pose = initial_consensus
-
-        # Fleeing behavior
 
     # Herd
     def add_herd(self, herd: Herd):
@@ -158,7 +159,7 @@ class MathematicalFlock(Behavior):
                 herd.wandering_angle += WANDER_ANGLE * rands[i]
 
     def _remain_in_screen(self, herd: Herd):
-        if herd.pose[0] > params.SCREEN_WIDTH - params.BOX_MARGIN:
+        if herd.pose[0] > params.SCREEN_WIDTH - 600:
             herd.steer(np.array([-params.STEER_INSIDE, 0.]),
                        alt_max=params.BOID_MAX_FORCE)
         if herd.pose[0] < params.BOX_MARGIN:
@@ -209,6 +210,14 @@ class MathematicalFlock(Behavior):
             # Grab and put all poses into a matrix
             agent_states = np.vstack(
                 (agent_states, np.hstack((herd.pose, herd.velocity))))
+            
+        ch = ConcaveHull()
+        pts = agent_states[:,:2]
+        ch.loadpoints(pts)
+        ch.calculatehull()
+
+        boundary_points = np.vstack(ch.boundary.exterior.coords.xy).T
+        print(boundary_points)
 
         u = np.zeros((len(self._herds), 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states,
@@ -219,8 +228,13 @@ class MathematicalFlock(Behavior):
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(agent_states,
                                                                   self._shepherds,
                                                                   r=self._danger_range)
-        force_mag_list = []
+        force_mag_list = np.empty((0, 2))
+
         for idx, herd in enumerate(self._herds):
+            # Plotting config
+            herd._plot_force = False
+            herd._plot_force_mag = False
+
             qi = agent_states[idx, :2]
             pi = agent_states[idx, 2:]
 
@@ -247,9 +261,11 @@ class MathematicalFlock(Behavior):
                 herd._force = self._get_agent_density_vector(qi, qj, 0.375)
                 herd._force_mag = 50 * \
                     self._get_agent_density_mag(qi, qj, 0.375)
-                force_mag_list.append(herd._force_mag)
             else:
-                force_mag_list.append(0)
+                herd._force = np.zeros(2)
+                herd._force_mag = 0
+            force_mag_list = np.vstack(
+                (force_mag_list, np.array([herd._force_mag, idx])))
 
             # Beta agent
             u_beta = 0
@@ -312,7 +328,7 @@ class MathematicalFlock(Behavior):
                     r=MathematicalFlock.BETA_RANGE)
                 u_delta = delta_grad + delta_consensus
 
-            u_gamma = 0
+            # u_gamma = 0
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
 
@@ -322,9 +338,13 @@ class MathematicalFlock(Behavior):
         pdot = agent_states[:, 2:]
         agent_states[:, :2] += pdot * 0.2
 
-        force_mag_list = np.array(force_mag_list)
-        force_mag_list.sort()
+        sorted_force_mag_list = force_mag_list[force_mag_list[:, 0].argsort()]
+        greatest_force_mag_idx = int(sorted_force_mag_list[-1:, 1])
 
+        self._herds[greatest_force_mag_idx]._plot_force_mag = True
+
+        # # Sort from greatest to least significant
+        # force_mag_list = -np.sort(-force_mag_list)
         herd: Herd
         for idx, herd in enumerate(self._herds):
             for shepherd in self._shepherds:

@@ -6,6 +6,10 @@ from abc import ABC, abstractmethod
 
 class Behavior(ABC):
 
+    def __init__(self):
+        self._screen = None
+        self._vis_entity = None
+
     @abstractmethod
     def update(self, *args, **kwargs):
         '''
@@ -24,5 +28,12 @@ class Behavior(ABC):
     
     def _get_mouse_pos(self, *arg):
         pass
+
+    # Use with caution, for testing purposes
+    def _set_screen(self, screen):
+        self._screen = screen
+
+    def set_vis_entity(self,vis_entity):
+        self._vis_entity = vis_entity
         
 

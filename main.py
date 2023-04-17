@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Hyperplane, Sphere
+from entity.visualise_agent import VisualisationEntity
 
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.formation_control import MathematicalFormation
@@ -89,22 +90,22 @@ def main():
     obstacles.append(lower_boundary)
 
     # Spherial obstacles
-    yk = np.array([800, 150])
+    yk = np.array([1000, 100])
     Rk = 100
     circle1 = Sphere(yk, Rk)
     obstacles.append(circle1)
 
-    yk = np.array([800, 500])
+    yk = np.array([1000, 510])
     Rk = 100
     circle2 = Sphere(yk, Rk)
     obstacles.append(circle2)
 
-    yk = np.array([800, 250])
+    yk = np.array([1000, 240])
     Rk = 100
     circle3 = Sphere(yk, Rk)
     obstacles.append(circle3)
 
-    yk = np.array([800, 600])
+    yk = np.array([1000, 650])
     Rk = 100
     circle4 = Sphere(yk, Rk)
     obstacles.append(circle4)
@@ -120,8 +121,8 @@ def main():
     min_v = 0.0
     max_v = 3
 
-    # pos = np.array([600, 900])
-    pos = np.array([350, 350])
+    pos = np.array([600, 900])
+    # pos = np.array([350, 350])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -227,6 +228,15 @@ def main():
     spiral = SpiralMotion()
     spiral.add_single_shepherd(shepherds[0])
 
+    # Visualisation Entity
+    vis_entity = VisualisationEntity()
+
+    # Behaviours
+    behaviours = []
+    behaviours.append(math_flock)
+    behaviours.append(math_formation)
+    behaviours.append(spiral)
+
     # Environment
     env = Environment()
 
@@ -239,11 +249,10 @@ def main():
         env.add_entity(obstacle)
 
     # Add behavior models
-    # env.add_behaviour(math_flock)
+    env.add_behaviour(math_flock)
     # env.add_behaviour(math_formation)
-    env.add_behaviour(spiral)
+    # env.add_behaviour(spiral)
 
-    # shepherds[0].follow_velocity(np.array([1,0]))
 
     while env.ok:
         env.run_once()

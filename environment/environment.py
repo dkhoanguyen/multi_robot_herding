@@ -12,11 +12,11 @@ from behavior.behavior import Behavior
 class Environment(object):
 
     def __init__(self):
-        # Pymunk for physic engine
-        self._space = pymunk.Space()
-        self._space.iterations = 10
-        self._space.sleep_time_threshold = 0.5
-        self._static_body = self._space.static_body
+        # # Pymunk for physic engine
+        # self._space = pymunk.Space()
+        # self._space.iterations = 10
+        # self._space.sleep_time_threshold = 0.5
+        # self._static_body = self._space.static_body
 
         # Pygame for visualisation
         pygame.init()
@@ -33,22 +33,22 @@ class Environment(object):
         screen_height = params.SCREEN_SIZE[1]
 
         # Add boundaries
-        left_segment = pymunk.Segment(self._static_body,
-                                      (0.0, 0.0),
-                                      (0.0, screen_height), 5.0)
-        top_segment = pymunk.Segment(self._static_body,
-                                     (0.0, 0.0),
-                                     (screen_width, 0.0), 5.0)
-        right_segment = pymunk.Segment(self._static_body,
-                                       (screen_width, 0.0),
-                                       (screen_width, screen_height), 5.0)
-        bottom_segment = pymunk.Segment(self._static_body,
-                                        (0.0, screen_height),
-                                        (screen_width, screen_height), 5.0)
-        self._space.add(left_segment)
-        self._space.add(top_segment)
-        self._space.add(right_segment)
-        self._space.add(bottom_segment)
+        # left_segment = pymunk.Segment(self._static_body,
+        #                               (0.0, 0.0),
+        #                               (0.0, screen_height), 5.0)
+        # top_segment = pymunk.Segment(self._static_body,
+        #                              (0.0, 0.0),
+        #                              (screen_width, 0.0), 5.0)
+        # right_segment = pymunk.Segment(self._static_body,
+        #                                (screen_width, 0.0),
+        #                                (screen_width, screen_height), 5.0)
+        # bottom_segment = pymunk.Segment(self._static_body,
+        #                                 (0.0, screen_height),
+        #                                 (screen_width, screen_height), 5.0)
+        # self._space.add(left_segment)
+        # self._space.add(top_segment)
+        # self._space.add(right_segment)
+        # self._space.add(bottom_segment)
 
     @property
     def ok(self):
@@ -65,16 +65,13 @@ class Environment(object):
         #         self._bodies.append(addable)
 
     def add_behaviour(self, behavior: Behavior):
+        behavior._set_screen(self._screen)
         self._behaviors.append(behavior)
 
     def update(self):
         '''
         Function to update behaviors and interaction between entities
         '''
-        
-
-        # for body in self._bodies:
-        #     self._space.reindex_shapes_for_body(body)
 
     def display(self):
         entity: Entity

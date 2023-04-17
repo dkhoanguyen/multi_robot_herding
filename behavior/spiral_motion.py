@@ -15,6 +15,7 @@ from entity.obstacle import Obstacle
 
 class SpiralMotion(Behavior):
     def __init__(self):
+        super().__init__()
         self._herds = []
         self._shepherds = []
         self._shepherd = None
@@ -39,8 +40,8 @@ class SpiralMotion(Behavior):
             self._shepherd.pose, np.array(mouse_pose), 50)
 
         # self._shepherd.move_to_pose(next_spiral)
-        self._shepherd.follow_velocity(np.array([1,-1]))
-        self._shepherd.update()
+        self._shepherd.follow_velocity(np.array([0,0]))
+        # self._shepherd.update()
 
     def _create_spiral_motion(self, current_pose: np.ndarray,
                               center: np.ndarray, radius: float):
@@ -55,6 +56,7 @@ class SpiralMotion(Behavior):
             self._current_idx = idx
         else:
             self._current_idx = self._current_idx + 1
-        if self._current_idx == len(spiral_poses[0,:]) - 1:
+
+        if self._current_idx >= len(spiral_poses[0,:]) - 1:
             self._current_idx = 0
         return spiral_poses[:, self._current_idx]

@@ -48,7 +48,7 @@ H4_FONT = (FONTS['hallo-sans'], FONT_SIZES['h4'])
 H5_FONT = (FONTS['hallo-sans'], FONT_SIZES['h5'])
 
 # Boid staying inside the screen box
-BOX_MARGIN = 150  # pixels
+BOX_MARGIN = 125  # pixels
 STEER_INSIDE = 6.  # speed impulse when out of margins
 # Boid steering parameters
 BOID_MAX_FORCE = 10.

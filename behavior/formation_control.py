@@ -14,6 +14,7 @@ from entity.obstacle import Obstacle
 
 class MathematicalFormation(Behavior):
     def __init__(self):
+        super().__init__()
         self._radius = 200
         self._k = 0.01
         self._kd = 1
