@@ -115,6 +115,7 @@ class Autonomous(Entity):
         self._speed = 0.5 * self._max_v
         self._pre_vel = np.array([0, 0])
         self._at_pose = False
+        self._plot_velocity = False
 
         # Additional params for testing
         self._force = np.zeros(2)
@@ -162,13 +163,14 @@ class Autonomous(Entity):
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
-        # pygame.draw.line(
-        #     screen, pygame.Color("yellow"),
-        #     tuple(self.pose), tuple(self.pose + 2 * self.velocity))
+        if self._plot_velocity:
+            pygame.draw.line(
+                screen, pygame.Color("yellow"),
+                tuple(self.pose), tuple(self.pose + self.velocity))
         if self._plot_force:
             pygame.draw.line(
                 screen, pygame.Color("white"),
-                tuple(self.pose), tuple(self.pose + 200 * self._force))
+                tuple(self.pose), tuple(self.pose + 75 * self._force))
         if self._plot_force_mag:
             pygame.draw.circle(screen, pygame.Color(
                 'white'), center=self._pose, radius=5, width=3)
@@ -206,4 +208,3 @@ class Autonomous(Entity):
 
         self.image = pygame.transform.rotate(self.base_image, angle)
         self.rect = self.image.get_rect(center=self.rect.center)
-        print(self.pose)

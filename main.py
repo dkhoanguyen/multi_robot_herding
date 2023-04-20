@@ -3,23 +3,23 @@
 import pygame
 import numpy as np
 from app import params
-import matplotlib.pyplot as plt
 
 from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Hyperplane, Sphere
 from entity.visualise_agent import VisualisationEntity
 
+from behavior.behavior import Behavior
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.formation_control import MathematicalFormation
-from behavior.spiral_motion import SpiralMotion
+from behavior.orbit import Orbit
 
 from environment.environment import Environment
 
 
 def main():
     # Create cows
-    NUMBER_OF_AGENTS = 50
+    NUMBER_OF_AGENTS = 30
     cows = []
     # Cow's properties
     local_perception = 200.0
@@ -121,8 +121,20 @@ def main():
     min_v = 0.0
     max_v = 3
 
-    pos = np.array([600, 900])
-    # pos = np.array([350, 350])
+    pos = np.array([900, 700])
+    pos = np.array([50, 325])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    vel = np.array([38.31,0])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+
+    pos = np.array([500, 900])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -133,7 +145,7 @@ def main():
                               min_v=min_v,
                               max_v=max_v))
 
-    pos = np.array([300, 900])
+    pos = np.array([100, 700])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -144,29 +156,7 @@ def main():
                               min_v=min_v,
                               max_v=max_v))
 
-    pos = np.array([100, 900])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([100, -100])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([300, -100])
+    pos = np.array([100, 100])
     angle = 0
     vel = max_v * np.array([np.cos(angle), np.sin(angle)])
     shepherds.append(Shepherd(pose=pos,
@@ -188,11 +178,22 @@ def main():
                               min_v=min_v,
                               max_v=max_v))
 
+    pos = np.array([900, 100])
+    angle = 0
+    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
+    shepherds.append(Shepherd(pose=pos,
+                              velocity=vel,
+                              local_perception=local_perception,
+                              local_boundary=local_boundary,
+                              mass=mass,
+                              min_v=min_v,
+                              max_v=max_v))
+
     # Mathematical flock
     follow_cursor = True
-    sensing_range = 150
+    sensing_range = MathematicalFlock.ALPHA_RANGE
     danger_range = 2000
-    initial_consensus = np.array([350, 350])
+    initial_consensus = np.array([500, 500])
     math_flock = MathematicalFlock(
         follow_cursor=follow_cursor,
         sensing_range=sensing_range,
@@ -208,9 +209,11 @@ def main():
     for obstacle in obstacles:
         math_flock.add_obstacle(obstacle)
 
-    # Add shepherd
+    # # Add shepherd
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
+    # math_flock.add_shepherd(shepherds[0])
+    # math_flock.add_shepherd(shepherds[1])
 
     # Mathematical formation
     math_formation = MathematicalFormation()
@@ -225,17 +228,18 @@ def main():
     for shepherd in shepherds:
         math_formation.add_shepherd(shepherd)
 
-    spiral = SpiralMotion()
-    spiral.add_single_shepherd(shepherds[0])
+    # Orbit
+    orbit = Orbit()
+    orbit.add_entity(shepherds[0])
 
     # Visualisation Entity
     vis_entity = VisualisationEntity()
 
     # Behaviours
-    behaviours = []
-    behaviours.append(math_flock)
-    behaviours.append(math_formation)
-    behaviours.append(spiral)
+    behaviors = []
+    behaviors.append(math_flock)
+    # behaviors.append(math_formation)
+    # behaviors.append(orbit)
 
     # Environment
     env = Environment()
@@ -248,11 +252,12 @@ def main():
     for obstacle in obstacles:
         env.add_entity(obstacle)
 
-    # Add behavior models
-    env.add_behaviour(math_flock)
-    # env.add_behaviour(math_formation)
-    # env.add_behaviour(spiral)
+    env.add_entity(vis_entity)
 
+    behavior : Behavior
+    for behavior in behaviors:
+        behavior.set_vis_entity(vis_entity)
+        env.add_behaviour(behavior)
 
     while env.ok:
         env.run_once()

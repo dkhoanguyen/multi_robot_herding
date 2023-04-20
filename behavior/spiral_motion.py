@@ -60,3 +60,12 @@ class SpiralMotion(Behavior):
         if self._current_idx >= len(spiral_poses[0,:]) - 1:
             self._current_idx = 0
         return spiral_poses[:, self._current_idx]
+    
+    def _attraction(self, other_pose: np.ndarray):
+        distance = np.linalg.norm(self._shepherd.pose - other_pose)
+        G = 100
+        shepherd_mass = 1
+        other_mass = 1
+
+        force = G * shepherd_mass * other_mass / distance ** 2
+        print(force)
