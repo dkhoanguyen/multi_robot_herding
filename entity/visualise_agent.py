@@ -40,9 +40,6 @@ class VisualisationEntity(Entity):
         if len(self.orbit) > 2:
             updated_points = []
             for point in self.orbit:
-                # print(point)
-                # x = x * self.SCALE + WIDTH / 2
-                # y = y * self.SCALE + HEIGHT / 2
                 updated_points.append(tuple(point))
 
             pygame.draw.lines(screen, pygame.Color("white"), False, updated_points, 2)

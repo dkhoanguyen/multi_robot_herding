@@ -1,0 +1,84 @@
+entity:
+  list:
+    - herd
+    - shepherd
+    - obstacle
+
+  herd:
+    init_random: true
+    num: 30
+    local_perception: 100
+    local_boundary: 40
+    personal_space: 50
+    mass: 0.0
+    min_v: 0.0
+    max_v: 5.0
+
+  shepherd:
+    init_random: false
+    num: 6
+    local_perception: 200
+    local_boundary: 30
+    mass: 20.0
+    min_v: 0.0
+    max_v: 3.0
+    configuration:
+      - pose: [800, 700]
+        angle: 0
+      - pose: [350, 1000]
+        angle: 0
+      - pose: [-100, 700]
+        angle: 0
+      - pose: [-100, 100]
+        angle: 0
+      - pose: [350, -200]
+        angle: 0
+      - pose: [800, 100]
+        angle: 0
+
+  obstacle:
+    sphere:
+      - yk: [1000, 100]
+        Rk: 100
+      - yk: [1000, 510]
+        Rk: 100
+      - yk: [1000, 240]
+        Rk: 100
+      - yk: [1000, 650]
+        Rk: 100
+
+    hyperplane:
+      - ak: [0, 1]
+        yk: [0, 0]
+        boundary: [[0,0],[1280,10]]
+      - ak: [1, 0]
+        yk: [0, 0]
+        boundary: [[0, 0],[10, 720]]
+      - ak: [1, 0]
+        yk: [1279, 0]
+        boundary: [[1270,0],[1280,720]]
+      - ak: [0, 1]
+        yk: [0, 719]
+        boundary: [[0,710],[1280,720]]
+
+behavior:
+  list:
+    - math_flock
+    - math_formation
+    - orbit
+
+  math_flock:
+    interaction:
+      - herd
+      - shepherd
+      - obstacle
+    params:
+      following_cursor: false
+      sensing_range: 40
+      danger_range: 300
+      initial_consensus: [350, 350]
+    constants:
+      c1_alpha: 3
+      c1_beta: 20
+      c1_gamma: 5
+      c1_delta: 20

@@ -28,11 +28,17 @@ class Obstacle(Entity):
 class Hyperplane(Obstacle):
     def __init__(self, ak: np.ndarray,
                  yk: np.ndarray,
-                 display_func=None):
-        super().__init__(display_func=display_func)
-        self._ak = ak.reshape((2, 1))
-        self._yk = yk.reshape((2, 1))
+                 boundary: np.ndarray):
+        super().__init__(display_func=None)
+        self._ak = np.array(ak).reshape((2, 1))
+        self._yk = np.array(yk).reshape((2, 1))
         self._P = np.eye(2) - self._ak @ self._ak.transpose()
+        self._boundary = np.array(boundary)
+
+    def display(self, screen: pygame.Surface):
+        pygame.draw.rect(screen, pygame.Color(
+            'slate gray'), (self._boundary[0, 0], self._boundary[0, 1],
+                            self._boundary[1, 0], self._boundary[1, 1]), 0)
 
     def in_entity_radius(self, qi: np.ndarray, r: float):
         # Project entity position onto the plane
@@ -51,8 +57,8 @@ class Hyperplane(Obstacle):
 class Sphere(Obstacle):
     def __init__(self, yk: np.ndarray,
                  Rk: float):
-        self._yk = yk.reshape((2, 1))
-        self._Rk = Rk
+        self._yk = np.array(yk).reshape((2, 1))
+        self._Rk = float(Rk)
 
     def display(self, screen: pygame.Surface):
         pygame.draw.circle(screen, pygame.Color(

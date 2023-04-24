@@ -1,23 +1,15 @@
 #!/usr/bin/python3
 
 import pygame
-import pymunk
-import pymunk.pygame_util
 from app import params
 
-from entity.entity import Entity, Autonomous
+from entity.entity import Entity
 from behavior.behavior import Behavior
 
 
 class Environment(object):
 
     def __init__(self):
-        # # Pymunk for physic engine
-        # self._space = pymunk.Space()
-        # self._space.iterations = 10
-        # self._space.sleep_time_threshold = 0.5
-        # self._static_body = self._space.static_body
-
         # Pygame for visualisation
         pygame.init()
         self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
@@ -29,40 +21,12 @@ class Environment(object):
         self._entities = []
         self._bodies = []
 
-        screen_width = params.SCREEN_SIZE[0]
-        screen_height = params.SCREEN_SIZE[1]
-
-        # Add boundaries
-        # left_segment = pymunk.Segment(self._static_body,
-        #                               (0.0, 0.0),
-        #                               (0.0, screen_height), 5.0)
-        # top_segment = pymunk.Segment(self._static_body,
-        #                              (0.0, 0.0),
-        #                              (screen_width, 0.0), 5.0)
-        # right_segment = pymunk.Segment(self._static_body,
-        #                                (screen_width, 0.0),
-        #                                (screen_width, screen_height), 5.0)
-        # bottom_segment = pymunk.Segment(self._static_body,
-        #                                 (0.0, screen_height),
-        #                                 (screen_width, screen_height), 5.0)
-        # self._space.add(left_segment)
-        # self._space.add(top_segment)
-        # self._space.add(right_segment)
-        # self._space.add(bottom_segment)
-
     @property
     def ok(self):
         return self._running
 
     def add_entity(self, entity: Entity):
         self._entities.append(entity)
-
-        # # Added pymunk physic elements
-        # addables = entity.get_pymunk_addables()
-        # for key, addable in addables.items():
-        #     self._space.add(addable)
-        #     if key == 'body':
-        #         self._bodies.append(addable)
 
     def add_behaviour(self, behavior: Behavior):
         behavior._set_screen(self._screen)

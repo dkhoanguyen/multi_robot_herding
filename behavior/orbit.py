@@ -30,20 +30,22 @@ class Orbit(Behavior):
         self._entity = entity
 
     def update(self, *args, **kwargs):
-        center = np.array([500, 500])
-        force = self._attraction(center)
+        # center = np.array([500, 500])
+        # force = self._attraction(center)
 
-        self._entity._plot_velocity = True
+        # self._entity._plot_velocity = True
 
-        # print(f"force: {force}")
-        self._entity.velocity = self._entity.velocity + force / 2 * 0.05
-        self._entity.pose = self._entity.pose + self._entity.velocity * 0.05
-        self._orbit.append(self._entity.pose.copy())
+        # # print(f"force: {force}")
+        # self._entity.velocity = self._entity.velocity + force / 2 * 0.05
+        # self._entity.pose = self._entity.pose + self._entity.velocity * 0.05
+        # self._orbit.append(self._entity.pose.copy())
 
-        self._vis_entity.orbit = self._orbit
+        # self._vis_entity.orbit = self._orbit
 
-        self._entity._rotate_image(self._entity.velocity)
-        self._entity.reset_steering()
+        # self._entity._rotate_image(self._entity.velocity)
+        # self._entity.reset_steering()
+        self._entity.follow_mouse()
+        self._entity.update()
 
     def _attraction(self, pose: np.ndarray):
         pose_entity = pose - self._entity.pose

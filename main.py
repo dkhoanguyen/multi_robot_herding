@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import yaml
+
 import pygame
 import numpy as np
 from app import params
@@ -15,193 +17,42 @@ from behavior.formation_control import MathematicalFormation
 from behavior.orbit import Orbit
 
 from environment.environment import Environment
+from environment.spawner import Spawner
 
 
 def main():
-    # Create cows
-    NUMBER_OF_AGENTS = 30
-    cows = []
-    # Cow's properties
-    local_perception = 200.0
-    local_boundary = 30.0
-    personal_space = 60.0
-    mass = 20.0
-    min_v = 0.0
-    max_v = 5
+    config = 'default_config.yml'
+    # Read yaml and extract configuration
+    with open(f'config/{config}', 'r') as file:
+        config = yaml.safe_load(file)
 
-    agents = np.random.randint(50, 700, (NUMBER_OF_AGENTS, 2)).astype('float')
+    entity_config = config['entity']
 
-    for i in range(NUMBER_OF_AGENTS):
-        angle = np.pi * (2 * np.random.rand() - 1)
-        vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-        cow = Herd(pose=agents[i, :2],
-                   velocity=vel,
-                   local_perception=local_perception,
-                   local_boundary=local_boundary,
-                   personal_space=personal_space,
-                   mass=mass,
-                   min_v=min_v,
-                   max_v=max_v)
-        cows.append(cow)
+    # Create herds
+    herd_config = entity_config['herd']
+    herds = Spawner.auto_spawn_herds(herd_config)
 
     # Create obstacles
-    obstacles = []
-    # Environment boundaries
-    ak = np.array([0, 1])
-    yk = np.array([0, 0])
-
-    def display_upper_boundary(screen):
-        pygame.draw.rect(screen, pygame.Color(
-            'slate gray'), (0, 0, params.SCREEN_SIZE[0], 10), 0)
-    upper_boundary = Hyperplane(ak, yk, display_upper_boundary)
-    obstacles.append(upper_boundary)
-
-    ak = np.array([1, 0])
-    yk = np.array([0, 0])
-
-    def display_left_boundary(screen):
-        pygame.draw.rect(screen,
-                         pygame.Color('slate gray'),
-                         (0, 0, 10, params.SCREEN_SIZE[1]), 0)
-    left_boundary = Hyperplane(ak, yk, display_left_boundary)
-    obstacles.append(left_boundary)
-
-    ak = np.array([1, 0])
-    yk = np.array([1279, 0])
-
-    def display_right_boundary(screen):
-        pygame.draw.rect(screen,
-                         pygame.Color('slate gray'),
-                         (params.SCREEN_SIZE[0] - 10, 0,
-                          params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
-
-    right_boundary = Hyperplane(ak, yk, display_right_boundary)
-    obstacles.append(right_boundary)
-
-    ak = np.array([0, 1])
-    yk = np.array([0, 719])
-
-    def display_lower_boundary(screen):
-        pygame.draw.rect(screen,
-                         pygame.Color('slate gray'),
-                         (0, params.SCREEN_SIZE[1] - 10,
-                             params.SCREEN_SIZE[0], params.SCREEN_SIZE[1]), 0)
-    lower_boundary = Hyperplane(ak, yk, display_lower_boundary)
-    obstacles.append(lower_boundary)
-
-    # Spherial obstacles
-    yk = np.array([1000, 100])
-    Rk = 100
-    circle1 = Sphere(yk, Rk)
-    obstacles.append(circle1)
-
-    yk = np.array([1000, 510])
-    Rk = 100
-    circle2 = Sphere(yk, Rk)
-    obstacles.append(circle2)
-
-    yk = np.array([1000, 240])
-    Rk = 100
-    circle3 = Sphere(yk, Rk)
-    obstacles.append(circle3)
-
-    yk = np.array([1000, 650])
-    Rk = 100
-    circle4 = Sphere(yk, Rk)
-    obstacles.append(circle4)
+    obstacle_config = entity_config['obstacle']
+    obstacles = Spawner.auto_spawn_obstacles(obstacle_config)
 
     # Create shepherds
-    num_shepherds = 6
-    shepherds = []
-    # Shepherd's properties
-    local_perception = 200.0
-    local_boundary = 30.0
-    personal_space = 60.0
-    mass = 20.0
-    min_v = 0.0
-    max_v = 3
-
-    pos = np.array([900, 700])
-    pos = np.array([50, 325])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    vel = np.array([38.31,0])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([500, 900])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([100, 700])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([100, 100])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([500, -100])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
-
-    pos = np.array([900, 100])
-    angle = 0
-    vel = max_v * np.array([np.cos(angle), np.sin(angle)])
-    shepherds.append(Shepherd(pose=pos,
-                              velocity=vel,
-                              local_perception=local_perception,
-                              local_boundary=local_boundary,
-                              mass=mass,
-                              min_v=min_v,
-                              max_v=max_v))
+    shepherd_config = entity_config['shepherd']
+    shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
 
     # Mathematical flock
     follow_cursor = True
     sensing_range = MathematicalFlock.ALPHA_RANGE
-    danger_range = 2000
-    initial_consensus = np.array([500, 500])
+    danger_range = 300
+    initial_consensus = np.array([350, 350])
     math_flock = MathematicalFlock(
         follow_cursor=follow_cursor,
         sensing_range=sensing_range,
         danger_range=danger_range,
         initial_consensus=initial_consensus)
 
-    # Add cows
-    for cow in cows:
+    # Add herds
+    for cow in herds:
         # flock.add_member(cow)
         math_flock.add_herd(cow)
 
@@ -212,16 +63,14 @@ def main():
     # # Add shepherd
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
-    # math_flock.add_shepherd(shepherds[0])
-    # math_flock.add_shepherd(shepherds[1])
 
     # Mathematical formation
     math_formation = MathematicalFormation()
     math_formation.set_herd_mean(initial_consensus)
     math_formation.add_herd(math_flock)
 
-    # Add cows
-    for cow in cows:
+    # Add herds
+    for cow in herds:
         math_formation.add_herd(cow)
 
     # Add shepherd
@@ -245,7 +94,7 @@ def main():
     env = Environment()
 
     # Add entities
-    for cow in cows:
+    for cow in herds:
         env.add_entity(cow)
     for shepherd in shepherds:
         env.add_entity(shepherd)
@@ -254,7 +103,7 @@ def main():
 
     env.add_entity(vis_entity)
 
-    behavior : Behavior
+    behavior: Behavior
     for behavior in behaviors:
         behavior.set_vis_entity(vis_entity)
         env.add_behaviour(behavior)

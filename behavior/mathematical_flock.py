@@ -116,41 +116,18 @@ class MathematicalFlock(Behavior):
 
     def get_herd_mean(self):
         herd: Herd
-        agent_states = np.array([]).reshape((0, 2))
+        herd_states = np.array([]).reshape((0, 2))
         for herd in self._herds:
             # Grab and put all poses into a matrix
-            agent_states = np.vstack(
-                (agent_states, herd.pose))
-        return np.sum(agent_states, axis=0) / agent_states.shape[0]
+            herd_states = np.vstack(
+                (herd_states, herd.pose))
+        return np.sum(herd_states, axis=0) / herd_states.shape[0]
 
     def update(self, dt: float):
         self._flocking(dt)
 
-    # Old basic herd behaviors
-    def _wander(self, herd: Herd):
-        WANDER_DIST = 4.0
-        WANDER_RADIUS = 3.0
-        WANDER_ANGLE = 1.0  # degrees
-
-        rands = 2 * np.random.rand(len(self._herds)) - 1
-        cos = np.cos([herd.wandering_angle for herd in self._herds])
-        sin = np.sin([herd.wandering_angle for herd in self._herds])
-
-        another_herd: Herd
-        for i, another_herd in enumerate(self._herds):
-            if herd == another_herd:
-                nvel = MathematicalFlock.MathUtils.normalise(herd.velocity)
-                # calculate circle center
-                circle_center = nvel * WANDER_DIST
-                # calculate displacement force
-                c, s = cos[i], sin[i]
-                displacement = np.dot(
-                    np.array([[c, -s], [s, c]]), nvel * WANDER_RADIUS)
-                herd.steer(circle_center + displacement, alt_max=10)
-                herd.wandering_angle += WANDER_ANGLE * rands[i]
-
     def _remain_in_screen(self, herd: Herd):
-        if herd.pose[0] > params.SCREEN_WIDTH - 600:
+        if herd.pose[0] > params.SCREEN_WIDTH - 700:
             herd.steer(np.array([-params.STEER_INSIDE, 0.]),
                        alt_max=params.BOID_MAX_FORCE)
         if herd.pose[0] < params.BOX_MARGIN:
@@ -162,21 +139,6 @@ class MathematicalFlock(Behavior):
         if herd.pose[1] > params.SCREEN_HEIGHT - params.BOX_MARGIN:
             herd.steer(np.array([0., -params.STEER_INSIDE]),
                        alt_max=params.BOID_MAX_FORCE)
-
-    def _separate(self, herd: Herd, distance: float):
-        number_of_neighbors = 0
-        force = np.zeros(2)
-        other_boid: Herd
-        for other_boid in self._herds:
-            if herd == other_boid:
-                continue
-            if utils.dist2(herd.pose, other_boid.pose) < distance ** 2:
-                force -= other_boid.pose - herd.pose
-                number_of_neighbors += 1
-        if number_of_neighbors:
-            force /= number_of_neighbors
-        herd.steer(utils.normalize(force) * 10.0,
-                   alt_max=params.BOID_MAX_FORCE)
 
     def _flee(self, shepherd: Shepherd, herd: Herd):
         pred_pose = shepherd.pose
@@ -202,27 +164,32 @@ class MathematicalFlock(Behavior):
                     self._stop = False
 
         herd: Herd
-        agent_states = np.array([]).reshape((0, 4))
+        herd_states = np.array([]).reshape((0, 4))
         for herd in self._herds:
             # Grab and put all poses into a matrix
-            agent_states = np.vstack(
-                (agent_states, np.hstack((herd.pose, herd.velocity))))
+            herd_states = np.vstack(
+                (herd_states, np.hstack((herd.pose, herd.velocity))))
 
-        # ch = ConvexHull(agent_states[:, :2])
+        shepherd: Shepherd
+        shepherd_states = np.array([]).reshape((0, 4))
+        for shepherd in self._shepherds:
+            # Grab and put all poses into a matrix
+            shepherd_states = np.vstack(
+                (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity))))
+            
 
         u = np.zeros((len(self._herds), 2))
-        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(agent_states,
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
         lower_tril = np.tril(alpha_adjacency_matrix, -1)
         epsilon = sum(sum(lower_tril))
 
-        beta_adjacency_matrix = self._get_beta_adjacency_matrix(agent_states,
+        beta_adjacency_matrix = self._get_beta_adjacency_matrix(herd_states,
                                                                 self._obstacles,
                                                                 r=self._sensing_range)
-        delta_adjacency_matrix = self._get_delta_adjacency_matrix(agent_states,
+        delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
                                                                   self._shepherds,
                                                                   r=self._danger_range)
-        force_mag_list = np.empty((0, 2))
 
         total_pairwise_sum = 0
         for idx, herd in enumerate(self._herds):
@@ -230,41 +197,35 @@ class MathematicalFlock(Behavior):
             herd._plot_force = False
             herd._plot_force_mag = False
 
-            qi = agent_states[idx, :2]
-            pi = agent_states[idx, 2:]
+            qi = herd_states[idx, :2]
+            pi = herd_states[idx, 2:]
 
             # Alpha agent
             u_alpha = 0
             neighbor_idxs = alpha_adjacency_matrix[idx]
 
-            pairwise_potential = self._pairwise_potential(
-                qi, agent_states[:, :2],
-                MathematicalFlock.ALPHA_DISTANCE)
-            total_pairwise_sum += pairwise_potential
-
             if sum(neighbor_idxs) > 0:
-                qj = agent_states[neighbor_idxs, :2]
-                pj = agent_states[neighbor_idxs, 2:]
+                qj = herd_states[neighbor_idxs, :2]
+                pj = herd_states[neighbor_idxs, 2:]
 
                 pw_qj = qj
                 shepherd: Shepherd
                 for shepherd in self._shepherds:
                     pw_qj = np.vstack((pw_qj, shepherd.pose.reshape(1, 2)))
 
-                pairwise_potential = (1/(1 + sum(neighbor_idxs))) * self._pairwise_potential(
-                    qi, qj, MathematicalFlock.ALPHA_DISTANCE)
+                pairwise_potential_mag = (1/(1 + sum(neighbor_idxs))) * self._pairwise_potential_mag(
+                    qi, qj, 0)
+                total_pairwise_sum += pairwise_potential_mag
 
-                reg_potential = (1/(1 + sum(neighbor_idxs))) * \
-                    self._potential(qi, pw_qj)
-                herd._force = reg_potential * 0.02
+                pairwise_potential_vec = (1/(1 + sum(neighbor_idxs))) * \
+                    self._pairwise_potentia_vec(
+                        qi, qj, MathematicalFlock.ALPHA_DISTANCE)
+                
+                density = self._density(qi, qj, 0.375)
+                
+                herd._force = density * 5
                 herd._plot_force = True
-
-                herd._plot_force_mag = False
-                # print(f"Robot {idx} norm: {np.linalg.norm(reg_potential)}")
-                # print(f"Robot {idx} vec: {reg_potential}")
-                # print("==")
-
-                herd._force_mag = pairwise_potential / 200
+                herd._force_mag = pairwise_potential_mag / 200
 
                 alpha_grad = self._gradient_term(
                     c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
@@ -277,16 +238,6 @@ class MathematicalFlock(Behavior):
                     pi=pi, pj=pj,
                     r=MathematicalFlock.ALPHA_RANGE)
                 u_alpha = alpha_grad + alpha_consensus
-
-                # # Density function with neighbors
-                # herd._force = self._get_agent_density_vector(qi, qj, 0.375)
-                # herd._force_mag = 35 * \
-                #     self._get_agent_density_mag(qi, qj, 0.375)
-            # else:
-            #     herd._force = np.zeros(2)
-            #     herd._force_mag = 0
-            # force_mag_list = np.vstack(
-            #     (force_mag_list, np.array([herd._force_mag, idx])))
 
             # Beta agent
             u_beta = 0
@@ -347,53 +298,56 @@ class MathematicalFlock(Behavior):
                     qi=qi, qj=qid,
                     pi=pi, pj=pid,
                     r=MathematicalFlock.BETA_RANGE)
-                u_delta = delta_grad + delta_consensus
 
-            # if time.time() - self._start_time < 0:
+                predator_avoidance = self._predator_avoidance_term(
+                    si=qi, k=200000)
+                # print(predator_avoidance)
+
+                # predator_avoidance = 0
+                u_delta = delta_grad + delta_consensus + predator_avoidance
             # u_gamma = 0
             # u_delta = 0
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_gamma + u_delta
 
         total_pairwise_sum = total_pairwise_sum/(1 + epsilon)
-        # print(total_pairwise_sum)
-        # with open('data/gathered_flock.txt', 'a') as f:
-        #     f.write(str(total_pairwise_sum) + '\n')
-
+        
         # Control for the agent
         qdot = u
-        agent_states[:, 2:] += qdot * 0.1
-        pdot = agent_states[:, 2:]
-        agent_states[:, :2] += pdot * 0.2
+        herd_states[:, 2:] += qdot * 0.1
+        pdot = herd_states[:, 2:]
+        herd_states[:, :2] += pdot * 0.2
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
             # for shepherd in self._shepherds:
             #     self._flee(shepherd, herd)
-            self._remain_in_screen(herd)
-            herd.velocity = agent_states[idx, 2:] + herd._steering
-            herd.pose = agent_states[idx, :2]
+            # self._remain_in_screen(herd)
+            herd.velocity = herd_states[idx, 2:] + herd._steering
+            herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
             herd.reset_steering()
 
         # shepherd: Shepherd
         # for shepherd in self._shepherds:
         #     reg_potential = (1/(1 + len(self._herds))) * \
-        #         self._inv_potential(shepherd.pose, agent_states[:, :2])
-        #     shepherd._force = reg_potential * 0.005
+        #         self._pairwise_potentia_vec(
+        #             shepherd.pose, self._consensus_pose.reshape(1, 2), 150)
+        #     shepherd._force = reg_potential * 0.000025
         #     shepherd._plot_force = True
-        #     shepherd.velocity = reg_potential * 0.008
+        #     shepherd.velocity = reg_potential * 0.0025
+        #     if np.linalg.norm(shepherd.velocity) <= 0.05:
+        #         shepherd.velocity = np.zeros(2)
+        #     # print(np.linalg.norm(shepherd.velocity))
 
         #     if self._stop:
         #         return
-            
+
         #     shepherd.pose = shepherd.pose + shepherd.velocity
         #     shepherd._rotate_image(shepherd.velocity)
         #     shepherd.reset_steering()
-        #     # shepherd.follow_mouse()
-        #     # shepherd.update()
 
-        # self._vis_entity.boundaries = agent_states[ch.vertices, :2]
+        # self._vis_entity.boundaries = herd_states[ch.vertices, :2]
 
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
                        r: float, d: float):
@@ -415,9 +369,9 @@ class MathematicalFlock(Behavior):
         # Group objective term
         return -c1 * MathematicalFlock.MathUtils.sigma_1(qi - pos) - c2 * (pi)
 
-    def _get_alpha_adjacency_matrix(self, agents: np.ndarray, r: float) -> np.ndarray:
-        adj_matrix = np.array([np.linalg.norm(agents[i, :2]-agents[:, :2], axis=-1) <= r
-                               for i in range(len(agents))])
+    def _get_alpha_adjacency_matrix(self, herd_states: np.ndarray, r: float) -> np.ndarray:
+        adj_matrix = np.array([np.linalg.norm(herd_states[i, :2]-herd_states[:, :2], axis=-1) <= r
+                               for i in range(len(herd_states))])
         np.fill_diagonal(adj_matrix, False)
         return adj_matrix
 
@@ -452,43 +406,33 @@ class MathematicalFlock(Behavior):
     def _get_n_ij(self, q_i, q_js):
         return MathematicalFlock.MathUtils.sigma_norm_grad(q_js - q_i)
 
+    def _predator_avoidance_term(self, si: np.ndarray, k: float):
+        shepherd: Shepherd
+        si_dot = np.zeros(2)
+        for shepherd in self._shepherds:
+            di = shepherd.pose.reshape(2)
+            si_dot += -k * (di - si)/(np.linalg.norm(di - si))**3
+        return si_dot
+
     # Experimental function
-    def _get_all_agent_density_vectors(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
-        p = []
-        for s_j in s_js:
-            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
-                utils.unit_vector(s_i - s_j)
-            if not sum(np.isnan(wij)):
-                p.append(wij)
-        return np.array(p)
+    # Pairwise potential
+    def _pairwise_potentia_vec(self, qi: np.ndarray, qj: np.ndarray, d: float):
+        pw_sum = np.zeros(2)
+        for i in range(qj.shape[0]):
+            qji = qj[i, :] - qi
+            pw = (np.linalg.norm(qj[i, :] - qi) -
+                  d) ** 2 * utils.unit_vector(qji)
+            pw_sum += pw
+        return pw_sum
 
-    def _get_agent_density_vector(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
-        p = []
-        for s_j in s_js:
-            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
-                utils.unit_vector(s_i - s_j)
-            if not sum(np.isnan(wij)):
-                p.append(wij)
-        p = np.sum(np.array(p), axis=0)
-        return p
-
-    def _get_agent_density_mag(self, s_i: np.ndarray, s_js: np.ndarray, k: float):
-        p = []
-        for s_j in s_js:
-            wij = 1/(1 + k * np.linalg.norm(s_i - s_j)) * \
-                utils.unit_vector(s_i - s_j)
-            if not sum(np.isnan(wij)):
-                p.append(np.linalg.norm(wij))
-        p = sum(p)
-        return p
-
-    def _pairwise_potential(self, qi: np.ndarray, qj: np.ndarray, d: float):
+    def _pairwise_potential_mag(self, qi: np.ndarray, qj: np.ndarray, d: float):
         pw_sum = 0
         for i in range(qj.shape[0]):
             pw = (np.linalg.norm(qj[i, :] - qi) - d) ** 2
             pw_sum += pw
         return pw_sum
 
+    # Elastic potential
     def _potential(self, qi: np.ndarray, qj: np.ndarray):
         p_sum = np.zeros(2)
         for i in range(qj.shape[0]):
@@ -502,3 +446,11 @@ class MathematicalFlock(Behavior):
             p = qj[i, :] - qi
             p_sum += p
         return p_sum
+
+    def _density(self, si: np.ndarray, sj: np.ndarray, k: float):
+        w_sum = np.zeros(2).astype(np.float64)
+        for i in range(sj.shape[0]):
+            sij = si - sj[i, :]
+            w = (1/(1 + k * np.linalg.norm(sij))) * (sij / np.linalg.norm(sij))
+            w_sum += w
+        return w_sum
