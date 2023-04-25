@@ -28,7 +28,7 @@ class Shepherd(Autonomous):
         self._local_perception = local_perception
         self._local_boundary = local_boundary
 
-        self._r = 100
+        self._r = 40
         self._consensus_r = 200
 
         self._consensus_point = np.zeros((2,))
@@ -44,9 +44,9 @@ class Shepherd(Autonomous):
         #     'white'), center=self._consensus_point, radius=10, width=3)
         return super().display(screen, debug)
 
-    def in_entity_radius(self, qi: np.ndarray, r: float):
+    def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:
         # Project entity posit
-        return np.linalg.norm(self._pose - qi) <= r + self._r
+        return np.linalg.norm(self._pose - qi) <= (r + self._r)
 
     def induce_delta_agent(self, alpha_agent: Entity):
         qi = alpha_agent.pose.reshape((2, 1))

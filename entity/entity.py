@@ -46,7 +46,7 @@ class Entity(pygame.sprite.Sprite):
         self._heading = np.deg2rad(angle)
 
         self._pymunk_addables = {}
-
+        
     @property
     def pose(self):
         return self._pose

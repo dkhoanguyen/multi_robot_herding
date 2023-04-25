@@ -15,7 +15,6 @@ class Environment(object):
         self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
         self._running = True
         self._clock = pygame.time.Clock()
-        # self._draw_options = pymunk.pygame_util.DrawOptions(self._screen)
 
         self._behaviors = []
         self._entities = []
@@ -41,19 +40,6 @@ class Environment(object):
         entity: Entity
         for entity in self._entities:
             entity.display(self._screen)
-
-    def run(self):
-        while self._running:
-            self._clock.tick(params.FPS)
-            self._screen.fill(params.SIMULATION_BACKGROUND)
-            motion_event, click_event = None, None
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-
-            self.update()
-            self.display()
-            pygame.display.flip()
 
     def run_once(self):
         events = pygame.event.get()

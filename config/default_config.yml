@@ -1,12 +1,7 @@
 entity:
-  list:
-    - herd
-    - shepherd
-    - obstacle
-
   herd:
     init_random: true
-    num: 30
+    num: 20
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -16,36 +11,68 @@ entity:
 
   shepherd:
     init_random: false
-    num: 6
+    num: 1
     local_perception: 200
     local_boundary: 30
     mass: 20.0
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [800, 700]
+      # - pose: [800, 700]
+      #   angle: 0
+      # - pose: [350, 1000]
+      #   angle: 0
+      # - pose: [-100, 700]
+      #   angle: 0
+      # - pose: [-100, 100]
+      #   angle: 0
+      # - pose: [350, -200]
+      #   angle: 0
+      # - pose: [800, 100]
+      #   angle: 0
+      - pose: [100, 700]
         angle: 0
-      - pose: [350, 1000]
+      - pose: [150, 700]
         angle: 0
-      - pose: [-100, 700]
+      - pose: [200, 700]
         angle: 0
-      - pose: [-100, 100]
+      - pose: [250, 700]
         angle: 0
-      - pose: [350, -200]
+      - pose: [300, 700]
         angle: 0
-      - pose: [800, 100]
+      - pose: [350, 700]
         angle: 0
+      - pose: [400, 700]
+        angle: 0
+      - pose: [450, 700]
+        angle: 0
+      - pose: [500, 700]
+        angle: 0
+      - pose: [550, 700]
+        angle: 0
+      # - pose: [600, 700]
+      #   angle: 0
+      # - pose: [650, 700]
+      #   angle: 0
+      # - pose: [700, 700]
+      #   angle: 0
+      # - pose: [750, 700]
+      #   angle: 0
+      # - pose: [800, 700]
+      #   angle: 0
+      # - pose: [850, 700]
+      #   angle: 0
 
   obstacle:
     sphere:
-      - yk: [1000, 100]
-        Rk: 100
-      - yk: [1000, 510]
-        Rk: 100
-      - yk: [1000, 240]
-        Rk: 100
-      - yk: [1000, 650]
-        Rk: 100
+      # - yk: [1000, 100]
+      #   Rk: 100
+      # - yk: [1000, 510]
+      #   Rk: 100
+      # - yk: [1000, 240]
+      #   Rk: 100
+      # - yk: [1000, 650]
+      #   Rk: 100
 
     hyperplane:
       - ak: [0, 1]
@@ -54,13 +81,15 @@ entity:
       - ak: [1, 0]
         yk: [0, 0]
         boundary: [[0, 0],[10, 720]]
-      - ak: [1, 0]
-        yk: [1279, 0]
+      - ak: [-1, 0]
+        yk: [1270, 0]
         boundary: [[1270,0],[1280,720]]
-      - ak: [0, 1]
-        yk: [0, 719]
+      - ak: [0, -1]
+        yk: [0, 710]
         boundary: [[0,710],[1280,720]]
 
+  plotting:
+    
 behavior:
   list:
     - math_flock
@@ -69,14 +98,16 @@ behavior:
 
   math_flock:
     interaction:
-      - herd
-      - shepherd
-      - obstacle
+      entity:
+        - herd
+        - shepherd
+        - obstacle
+      behavior:
     params:
-      following_cursor: false
+      follow_cursor: false
       sensing_range: 40
       danger_range: 300
-      initial_consensus: [350, 350]
+      initial_consensus: [500, 360]
     constants:
       c1_alpha: 3
       c1_beta: 20

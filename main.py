@@ -13,7 +13,7 @@ from entity.visualise_agent import VisualisationEntity
 
 from behavior.behavior import Behavior
 from behavior.mathematical_flock import MathematicalFlock
-from behavior.formation_control import MathematicalFormation
+from behavior.mathematical_formation import MathematicalFormation
 from behavior.orbit import Orbit
 
 from environment.environment import Environment
@@ -26,35 +26,30 @@ def main():
     with open(f'config/{config}', 'r') as file:
         config = yaml.safe_load(file)
 
+    entities = []
+    ## Entity related configuration
     entity_config = config['entity']
-
     # Create herds
     herd_config = entity_config['herd']
     herds = Spawner.auto_spawn_herds(herd_config)
-
+    entities = entities + herds
     # Create obstacles
     obstacle_config = entity_config['obstacle']
     obstacles = Spawner.auto_spawn_obstacles(obstacle_config)
-
+    entities = entities + obstacles
     # Create shepherds
     shepherd_config = entity_config['shepherd']
     shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
+    entities = entities + shepherds
 
-    # Mathematical flock
-    follow_cursor = True
-    sensing_range = MathematicalFlock.ALPHA_RANGE
-    danger_range = 300
-    initial_consensus = np.array([350, 350])
-    math_flock = MathematicalFlock(
-        follow_cursor=follow_cursor,
-        sensing_range=sensing_range,
-        danger_range=danger_range,
-        initial_consensus=initial_consensus)
+    ## Behavior related configuration
+    behavior_config = config['behavior']
+    math_flock_config = behavior_config['math_flock']
+    math_flock = MathematicalFlock(**math_flock_config['params'])
 
     # Add herds
-    for cow in herds:
-        # flock.add_member(cow)
-        math_flock.add_herd(cow)
+    for herd in herds:
+        math_flock.add_herd(herd)
 
     # Add obstacles
     for obstacle in obstacles:
@@ -64,16 +59,13 @@ def main():
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
 
-    # Mathematical formation
     math_formation = MathematicalFormation()
-    math_formation.set_herd_mean(initial_consensus)
-    math_formation.add_herd(math_flock)
 
     # Add herds
-    for cow in herds:
-        math_formation.add_herd(cow)
+    for herd in herds:
+        math_formation.add_herd(herd)
 
-    # Add shepherd
+    # # Add shepherd
     for shepherd in shepherds:
         math_formation.add_shepherd(shepherd)
 
@@ -87,7 +79,7 @@ def main():
     # Behaviours
     behaviors = []
     behaviors.append(math_flock)
-    # behaviors.append(math_formation)
+    behaviors.append(math_formation)
     # behaviors.append(orbit)
 
     # Environment
@@ -111,7 +103,6 @@ def main():
     while env.ok:
         env.run_once()
         env.render()
-
 
 if __name__ == '__main__':
     main()

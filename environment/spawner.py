@@ -68,13 +68,15 @@ class Spawner(object):
         obstacles = []
         # Spherial obstacles
         sphere_config = obs_config['sphere']
-        for sphere in sphere_config:
-            obstacles.append(Spawner.manual_spawn(
-                entity=Sphere, config=sphere))
+        if sphere_config:
+            for sphere in sphere_config:
+                obstacles.append(Spawner.manual_spawn(
+                    entity=Sphere, config=sphere))
 
         # Hyperplane obstacles
         hyperplane_config = obs_config['hyperplane']
-        for hyperplane in hyperplane_config:
-            obstacles.append(Spawner.manual_spawn(
-                entity=Hyperplane, config=hyperplane))
+        if hyperplane_config:
+            for hyperplane in hyperplane_config:
+                obstacles.append(Spawner.manual_spawn(
+                    entity=Hyperplane, config=hyperplane))
         return obstacles
