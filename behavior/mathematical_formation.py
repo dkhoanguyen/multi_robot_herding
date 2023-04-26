@@ -12,7 +12,7 @@ from entity.shepherd import Shepherd
 
 
 class MathematicalFormation(Behavior):
-    Cs = 10
+    Cs = 40
     Cr = 0
 
     def __init__(self):
@@ -22,6 +22,11 @@ class MathematicalFormation(Behavior):
         self._shepherds = []
 
         self._stop = True
+
+        # Stuff to display
+        self._plot_enforced_agent = False
+        self._herd_mean = np.zeros(2)
+        self._herd_radius = 150
 
     def add_herd(self, herd):
         self._herds.append(herd)
@@ -45,7 +50,12 @@ class MathematicalFormation(Behavior):
             herd_states = np.vstack(
                 (herd_states, np.hstack((herd.pose, herd.velocity))))
 
-        herd_mean = np.sum(herd_states[:,:2], axis=0) / herd_states.shape[0]
+        self._herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+
+        d_to_herd_mean = np.linalg.norm(
+            herd_states[:, :2] - self._herd_mean, axis=1)
+        self._herd_radius = np.max(d_to_herd_mean) + 20
 
         shepherd: Shepherd
         shepherd_states = np.array([]).reshape((0, 4))
@@ -56,9 +66,9 @@ class MathematicalFormation(Behavior):
 
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
                                                                   self._shepherds,
-                                                                  r=2000)
+                                                                  r=500)
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
-                                                                  r=2000)
+                                                                  r=200)
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
         for idx, shepherd in enumerate(self._shepherds):
@@ -69,34 +79,31 @@ class MathematicalFormation(Behavior):
             ps = np.zeros(2)
             if sum(neighbor_herd_idxs) > 0:
                 sj = herd_states[neighbor_herd_idxs, :2]
-                s_dot_j = herd_states[neighbor_herd_idxs, 2:]
-                ps = self._pairwise_density(si=di, sj=sj, k=0.375, r=200)
+                # s_dot_j = herd_stat
+                # es[neighbor_herd_idxs, 2:]
+                stabilised_range = 150
+                ps = self._pairwise_density(
+                    si=di, sj=sj, k=0.125, r=stabilised_range)
 
             po = np.zeros(2)
-
             # Enforce virual beta agent
-            R = 200
+            agent_spacing = 200
             neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_shepherd_idxs) > 0:
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
                 d_dot_j = shepherd_states[neighbor_shepherd_idxs, 2:]
 
                 alpha_grad = self._gradient_term(
-                    c=2 * np.sqrt(0.1), qi=di, qj=dj,
-                    r=R,
-                    d=R)
-
-                # alpha_consensus = self._velocity_consensus_term(
-                #     c=np.sqrt(0.1),
-                #     qi=di, qj=dj,
-                #     pi=d_dot_i, pj=d_dot_j,
-                #     r=200)                
+                    c=2 * np.sqrt(0.05), qi=di, qj=dj,
+                    r=agent_spacing,
+                    d=agent_spacing)
                 po = alpha_grad
 
             # Enforce virual beta agent
+            enforced_beta = np.zeros(2)
             enforce_agent = self._induce_enforced_beta_agent(
-                yk=herd_mean,
-                Rk=R,
+                yk=self._herd_mean,
+                Rk=self._herd_radius,
                 di=di,
                 di_dot=d_dot_i)
             bt_di = enforce_agent[:2]
@@ -113,18 +120,26 @@ class MathematicalFormation(Behavior):
                 pi=d_dot_i, pj=bt_di_dot,
                 r=30)
 
+            enforced_beta = beta_grad + beta_consensus
+
+            pg = np.zeros(2)
+
             # Total density p
             p[idx] = -MathematicalFormation.Cs * \
                 (1/np.sqrt(np.linalg.norm(ps)**2)) * \
-                utils.unit_vector(ps) + po + beta_consensus + beta_grad
+                utils.unit_vector(ps) + po + enforced_beta
+
+            if np.linalg.norm(p[idx]) > 30:
+                p[idx] = 30 * utils.unit_vector(p[idx])
+
+        self._plot_enforced_agent = False
 
         if not self._stop:
             # Control for the agent
             qdot = p
             shepherd_states[:, 2:] = qdot
             pdot = shepherd_states[:, 2:]
-            shepherd_states[:, :2] += pdot * 0.25
-            # print(shepherd_states)
+            shepherd_states[:, :2] += pdot * 0.15
 
             shepherd: Shepherd
             for idx, shepherd in enumerate(self._shepherds):
@@ -134,6 +149,12 @@ class MathematicalFormation(Behavior):
                 shepherd.pose = shepherd_states[idx, :2]
                 shepherd._rotate_image(shepherd.velocity)
                 shepherd.reset_steering()
+
+    def display(self, screen: pygame.Surface):
+        if self._plot_enforced_agent:
+            pygame.draw.circle(screen, pygame.Color(
+                'white'), center=tuple(self._herd_mean),
+                radius=self._herd_radius, width=2)
 
     # Common functions with MathematicalFlock
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
@@ -151,6 +172,11 @@ class MathematicalFormation(Behavior):
         # Velocity consensus term
         a_ij = self._get_a_ij(qi, qj, r)
         return c * np.sum(a_ij*(pj-pi), axis=0)
+
+    def _group_objective_term(self, c1: float, c2: float,
+                              pos: np.ndarray, qi: np.ndarray, pi: np.ndarray):
+        # Group objective term
+        return -c1 * MathUtils.sigma_1(qi - pos) - c2 * (pi)
 
     def _get_alpha_adjacency_matrix(self, agent_states: np.ndarray,
                                     r: float) -> np.ndarray:

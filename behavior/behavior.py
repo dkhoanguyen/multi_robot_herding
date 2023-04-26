@@ -14,6 +14,10 @@ class Behavior(ABC):
     def update(self, *args, **kwargs):
         '''
         '''
+    @abstractmethod
+    def display(self, screen: pygame.Surface):
+        '''
+        '''
 
     def _get_events(self, args):
         events = []

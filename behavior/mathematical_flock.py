@@ -127,7 +127,6 @@ class MathematicalFlock(Behavior):
 
     def update(self, dt: float):
         self._flocking(dt)
-        # self._edge_following()
 
     def _remain_in_screen(self, herd: Herd):
         if herd.pose[0] > params.SCREEN_WIDTH - 700:
@@ -276,9 +275,10 @@ class MathematicalFlock(Behavior):
                 u_delta = delta_grad + delta_consensus
 
             u_delta += self._predator_avoidance_term(
-                si=qi, r=self._danger_range, k=50000)
+                si=qi, r=self._danger_range, k=175000)
 
             # u_delta = 0
+            # u_gamma = 0
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + \
                 self._flocking_condition * (u_gamma + u_delta)
@@ -293,11 +293,14 @@ class MathematicalFlock(Behavior):
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
-            # self._remain_in_screen(herd)
-            herd.velocity = herd_states[idx, 2:]
+            self._remain_in_screen(herd)
+            herd.velocity = herd_states[idx, 2:] + herd._steering
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
             herd.reset_steering()
+
+    def display(self, screen: pygame.Surface):
+        pass
 
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
                        r: float, d: float):

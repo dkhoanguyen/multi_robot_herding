@@ -69,9 +69,9 @@ def main():
     for shepherd in shepherds:
         math_formation.add_shepherd(shepherd)
 
-    # Orbit
-    orbit = Orbit()
-    orbit.add_entity(shepherds[0])
+    # # Orbit
+    # orbit = Orbit()
+    # orbit.add_entity(shepherds[0])
 
     # Visualisation Entity
     vis_entity = VisualisationEntity()

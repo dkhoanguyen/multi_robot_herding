@@ -40,6 +40,9 @@ class Environment(object):
         entity: Entity
         for entity in self._entities:
             entity.display(self._screen)
+        behavior: Behavior
+        for behavior in self._behaviors:
+            behavior.display(self._screen)
 
     def run_once(self):
         events = pygame.event.get()

@@ -5,7 +5,7 @@ entity:
     local_perception: 100
     local_boundary: 40
     personal_space: 50
-    mass: 0.0
+    mass: 20.0
     min_v: 0.0
     max_v: 5.0
 
@@ -18,18 +18,6 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      # - pose: [800, 700]
-      #   angle: 0
-      # - pose: [350, 1000]
-      #   angle: 0
-      # - pose: [-100, 700]
-      #   angle: 0
-      # - pose: [-100, 100]
-      #   angle: 0
-      # - pose: [350, -200]
-      #   angle: 0
-      # - pose: [800, 100]
-      #   angle: 0
       - pose: [100, 700]
         angle: 0
       - pose: [150, 700]
@@ -50,18 +38,20 @@ entity:
         angle: 0
       - pose: [550, 700]
         angle: 0
-      # - pose: [600, 700]
-      #   angle: 0
-      # - pose: [650, 700]
-      #   angle: 0
-      # - pose: [700, 700]
-      #   angle: 0
-      # - pose: [750, 700]
-      #   angle: 0
-      # - pose: [800, 700]
-      #   angle: 0
-      # - pose: [850, 700]
-      #   angle: 0
+      - pose: [600, 700]
+        angle: 0
+      - pose: [650, 700]
+        angle: 0
+      - pose: [700, 700]
+        angle: 0
+      - pose: [750, 700]
+        angle: 0
+      - pose: [800, 700]
+        angle: 0
+      - pose: [850, 700]
+        angle: 0
+      - pose: [900, 700]
+        angle: 0
 
   obstacle:
     sphere:
@@ -106,7 +96,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 300
+      danger_range: 100
       initial_consensus: [500, 360]
     constants:
       c1_alpha: 3
