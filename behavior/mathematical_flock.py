@@ -10,8 +10,6 @@ from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Obstacle
 
-from scipy.spatial import ConvexHull
-
 
 class MathUtils():
 
@@ -95,11 +93,14 @@ class MathematicalFlock(Behavior):
         self._consensus_pose = np.array(initial_consensus)
 
         self._start_time = time.time()
-        self._stop = False
+        self._enable_flocking = False
 
         # For control
         self._mass = 0
         self._flocking_condition = 1
+
+        # For visualization
+        self._contour_agents = []
 
     # Herd
     def add_herd(self, herd: Herd):
@@ -147,10 +148,15 @@ class MathematicalFlock(Behavior):
         events = self._get_events(args)
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN and not self._stop:
-                    self._stop = True
-                if event.key == pygame.K_UP and self._stop:
-                    self._stop = False
+                if event.key == pygame.K_DOWN and self._enable_flocking:
+                    self._enable_flocking = False
+                if event.key == pygame.K_UP and not self._enable_flocking:
+                    self._enable_flocking = True
+
+        if self._enable_flocking:
+            self._flocking_condition = 1
+        else:
+            self._flocking_condition = 0
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))

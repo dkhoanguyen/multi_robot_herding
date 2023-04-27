@@ -11,47 +11,47 @@ entity:
 
   shepherd:
     init_random: false
-    num: 1
+    num: 20
     local_perception: 200
     local_boundary: 30
     mass: 20.0
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [100, 700]
+      # - pose: [100, 600]
+      #   angle: 0
+      # - pose: [150, 600]
+      #   angle: 0
+      # - pose: [200, 600]
+      #   angle: 0
+      # - pose: [250, 600]
+      #   angle: 0
+      - pose: [300, 600]
         angle: 0
-      - pose: [150, 700]
+      - pose: [350, 600]
         angle: 0
-      - pose: [200, 700]
+      - pose: [400, 600]
         angle: 0
-      - pose: [250, 700]
+      - pose: [450, 600]
         angle: 0
-      - pose: [300, 700]
+      - pose: [500, 600]
         angle: 0
-      - pose: [350, 700]
+      - pose: [550, 600]
         angle: 0
-      - pose: [400, 700]
+      - pose: [600, 600]
         angle: 0
-      - pose: [450, 700]
+      - pose: [650, 600]
         angle: 0
-      - pose: [500, 700]
-        angle: 0
-      - pose: [550, 700]
-        angle: 0
-      - pose: [600, 700]
-        angle: 0
-      - pose: [650, 700]
-        angle: 0
-      - pose: [700, 700]
-        angle: 0
-      - pose: [750, 700]
-        angle: 0
-      - pose: [800, 700]
-        angle: 0
-      - pose: [850, 700]
-        angle: 0
-      - pose: [900, 700]
-        angle: 0
+      # - pose: [700, 700]
+      #   angle: 0
+      # - pose: [750, 700]
+      #   angle: 0
+      # - pose: [800, 700]
+      #   angle: 0
+      # - pose: [850, 700]
+      #   angle: 0
+      # - pose: [900, 700]
+      #   angle: 0
 
   obstacle:
     sphere:
@@ -103,3 +103,10 @@ behavior:
       c1_beta: 20
       c1_gamma: 5
       c1_delta: 20
+
+  math_formation:
+    interaction:
+      entity:
+        - herd
+        - shepherd
+        - obstacle

@@ -1,6 +1,4 @@
 # !/usr/bin/python3
-import math
-import time
 
 import pygame
 import numpy as np
@@ -10,9 +8,11 @@ from behavior.mathematical_flock import MathUtils
 from entity.herd import Herd
 from entity.shepherd import Shepherd
 
+from scipy.spatial import ConvexHull
+
 
 class MathematicalFormation(Behavior):
-    Cs = 40
+    Cs = 35
     Cr = 0
 
     def __init__(self):
@@ -27,6 +27,9 @@ class MathematicalFormation(Behavior):
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
         self._herd_radius = 150
+
+        self._vis_boundary = False
+        self._boundary_agents = []
 
     def add_herd(self, herd):
         self._herds.append(herd)
@@ -66,9 +69,14 @@ class MathematicalFormation(Behavior):
 
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
                                                                   self._shepherds,
-                                                                  r=500)
+                                                                  r=200)
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
                                                                   r=200)
+
+        hull = ConvexHull(herd_states[:,:2])
+        self._boundary_agents = herd_states[hull.vertices, :2]
+        self._vis_boundary = True
+
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
         for idx, shepherd in enumerate(self._shepherds):
@@ -81,9 +89,14 @@ class MathematicalFormation(Behavior):
                 sj = herd_states[neighbor_herd_idxs, :2]
                 # s_dot_j = herd_stat
                 # es[neighbor_herd_idxs, 2:]
-                stabilised_range = 150
-                ps = self._pairwise_density(
+                stabilised_range = 110
+                pairwise_density = self._pairwise_density(
                     si=di, sj=sj, k=0.125, r=stabilised_range)
+
+                # print(f"Robot {idx}: {np.linalg.norm(ps)}")
+                ps = -MathematicalFormation.Cs * \
+                    (1/np.sqrt(np.linalg.norm(pairwise_density)**2)) * \
+                    utils.unit_vector(pairwise_density)
 
             po = np.zeros(2)
             # Enforce virual beta agent
@@ -93,8 +106,9 @@ class MathematicalFormation(Behavior):
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
                 d_dot_j = shepherd_states[neighbor_shepherd_idxs, 2:]
 
+                # print(50/np.linalg.norm(di - self._herd_mean))
                 alpha_grad = self._gradient_term(
-                    c=2 * np.sqrt(0.05), qi=di, qj=dj,
+                    c=2 * np.sqrt(10/np.linalg.norm(di - self._herd_mean)), qi=di, qj=dj,
                     r=agent_spacing,
                     d=agent_spacing)
                 po = alpha_grad
@@ -125,12 +139,10 @@ class MathematicalFormation(Behavior):
             pg = np.zeros(2)
 
             # Total density p
-            p[idx] = -MathematicalFormation.Cs * \
-                (1/np.sqrt(np.linalg.norm(ps)**2)) * \
-                utils.unit_vector(ps) + po + enforced_beta
+            p[idx] = ps + po + enforced_beta
 
-            if np.linalg.norm(p[idx]) > 30:
-                p[idx] = 30 * utils.unit_vector(p[idx])
+            if np.linalg.norm(p[idx]) > 15:
+                p[idx] = 15 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
 
@@ -155,6 +167,14 @@ class MathematicalFormation(Behavior):
             pygame.draw.circle(screen, pygame.Color(
                 'white'), center=tuple(self._herd_mean),
                 radius=self._herd_radius, width=2)
+
+        if self._vis_boundary and self._boundary_agents is not None:
+            for idx in range(self._boundary_agents.shape[0] - 1):
+                pygame.draw.line(screen, pygame.Color("white"), tuple(
+                    self._boundary_agents[idx, :]), tuple(self._boundary_agents[idx + 1, :]))
+            pygame.draw.line(screen, pygame.Color("white"), tuple(
+                self._boundary_agents[self._boundary_agents.shape[0] - 1, :]),
+                tuple(self._boundary_agents[0, :]))
 
     # Common functions with MathematicalFlock
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
@@ -229,7 +249,7 @@ class MathematicalFormation(Behavior):
         for i in range(sj.shape[0]):
             sij = si - sj[i, :]
             w = (1/(1 + k * (np.linalg.norm(sij) - r))) * \
-                (sij / np.linalg.norm(sij))
+                utils.unit_vector(sij)
             w_sum += w
         return w_sum
 
