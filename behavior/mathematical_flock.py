@@ -92,12 +92,20 @@ class MathematicalFlock(Behavior):
         self._danger_range = danger_range
         self._consensus_pose = np.array(initial_consensus)
 
-        self._start_time = time.time()
         self._enable_flocking = False
 
         # For control
         self._mass = 0
-        self._flocking_condition = 1
+        self._flocking_condition = 0
+        self._dt = 0.2
+        self._dt_sqr = 0.1
+
+        self._boundary = {
+            'x_min': 200,
+            'x_max': 700,
+            'y_min': 150,
+            'y_max': 650,
+        }
 
         # For visualization
         self._contour_agents = []
@@ -126,26 +134,46 @@ class MathematicalFlock(Behavior):
                 (herd_states, herd.pose))
         return np.sum(herd_states, axis=0) / herd_states.shape[0]
 
-    def update(self, dt: float):
-        self._flocking(dt)
+    def update(self, *args, **kwargs):
+        events = self._get_events(args)
+        herd: Herd
+        herd_states = np.array([]).reshape((0, 4))
 
-    def _remain_in_screen(self, herd: Herd):
-        if herd.pose[0] > params.SCREEN_WIDTH - 700:
-            herd.steer(np.array([-params.STEER_INSIDE, 0.]),
-                       alt_max=params.BOID_MAX_FORCE)
-        if herd.pose[0] < params.BOX_MARGIN:
-            herd.steer(np.array([params.STEER_INSIDE, 0.]),
-                       alt_max=params.BOID_MAX_FORCE)
-        if herd.pose[1] < params.BOX_MARGIN:
-            herd.steer(np.array([0., params.STEER_INSIDE]),
-                       alt_max=params.BOID_MAX_FORCE)
-        if herd.pose[1] > params.SCREEN_HEIGHT - params.BOX_MARGIN:
-            herd.steer(np.array([0., -params.STEER_INSIDE]),
-                       alt_max=params.BOID_MAX_FORCE)
+        for herd in self._herds:
+            # Grab and put all poses into a matrix
+            herd_states = np.vstack(
+                (herd_states, np.hstack((herd.pose, herd.velocity))))
+
+        shepherd: Shepherd
+        shepherd_states = np.array([]).reshape((0, 4))
+        for shepherd in self._shepherds:
+            # Grab and put all poses into a matrix
+            shepherd_states = np.vstack(
+                (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity))))
+
+        flocking_u = self._flocking(herd_states, shepherd_states, events)
+
+        remain_in_bound_u = self._calc_remain_in_boundary_control(
+            herd_states, self._boundary, k=5.0)
+
+        qdot = flocking_u + (1 - self._flocking_condition) * remain_in_bound_u
+        herd_states[:, 2:] += qdot * self._dt_sqr
+        pdot = herd_states[:, 2:]
+        herd_states[:, :2] += pdot * self._dt
+
+        herd: Herd
+        for idx, herd in enumerate(self._herds):
+            # Scale velocity
+            if np.linalg.norm(herd_states[idx, 2:]) > herd._max_v:
+                herd_states[idx, 2:] = herd._max_v * utils.unit_vector(herd_states[idx, 2:])
+
+            herd.velocity = herd_states[idx, 2:]
+            herd.pose = herd_states[idx, :2]
+            herd._rotate_image(herd.velocity)
+            herd.reset_steering()
 
     # Mathematical model of flocking
-    def _flocking(self, *args, **kwargs):
-        events = self._get_events(args)
+    def _flocking(self, herd_states, shepherd_states, events):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_DOWN and self._enable_flocking:
@@ -158,19 +186,9 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
 
-        herd: Herd
-        herd_states = np.array([]).reshape((0, 4))
-        for herd in self._herds:
-            # Grab and put all poses into a matrix
-            herd_states = np.vstack(
-                (herd_states, np.hstack((herd.pose, herd.velocity))))
-
         u = np.zeros((len(self._herds), 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
-        lower_tril = np.tril(alpha_adjacency_matrix, -1)
-        epsilon = sum(sum(lower_tril))
-
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(herd_states,
                                                                 self._obstacles,
                                                                 r=self._sensing_range)
@@ -178,135 +196,165 @@ class MathematicalFlock(Behavior):
                                                                   self._shepherds,
                                                                   r=self._sensing_range)
 
-        total_pairwise_sum = 0
         for idx, herd in enumerate(self._herds):
-            # Plotting config
-            herd._plot_force = False
-            herd._plot_force_mag = False
-
             qi = herd_states[idx, :2]
             pi = herd_states[idx, 2:]
 
-            # Alpha agent
-            u_alpha = np.zeros(2)
+            # Flocking terms
             neighbor_idxs = alpha_adjacency_matrix[idx]
+            u_alpha = self._calc_flocking_control(
+                idx=idx, neighbors_idxs=neighbor_idxs,
+                herd_states=herd_states)
 
-            if sum(neighbor_idxs) > 0:
-                qj = herd_states[neighbor_idxs, :2]
-                pj = herd_states[neighbor_idxs, 2:]
-                
-                pairwise_potential_mag = (1/(1 + sum(neighbor_idxs))) * self._pairwise_potential_mag(
-                    qi, qj, 30)
-                total_pairwise_sum += pairwise_potential_mag
-
-                density = self._density(qi, qj, 0.375)
-
-                herd._force = density * 5
-                herd._plot_force = True
-                herd._force_mag = pairwise_potential_mag / 200
-
-                alpha_grad = self._gradient_term(
-                    c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
-                    r=MathematicalFlock.ALPHA_RANGE,
-                    d=MathematicalFlock.ALPHA_DISTANCE)
-
-                alpha_consensus = self._velocity_consensus_term(
-                    c=MathematicalFlock.C2_alpha,
-                    qi=qi, qj=qj,
-                    pi=pi, pj=pj,
-                    r=MathematicalFlock.ALPHA_RANGE)
-                u_alpha = alpha_grad + alpha_consensus
-
-            # Beta agent
-            u_beta = np.zeros(2)
+            # Obstacle avoidance term
             obstacle_idxs = beta_adjacency_matrix[idx]
-            if sum(obstacle_idxs) > 0:
-                # Create beta agent
-                obs_in_radius = np.where(beta_adjacency_matrix[idx] > 0)
-                beta_agents = np.array([]).reshape((0, 4))
-                for obs_idx in obs_in_radius[0]:
-                    beta_agent = self._obstacles[obs_idx].induce_beta_agent(
-                        herd)
-                    beta_agents = np.vstack((beta_agents, beta_agent))
+            u_beta = self._calc_obstacle_avoidance_control(
+                idx=idx, obstacle_idxs=obstacle_idxs,
+                beta_adj_matrix=beta_adjacency_matrix,
+                herd_states=herd_states)
 
-                qik = beta_agents[:, :2]
-                pik = beta_agents[:, 2:]
-                beta_grad = self._gradient_term(
-                    c=MathematicalFlock.C2_beta, qi=qi, qj=qik,
-                    r=MathematicalFlock.BETA_RANGE,
-                    d=MathematicalFlock.BETA_DISTANCE)
-
-                beta_consensus = self._velocity_consensus_term(
-                    c=MathematicalFlock.C2_beta,
-                    qi=qi, qj=qik,
-                    pi=pi, pj=pik,
-                    r=MathematicalFlock.BETA_RANGE)
-                u_beta = beta_grad + beta_consensus
-
-            # Gamma agent
+            # Group consensus term
             target = self._consensus_pose
             if self._follow_cursor:
                 target = np.array(pygame.mouse.get_pos())
 
-            u_gamma = self._group_objective_term(
-                c1=MathematicalFlock.C1_gamma,
-                c2=MathematicalFlock.C2_gamma,
-                pos=target,
-                qi=qi,
-                pi=pi)
+            u_gamma = self._calc_group_objective_control(target=target,
+                                                         qi=qi, pi=pi)
 
-            # Delta agent (shepherd)
-            u_delta = np.zeros(2)
-            delta_idxs = delta_adjacency_matrix[idx]
-            if sum(delta_idxs) > 0:
-                # Create delta_agent
-                delta_in_radius = np.where(delta_adjacency_matrix[idx] > 0)
-                delta_agents = np.array([]).reshape((0, 4))
-                for del_idx in delta_in_radius[0]:
-                    delta_agent = self._shepherds[del_idx].induce_delta_agent(
-                        herd)
-                    delta_agents = np.vstack((delta_agents, delta_agent))
+            # Shepherd
+            shepherd_idxs = delta_adjacency_matrix[idx]
+            u_delta = self._calc_shepherd_interaction_control(
+                idx=idx, shepherd_idxs=shepherd_idxs,
+                delta_adj_matrix=delta_adjacency_matrix,
+                herd_states=herd_states)
 
-                qid = delta_agents[:, :2]
-                pid = delta_agents[:, 2:]
-                delta_grad = self._gradient_term(
-                    c=MathematicalFlock.C2_beta, qi=qi, qj=qid,
-                    r=MathematicalFlock.BETA_RANGE,
-                    d=MathematicalFlock.BETA_DISTANCE)
-                delta_consensus = self._velocity_consensus_term(
-                    c=MathematicalFlock.C2_beta,
-                    qi=qi, qj=qid,
-                    pi=pi, pj=pid,
-                    r=MathematicalFlock.BETA_RANGE)
-                u_delta = delta_grad + delta_consensus
-
-            u_delta += self._predator_avoidance_term(
-                si=qi, r=self._danger_range, k=175000)
-
-            # u_delta = 0
-            # u_gamma = 0
             # Ultimate flocking model
-            u[idx] = u_alpha + u_beta + \
-                self._flocking_condition * (u_gamma + u_delta)
-
-        total_pairwise_sum = total_pairwise_sum/(1 + epsilon)
-
-        # Control for the agent
-        qdot = u
-        herd_states[:, 2:] += qdot * 0.1
-        pdot = herd_states[:, 2:]
-        herd_states[:, :2] += pdot * 0.2
-
-        herd: Herd
-        for idx, herd in enumerate(self._herds):
-            self._remain_in_screen(herd)
-            herd.velocity = herd_states[idx, 2:] + herd._steering
-            herd.pose = herd_states[idx, :2]
-            herd._rotate_image(herd.velocity)
-            herd.reset_steering()
+            u[idx] = u_alpha + u_beta + u_gamma + u_delta
+        return u
 
     def display(self, screen: pygame.Surface):
         pass
+
+    def _calc_remain_in_boundary_control(self, herd_states: Herd, boundary: np.ndarray, k: float):
+        x_min = boundary['x_min']
+        x_max = boundary['x_max']
+        y_min = boundary['y_min']
+        y_max = boundary['y_max']
+
+        u = np.zeros_like(herd_states[:, 2:])
+        for idx in range(herd_states.shape[0]):
+            qi = herd_states[idx, :2]
+
+            if qi[0] < x_min:
+                u[idx, :] += k * np.array([1.0, 0.0])
+
+            elif qi[0] > x_max:
+                u[idx, :] += k * np.array([-1.0, 0.0])
+
+            if qi[1] < y_min:
+                u[idx, :] += k * np.array([0.0, 1.0])
+
+            elif qi[1] > y_max:
+                u[idx, :] += k * np.array([0.0, -1.0])
+        return u
+
+    def _calc_flocking_control(self, idx: int,
+                               neighbors_idxs: np.ndarray,
+                               herd_states: np.ndarray):
+        qi = herd_states[idx, :2]
+        pi = herd_states[idx, 2:]
+        u_alpha = np.zeros(2)
+        if sum(neighbors_idxs) > 0:
+            qj = herd_states[neighbors_idxs, :2]
+            pj = herd_states[neighbors_idxs, 2:]
+
+            alpha_grad = self._gradient_term(
+                c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
+                r=MathematicalFlock.ALPHA_RANGE,
+                d=MathematicalFlock.ALPHA_DISTANCE)
+
+            alpha_consensus = self._velocity_consensus_term(
+                c=MathematicalFlock.C2_alpha,
+                qi=qi, qj=qj,
+                pi=pi, pj=pj,
+                r=MathematicalFlock.ALPHA_RANGE)
+            u_alpha = alpha_grad + alpha_consensus
+        return u_alpha
+
+    def _calc_obstacle_avoidance_control(self, idx: int,
+                                         obstacle_idxs: np.ndarray,
+                                         beta_adj_matrix: np.ndarray,
+                                         herd_states: np.ndarray):
+        qi = herd_states[idx, :2]
+        pi = herd_states[idx, 2:]
+        u_beta = np.zeros(2)
+        if sum(obstacle_idxs) > 0:
+            # Create beta agent
+            obs_in_radius = np.where(beta_adj_matrix[idx] > 0)
+            beta_agents = np.array([]).reshape((0, 4))
+            for obs_idx in obs_in_radius[0]:
+                beta_agent = self._obstacles[obs_idx].induce_beta_agent(
+                    self._herds[idx])
+                beta_agents = np.vstack((beta_agents, beta_agent))
+
+            qik = beta_agents[:, :2]
+            pik = beta_agents[:, 2:]
+            beta_grad = self._gradient_term(
+                c=MathematicalFlock.C2_beta, qi=qi, qj=qik,
+                r=MathematicalFlock.BETA_RANGE,
+                d=MathematicalFlock.BETA_DISTANCE)
+
+            beta_consensus = self._velocity_consensus_term(
+                c=MathematicalFlock.C2_beta,
+                qi=qi, qj=qik,
+                pi=pi, pj=pik,
+                r=MathematicalFlock.BETA_RANGE)
+            u_beta = beta_grad + beta_consensus
+        return u_beta
+
+    def _calc_group_objective_control(self, target: np.ndarray,
+                                      qi: np.ndarray, pi: np.ndarray):
+        u_gamma = self._group_objective_term(
+            c1=MathematicalFlock.C1_gamma,
+            c2=MathematicalFlock.C2_gamma,
+            pos=target,
+            qi=qi,
+            pi=pi)
+        return u_gamma
+
+    def _calc_shepherd_interaction_control(self, idx: int,
+                                           shepherd_idxs: np.ndarray,
+                                           delta_adj_matrix: np.ndarray,
+                                           herd_states: np.ndarray):
+        qi = herd_states[idx, :2]
+        pi = herd_states[idx, 2:]
+        u_delta = np.zeros(2)
+        if sum(shepherd_idxs) > 0:
+            # Create delta_agent
+            delta_in_radius = np.where(delta_adj_matrix[idx] > 0)
+            delta_agents = np.array([]).reshape((0, 4))
+            for del_idx in delta_in_radius[0]:
+                delta_agent = self._shepherds[del_idx].induce_delta_agent(
+                    self._herds[idx])
+                delta_agents = np.vstack((delta_agents, delta_agent))
+
+            qid = delta_agents[:, :2]
+            pid = delta_agents[:, 2:]
+            delta_grad = self._gradient_term(
+                c=MathematicalFlock.C2_beta, qi=qi, qj=qid,
+                r=MathematicalFlock.BETA_RANGE,
+                d=MathematicalFlock.BETA_DISTANCE)
+            delta_consensus = self._velocity_consensus_term(
+                c=MathematicalFlock.C2_beta,
+                qi=qi, qj=qid,
+                pi=pi, pj=pid,
+                r=MathematicalFlock.BETA_RANGE)
+            u_delta = delta_grad + delta_consensus
+
+        u_delta += self._predator_avoidance_term(
+            si=qi, r=self._danger_range, k=175000)
+
+        return u_delta
 
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
                        r: float, d: float):
@@ -365,6 +413,9 @@ class MathematicalFlock(Behavior):
                     delta_agent.in_entity_radius(agents[i, :2], r=r))
             adj_matrix = np.vstack((adj_matrix, np.array(adj_vec)))
         return adj_matrix
+
+    def _get_entire_herd_adjacency_matrix(self, herd_states: np.ndarray):
+        pass
 
     def _get_a_ij(self, q_i, q_js, range):
         r_alpha = MathUtils.sigma_norm([range])

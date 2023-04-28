@@ -7,7 +7,7 @@ entity:
     personal_space: 50
     mass: 20.0
     min_v: 0.0
-    max_v: 5.0
+    max_v: 10.0
 
   shepherd:
     init_random: false

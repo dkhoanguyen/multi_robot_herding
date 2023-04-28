@@ -6,13 +6,6 @@ from app import params
 from entity.herd import Herd
 from entity.shepherd import Shepherd
 from entity.obstacle import Hyperplane, Sphere
-from entity.visualise_agent import VisualisationEntity
-
-from behavior.behavior import Behavior
-from behavior.mathematical_flock import MathematicalFlock
-from behavior.formation_control import MathematicalFormation
-from behavior.orbit import Orbit
-
 
 class Spawner(object):
     def __init__(self):
@@ -29,7 +22,7 @@ class Spawner(object):
         if herd_config.pop('init_random'):
             num = herd_config.pop('num')
             initial_poses = np.random.randint(
-                50, 700, (num, 2)).astype('float')
+                100, 600, (num, 2)).astype('float')
 
             for i in range(num):
                 angle = np.pi * (2 * np.random.rand() - 1)

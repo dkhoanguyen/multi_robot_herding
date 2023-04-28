@@ -58,7 +58,7 @@ class MathematicalFormation(Behavior):
 
         d_to_herd_mean = np.linalg.norm(
             herd_states[:, :2] - self._herd_mean, axis=1)
-        self._herd_radius = np.max(d_to_herd_mean) + 20
+        self._herd_radius = np.max(d_to_herd_mean)
 
         shepherd: Shepherd
         shepherd_states = np.array([]).reshape((0, 4))
@@ -73,9 +73,9 @@ class MathematicalFormation(Behavior):
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
                                                                   r=200)
 
-        hull = ConvexHull(herd_states[:,:2])
-        self._boundary_agents = herd_states[hull.vertices, :2]
-        self._vis_boundary = True
+        # hull = ConvexHull(herd_states[:,:2])
+        # self._boundary_agents = herd_states[hull.vertices, :2]
+        # self._vis_boundary = True
 
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
