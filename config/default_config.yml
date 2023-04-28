@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 20
+    num: 10
     local_perception: 100
     local_boundary: 40
     personal_space: 50

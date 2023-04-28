@@ -1,6 +1,7 @@
 # !/usr/bin/python3
 import math
 import time
+import networkx as nx
 
 import pygame
 import numpy as np
@@ -110,6 +111,10 @@ class MathematicalFlock(Behavior):
         # For visualization
         self._contour_agents = []
 
+        # Clusters
+        self._total_clusters = 0
+        self._clusters = []
+
     # Herd
     def add_herd(self, herd: Herd):
         self._herds.append(herd)
@@ -136,6 +141,19 @@ class MathematicalFlock(Behavior):
 
     def update(self, *args, **kwargs):
         events = self._get_events(args)
+
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_DOWN and self._enable_flocking:
+                    self._enable_flocking = False
+                if event.key == pygame.K_UP and not self._enable_flocking:
+                    self._enable_flocking = True
+
+        if self._enable_flocking:
+            self._flocking_condition = 1
+        else:
+            self._flocking_condition = 0
+
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
 
@@ -151,43 +169,40 @@ class MathematicalFlock(Behavior):
             shepherd_states = np.vstack(
                 (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity))))
 
-        flocking_u = self._flocking(herd_states, shepherd_states, events)
+        local_flocking = self._local_flocking(herd_states, shepherd_states)
+        global_flocking = self._global_flocking(herd_states, shepherd_states)
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
 
-        qdot = flocking_u + (1 - self._flocking_condition) * remain_in_bound_u
+        qdot = (1 - self._flocking_condition) * local_flocking + \
+            global_flocking + \
+            (1 - self._flocking_condition) * remain_in_bound_u
         herd_states[:, 2:] += qdot * self._dt_sqr
         pdot = herd_states[:, 2:]
         herd_states[:, :2] += pdot * self._dt
-
-        self._get_herd_laplacian_matrix(herd_states)
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
             # Scale velocity
             if np.linalg.norm(herd_states[idx, 2:]) > herd._max_v:
-                herd_states[idx, 2:] = herd._max_v * utils.unit_vector(herd_states[idx, 2:])
+                herd_states[idx, 2:] = herd._max_v * \
+                    utils.unit_vector(herd_states[idx, 2:])
 
             herd.velocity = herd_states[idx, 2:]
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
             herd.reset_steering()
 
+    def display(self, screen: pygame.Surface):
+        if self._clusters is not None and len(self._clusters) > 0:
+            for cluster in self._clusters:
+                for edge in cluster:
+                    pygame.draw.line(screen, pygame.Color("white"), tuple(edge[0, :2]),
+                                     tuple(edge[1, :2]))
+
     # Mathematical model of flocking
-    def _flocking(self, herd_states, shepherd_states, events):
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN and self._enable_flocking:
-                    self._enable_flocking = False
-                if event.key == pygame.K_UP and not self._enable_flocking:
-                    self._enable_flocking = True
-
-        if self._enable_flocking:
-            self._flocking_condition = 1
-        else:
-            self._flocking_condition = 0
-
+    def _global_flocking(self, herd_states, shepherd_states):
         u = np.zeros((len(self._herds), 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
@@ -231,11 +246,68 @@ class MathematicalFlock(Behavior):
                 herd_states=herd_states)
 
             # Ultimate flocking model
-            u[idx] = u_alpha + u_beta + u_gamma + u_delta
+            u[idx] = u_alpha + u_beta + \
+                self._flocking_condition * (u_gamma + u_delta)
         return u
 
-    def display(self, screen: pygame.Surface):
-        pass
+    def _local_flocking(self, herd_states, shepherd_states):
+        adj_matrix = self._get_alpha_adjacency_matrix(
+            herd_states=herd_states, r=self._sensing_range * 1.25)
+        graph = nx.Graph(adj_matrix)
+
+        clusters_idxs = [graph.subgraph(c).copy()
+                         for c in nx.connected_components(graph)]
+
+        self._total_clusters = len(clusters_idxs)
+        self._clusters = []
+
+        clusters = []
+        cluster_indx_list = []
+        for cluster_idxs in clusters_idxs:
+            cluster = []
+            cluster_indx = []
+
+            for cluster_edge in cluster_idxs.edges:
+                cluster.append(herd_states[cluster_edge, :])
+
+            self._clusters.append(cluster)
+
+            cluster_nodes = []
+            if len(cluster_idxs.nodes) == 1:
+                continue
+
+            for cluster_node in cluster_idxs.nodes:
+                cluster_nodes.append(herd_states[cluster_node, :])
+                cluster_indx.append(cluster_node)
+            clusters.append(cluster_nodes)
+            cluster_indx_list.append(cluster_indx)
+
+        # Perform local flocking with local cluster
+        all_gamma = np.zeros((herd_states.shape[0], 2))
+        for cluster_indx, cluster in enumerate(clusters):
+            if len(clusters) == 1:
+                continue
+            u = np.zeros(len(cluster))
+            local_cluster_states = np.empty((0, 4))
+            for cluster_node in cluster:
+                local_cluster_states = np.vstack(
+                    (local_cluster_states, cluster_node))
+
+            for idx in range(local_cluster_states.shape[0]):
+                qi = local_cluster_states[idx, :2]
+                pi = local_cluster_states[idx, 2:]
+
+                this_indx = cluster_indx_list[cluster_indx][idx]
+
+                # Group consensus term
+                cluster_mean = np.sum(
+                    local_cluster_states[:, :2], axis=0) / local_cluster_states.shape[0]
+
+                target = cluster_mean
+                u_gamma = self._calc_group_objective_control(target=target,
+                                                             qi=qi, pi=pi)
+                all_gamma[this_indx,:] = u_gamma
+        return all_gamma
 
     def _calc_remain_in_boundary_control(self, herd_states: Herd, boundary: np.ndarray, k: float):
         x_min = boundary['x_min']
@@ -467,5 +539,12 @@ class MathematicalFlock(Behavior):
 
     # Clustering and graph theory
     def _get_herd_laplacian_matrix(self, herd_states: np.ndarray):
-        adj_matrix = self._get_alpha_adjacency_matrix(herd_states=herd_states,r=self._sensing_range).astype(np.float64)
-        print(adj_matrix)
+        # First get adjaceny matrix
+        adj_matrix = self._get_alpha_adjacency_matrix(
+            herd_states=herd_states, r=self._sensing_range).astype(np.float64)
+        # Then get the degree matrix
+        deg_matrix = np.zeros_like(adj_matrix)
+        diag_sum = np.sum(adj_matrix, axis=1)
+        np.fill_diagonal(deg_matrix, diag_sum)
+        laplacian_matrix = deg_matrix - adj_matrix
+        return laplacian_matrix

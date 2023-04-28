@@ -22,7 +22,7 @@ class Spawner(object):
         if herd_config.pop('init_random'):
             num = herd_config.pop('num')
             initial_poses = np.random.randint(
-                100, 600, (num, 2)).astype('float')
+                200, 600, (num, 2)).astype('float')
 
             for i in range(num):
                 angle = np.pi * (2 * np.random.rand() - 1)
