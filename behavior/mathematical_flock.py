@@ -161,6 +161,8 @@ class MathematicalFlock(Behavior):
         pdot = herd_states[:, 2:]
         herd_states[:, :2] += pdot * self._dt
 
+        self._get_herd_laplacian_matrix(herd_states)
+
         herd: Herd
         for idx, herd in enumerate(self._herds):
             # Scale velocity
@@ -414,9 +416,6 @@ class MathematicalFlock(Behavior):
             adj_matrix = np.vstack((adj_matrix, np.array(adj_vec)))
         return adj_matrix
 
-    def _get_entire_herd_adjacency_matrix(self, herd_states: np.ndarray):
-        pass
-
     def _get_a_ij(self, q_i, q_js, range):
         r_alpha = MathUtils.sigma_norm([range])
         return MathUtils.bump_function(
@@ -465,3 +464,8 @@ class MathematicalFlock(Behavior):
             w = (1/(1 + k * np.linalg.norm(sij))) * (sij / np.linalg.norm(sij))
             w_sum += w
         return w_sum
+
+    # Clustering and graph theory
+    def _get_herd_laplacian_matrix(self, herd_states: np.ndarray):
+        adj_matrix = self._get_alpha_adjacency_matrix(herd_states=herd_states,r=self._sensing_range).astype(np.float64)
+        print(adj_matrix)
