@@ -4,6 +4,7 @@ import pygame
 import numpy as np
 from app import utils
 from behavior.behavior import Behavior
+from behavior.mathematical_flock import MathematicalFlock
 from behavior.mathematical_flock import MathUtils
 from entity.herd import Herd
 from entity.shepherd import Shepherd
@@ -15,13 +16,16 @@ class MathematicalFormation(Behavior):
     Cs = 35
     Cr = 0
 
-    def __init__(self):
+    def __init__(self, sensing_range: float):
         super().__init__()
+
+        self._sensing_range = sensing_range
 
         self._herds = []
         self._shepherds = []
 
         self._stop = True
+        self._move_toward_herds = 1
 
         # Stuff to display
         self._plot_enforced_agent = False
@@ -69,13 +73,9 @@ class MathematicalFormation(Behavior):
 
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
                                                                   self._shepherds,
-                                                                  r=200)
+                                                                  r=self._sensing_range)
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
-                                                                  r=200)
-
-        # hull = ConvexHull(herd_states[:,:2])
-        # self._boundary_agents = herd_states[hull.vertices, :2]
-        # self._vis_boundary = True
+                                                                  r=self._sensing_range)
 
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
@@ -83,32 +83,37 @@ class MathematicalFormation(Behavior):
             di = shepherd_states[idx, :2]
             d_dot_i = shepherd_states[idx, 2:]
 
+            approach_herd = 1
+            if np.linalg.norm(di - self._herd_mean) <= self._sensing_range + 0.9 * self._herd_radius:
+                approach_herd = 0
+
             neighbor_herd_idxs = delta_adjacency_matrix[idx]
             ps = np.zeros(2)
             if sum(neighbor_herd_idxs) > 0:
                 sj = herd_states[neighbor_herd_idxs, :2]
-                # s_dot_j = herd_stat
-                # es[neighbor_herd_idxs, 2:]
+
                 stabilised_range = 110
                 pairwise_density = self._pairwise_density(
                     si=di, sj=sj, k=0.125, r=stabilised_range)
 
-                # print(f"Robot {idx}: {np.linalg.norm(ps)}")
                 ps = -MathematicalFormation.Cs * \
                     (1/np.sqrt(np.linalg.norm(pairwise_density)**2)) * \
                     utils.unit_vector(pairwise_density)
 
             po = np.zeros(2)
             # Enforce virual beta agent
-            agent_spacing = 200
+            agent_spacing = self._sensing_range
+            if approach_herd:
+                agent_spacing = 0.5 * self._sensing_range
+
             neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_shepherd_idxs) > 0:
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
                 d_dot_j = shepherd_states[neighbor_shepherd_idxs, 2:]
 
-                # print(50/np.linalg.norm(di - self._herd_mean))
                 alpha_grad = self._gradient_term(
-                    c=2 * np.sqrt(10/np.linalg.norm(di - self._herd_mean)), qi=di, qj=dj,
+                    c=MathematicalFlock.C2_alpha,
+                    qi=di, qj=dj,
                     r=agent_spacing,
                     d=agent_spacing)
                 po = alpha_grad
@@ -124,25 +129,29 @@ class MathematicalFormation(Behavior):
             bt_di_dot = enforce_agent[2:]
 
             beta_grad = self._gradient_term(
-                c=2 * np.sqrt(20), qi=di, qj=bt_di,
-                r=30,
-                d=30)
+                c=MathematicalFlock.C2_beta, qi=di, qj=bt_di,
+                r=MathematicalFlock.BETA_RANGE,
+                d=MathematicalFlock.BETA_DISTANCE)
 
             beta_consensus = self._velocity_consensus_term(
-                c=2 * np.sqrt(20),
+                c=MathematicalFlock.C2_beta,
                 qi=di, qj=bt_di,
                 pi=d_dot_i, pj=bt_di_dot,
-                r=30)
+                r=MathematicalFlock.BETA_RANGE)
 
             enforced_beta = beta_grad + beta_consensus
 
-            pg = np.zeros(2)
+            # Move toward herd mean
+            target = self._herd_mean
+            p_gamma = self._calc_group_objective_control(
+                target=target,
+                qi=di, pi=d_dot_i)
 
             # Total density p
-            p[idx] = ps + po + enforced_beta
+            p[idx] = ps + po + enforced_beta + approach_herd * p_gamma
 
-            if np.linalg.norm(p[idx]) > 15:
-                p[idx] = 15 * utils.unit_vector(p[idx])
+            if np.linalg.norm(p[idx]) > 20:
+                p[idx] = 20 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
 
@@ -197,6 +206,16 @@ class MathematicalFormation(Behavior):
                               pos: np.ndarray, qi: np.ndarray, pi: np.ndarray):
         # Group objective term
         return -c1 * MathUtils.sigma_1(qi - pos) - c2 * (pi)
+
+    def _calc_group_objective_control(self, target: np.ndarray,
+                                      qi: np.ndarray, pi: np.ndarray):
+        u_gamma = self._group_objective_term(
+            c1=MathematicalFlock.C1_gamma,
+            c2=MathematicalFlock.C2_gamma,
+            pos=target,
+            qi=qi,
+            pi=pi)
+        return u_gamma
 
     def _get_alpha_adjacency_matrix(self, agent_states: np.ndarray,
                                     r: float) -> np.ndarray:

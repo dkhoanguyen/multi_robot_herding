@@ -59,7 +59,8 @@ def main():
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
 
-    math_formation = MathematicalFormation()
+    math_formation_config = behavior_config['math_formation']
+    math_formation = MathematicalFormation(**math_formation_config['params'])
 
     # Add herds
     for herd in herds:

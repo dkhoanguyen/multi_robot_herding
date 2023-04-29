@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 10
+    num: 50
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -18,68 +18,66 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      # - pose: [100, 600]
-      #   angle: 0
-      # - pose: [150, 600]
-      #   angle: 0
-      # - pose: [200, 600]
-      #   angle: 0
-      # - pose: [250, 600]
-      #   angle: 0
-      - pose: [300, 600]
-        angle: 0
-      - pose: [350, 600]
-        angle: 0
-      - pose: [400, 600]
-        angle: 0
-      - pose: [450, 600]
-        angle: 0
-      - pose: [500, 600]
-        angle: 0
-      - pose: [550, 600]
-        angle: 0
-      - pose: [600, 600]
-        angle: 0
-      - pose: [650, 600]
-        angle: 0
-      # - pose: [700, 700]
-      #   angle: 0
-      # - pose: [750, 700]
-      #   angle: 0
-      # - pose: [800, 700]
-      #   angle: 0
-      # - pose: [850, 700]
-      #   angle: 0
-      # - pose: [900, 700]
-      #   angle: 0
+      - pose: [1100, 200]
+        angle: 1.57
+      - pose: [1100, 240]
+        angle: 1.57
+      - pose: [1100, 280]
+        angle: 1.57
+      - pose: [1100, 320]
+        angle: 1.57
+      - pose: [1100, 380]
+        angle: 1.57
+      - pose: [1100, 420]
+        angle: 1.57
+      - pose: [1100, 460]
+        angle: 1.57
+      - pose: [1100, 500]
+        angle: 1.57
+      - pose: [1140, 200]
+        angle: 1.57
+      - pose: [1140, 240]
+        angle: 1.57
+      - pose: [1140, 280]
+        angle: 1.57
+      - pose: [1140, 320]
+        angle: 1.57
+      - pose: [1140, 380]
+        angle: 1.57
+      - pose: [1140, 420]
+        angle: 1.57
+      # - pose: [1140, 460]
+      #   angle: 1.57
+      # - pose: [1140, 500]
+      #   angle: 1.57
 
   obstacle:
     sphere:
-      # - yk: [1000, 100]
-      #   Rk: 100
-      # - yk: [1000, 510]
-      #   Rk: 100
-      # - yk: [1000, 240]
-      #   Rk: 100
-      # - yk: [1000, 650]
-      #   Rk: 100
+    # - yk: [1000, 100]
+    #   Rk: 100
+    # - yk: [1000, 510]
+    #   Rk: 100
+    # - yk: [1000, 240]
+    #   Rk: 100
+    # - yk: [1000, 650]
+    #   Rk: 100
 
     hyperplane:
       - ak: [0, 1]
         yk: [0, 0]
-        boundary: [[0,0],[1280,10]]
+        boundary: [[0, 0], [1280, 10]]
       - ak: [1, 0]
         yk: [0, 0]
-        boundary: [[0, 0],[10, 720]]
+        boundary: [[0, 0], [10, 720]]
       - ak: [-1, 0]
         yk: [1270, 0]
-        boundary: [[1270,0],[1280,720]]
+        boundary: [[1270, 0], [1280, 720]]
       - ak: [0, -1]
         yk: [0, 710]
-        boundary: [[0,710],[1280,720]]
+        boundary: [[0, 710], [1280, 720]]
 
   plotting:
-    
+
 behavior:
   list:
     - math_flock
@@ -97,7 +95,7 @@ behavior:
       follow_cursor: false
       sensing_range: 40
       danger_range: 100
-      initial_consensus: [500, 360]
+      initial_consensus: [900, 360]
     constants:
       c1_alpha: 3
       c1_beta: 20
@@ -110,3 +108,5 @@ behavior:
         - herd
         - shepherd
         - obstacle
+    params:
+      sensing_range: 120

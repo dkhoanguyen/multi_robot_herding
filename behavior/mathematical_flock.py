@@ -169,14 +169,18 @@ class MathematicalFlock(Behavior):
             shepherd_states = np.vstack(
                 (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity))))
 
-        local_flocking = self._local_flocking(herd_states, shepherd_states)
-        global_flocking = self._global_flocking(herd_states, shepherd_states)
+        local_clustering = self._local_clustering(
+            herd_states, shepherd_states, k=0.5)
+        global_clustering = self._global_clustering(
+            herd_states, shepherd_states)
+
+        flocking = self._flocking(herd_states, shepherd_states)
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
 
-        qdot = (1 - self._flocking_condition) * local_flocking + \
-            global_flocking + \
+        qdot = (1 - self._flocking_condition) * local_clustering + \
+            flocking + self._flocking_condition * global_clustering + \
             (1 - self._flocking_condition) * remain_in_bound_u
         herd_states[:, 2:] += qdot * self._dt_sqr
         pdot = herd_states[:, 2:]
@@ -202,8 +206,9 @@ class MathematicalFlock(Behavior):
                                      tuple(edge[1, :2]))
 
     # Mathematical model of flocking
-    def _global_flocking(self, herd_states, shepherd_states):
-        u = np.zeros((len(self._herds), 2))
+    def _flocking(self, herd_states: np.ndarray,
+                  shepherd_states: np.ndarray) -> np.ndarray:
+        u = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(herd_states,
@@ -213,10 +218,7 @@ class MathematicalFlock(Behavior):
                                                                   self._shepherds,
                                                                   r=self._sensing_range)
 
-        for idx, herd in enumerate(self._herds):
-            qi = herd_states[idx, :2]
-            pi = herd_states[idx, 2:]
-
+        for idx in range(herd_states.shape[0]):
             # Flocking terms
             neighbor_idxs = alpha_adjacency_matrix[idx]
             u_alpha = self._calc_flocking_control(
@@ -230,14 +232,6 @@ class MathematicalFlock(Behavior):
                 beta_adj_matrix=beta_adjacency_matrix,
                 herd_states=herd_states)
 
-            # Group consensus term
-            target = self._consensus_pose
-            if self._follow_cursor:
-                target = np.array(pygame.mouse.get_pos())
-
-            u_gamma = self._calc_group_objective_control(target=target,
-                                                         qi=qi, pi=pi)
-
             # Shepherd
             shepherd_idxs = delta_adjacency_matrix[idx]
             u_delta = self._calc_shepherd_interaction_control(
@@ -246,13 +240,31 @@ class MathematicalFlock(Behavior):
                 herd_states=herd_states)
 
             # Ultimate flocking model
-            u[idx] = u_alpha + u_beta + \
-                self._flocking_condition * (u_gamma + u_delta)
+            u[idx] = u_alpha + u_beta + self._flocking_condition * u_delta
         return u
 
-    def _local_flocking(self, herd_states, shepherd_states):
+    def _global_clustering(self, herd_states: np.ndarray,
+                           shepherd_states: np.ndarray) -> np.ndarray:
+        u = np.zeros((herd_states.shape[0], 2))
+        for idx in range(herd_states.shape[0]):
+            qi = herd_states[idx, :2]
+            pi = herd_states[idx, 2:]
+
+            # Group consensus term
+            target = self._consensus_pose
+            if self._follow_cursor:
+                target = np.array(pygame.mouse.get_pos())
+
+            u_gamma = self._calc_group_objective_control(target=target,
+                                                         qi=qi, pi=pi)
+            u[idx] = u_gamma
+        return u
+
+    def _local_clustering(self, herd_states: np.ndarray,
+                          shepherd_states: np.ndarray,
+                          k: float) -> np.ndarray:
         adj_matrix = self._get_alpha_adjacency_matrix(
-            herd_states=herd_states, r=self._sensing_range * 1.25)
+            herd_states=herd_states, r=self._sensing_range * 1.)
         graph = nx.Graph(adj_matrix)
 
         clusters_idxs = [graph.subgraph(c).copy()
@@ -287,7 +299,7 @@ class MathematicalFlock(Behavior):
         for cluster_indx, cluster in enumerate(clusters):
             if len(clusters) == 1:
                 continue
-            u = np.zeros(len(cluster))
+
             local_cluster_states = np.empty((0, 4))
             for cluster_node in cluster:
                 local_cluster_states = np.vstack(
@@ -304,9 +316,10 @@ class MathematicalFlock(Behavior):
                     local_cluster_states[:, :2], axis=0) / local_cluster_states.shape[0]
 
                 target = cluster_mean
-                u_gamma = self._calc_group_objective_control(target=target,
-                                                             qi=qi, pi=pi)
-                all_gamma[this_indx,:] = u_gamma
+                u_gamma = k * self._calc_group_objective_control(
+                    target=target,
+                    qi=qi, pi=pi)
+                all_gamma[this_indx, :] = u_gamma
         return all_gamma
 
     def _calc_remain_in_boundary_control(self, herd_states: Herd, boundary: np.ndarray, k: float):
