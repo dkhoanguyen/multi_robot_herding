@@ -13,13 +13,17 @@ from scipy.spatial import ConvexHull
 
 
 class MathematicalFormation(Behavior):
-    Cs = 35
+    Cs = 100
     Cr = 0
 
-    def __init__(self, sensing_range: float):
+    def __init__(self, sensing_range: float,
+                 agent_spacing: float,
+                 scaled_agent_spacing: float):
         super().__init__()
 
         self._sensing_range = sensing_range
+        self._default_agent_spacing = agent_spacing
+        self._scaled_agent_spacing = scaled_agent_spacing
 
         self._herds = []
         self._shepherds = []
@@ -30,7 +34,7 @@ class MathematicalFormation(Behavior):
         # Stuff to display
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
-        self._herd_radius = 150
+        self._herd_radius = 0
 
         self._vis_boundary = False
         self._boundary_agents = []
@@ -75,7 +79,7 @@ class MathematicalFormation(Behavior):
                                                                   self._shepherds,
                                                                   r=self._sensing_range)
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
-                                                                  r=self._sensing_range)
+                                                                  r=self._default_agent_spacing)
 
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
@@ -84,7 +88,7 @@ class MathematicalFormation(Behavior):
             d_dot_i = shepherd_states[idx, 2:]
 
             approach_herd = 1
-            if np.linalg.norm(di - self._herd_mean) <= self._sensing_range + 0.9 * self._herd_radius:
+            if np.linalg.norm(di - self._herd_mean) <= (self._sensing_range + self._herd_radius):
                 approach_herd = 0
 
             neighbor_herd_idxs = delta_adjacency_matrix[idx]
@@ -92,19 +96,19 @@ class MathematicalFormation(Behavior):
             if sum(neighbor_herd_idxs) > 0:
                 sj = herd_states[neighbor_herd_idxs, :2]
 
-                stabilised_range = 110
+                stabilised_range = self._sensing_range
                 pairwise_density = self._pairwise_density(
                     si=di, sj=sj, k=0.125, r=stabilised_range)
 
                 ps = -MathematicalFormation.Cs * \
-                    (1/np.sqrt(np.linalg.norm(pairwise_density)**2)) * \
+                    (1/np.linalg.norm(pairwise_density)) * \
                     utils.unit_vector(pairwise_density)
 
             po = np.zeros(2)
             # Enforce virual beta agent
-            agent_spacing = self._sensing_range
+            agent_spacing = self._default_agent_spacing
             if approach_herd:
-                agent_spacing = 0.5 * self._sensing_range
+                agent_spacing = self._scaled_agent_spacing * self._default_agent_spacing
 
             neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_shepherd_idxs) > 0:
@@ -118,29 +122,6 @@ class MathematicalFormation(Behavior):
                     d=agent_spacing)
                 po = alpha_grad
 
-            # Enforce virual beta agent
-            enforced_beta = np.zeros(2)
-            enforce_agent = self._induce_enforced_beta_agent(
-                yk=self._herd_mean,
-                Rk=self._herd_radius,
-                di=di,
-                di_dot=d_dot_i)
-            bt_di = enforce_agent[:2]
-            bt_di_dot = enforce_agent[2:]
-
-            beta_grad = self._gradient_term(
-                c=MathematicalFlock.C2_beta, qi=di, qj=bt_di,
-                r=MathematicalFlock.BETA_RANGE,
-                d=MathematicalFlock.BETA_DISTANCE)
-
-            beta_consensus = self._velocity_consensus_term(
-                c=MathematicalFlock.C2_beta,
-                qi=di, qj=bt_di,
-                pi=d_dot_i, pj=bt_di_dot,
-                r=MathematicalFlock.BETA_RANGE)
-
-            enforced_beta = beta_grad + beta_consensus
-
             # Move toward herd mean
             target = self._herd_mean
             p_gamma = self._calc_group_objective_control(
@@ -148,10 +129,10 @@ class MathematicalFormation(Behavior):
                 qi=di, pi=d_dot_i)
 
             # Total density p
-            p[idx] = ps + po + enforced_beta + approach_herd * p_gamma
-
-            if np.linalg.norm(p[idx]) > 20:
-                p[idx] = 20 * utils.unit_vector(p[idx])
+            p[idx] = (1 - approach_herd) * ps + po + approach_herd * p_gamma
+            
+            if np.linalg.norm(p[idx]) > 10:
+                p[idx] = 10 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
 

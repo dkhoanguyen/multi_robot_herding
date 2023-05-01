@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 50
+    num: 10
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -30,22 +30,22 @@ entity:
         angle: 1.57
       - pose: [1100, 420]
         angle: 1.57
-      - pose: [1100, 460]
-        angle: 1.57
-      - pose: [1100, 500]
-        angle: 1.57
-      - pose: [1140, 200]
-        angle: 1.57
-      - pose: [1140, 240]
-        angle: 1.57
-      - pose: [1140, 280]
-        angle: 1.57
-      - pose: [1140, 320]
-        angle: 1.57
-      - pose: [1140, 380]
-        angle: 1.57
-      - pose: [1140, 420]
-        angle: 1.57
+      # - pose: [1100, 460]
+      #   angle: 1.57
+      # - pose: [1100, 500]
+      #   angle: 1.57
+      # - pose: [1140, 200]
+      #   angle: 1.57
+      # - pose: [1140, 240]
+      #   angle: 1.57
+      # - pose: [1140, 280]
+      #   angle: 1.57
+      # - pose: [1140, 320]
+      #   angle: 1.57
+      # - pose: [1140, 380]
+      #   angle: 1.57
+      # - pose: [1140, 420]
+      #   angle: 1.57
       # - pose: [1140, 460]
       #   angle: 1.57
       # - pose: [1140, 500]
@@ -94,8 +94,8 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 100
-      initial_consensus: [900, 360]
+      danger_range: 40
+      initial_consensus: [500, 360]
     constants:
       c1_alpha: 3
       c1_beta: 20
@@ -109,4 +109,6 @@ behavior:
         - shepherd
         - obstacle
     params:
-      sensing_range: 120
+      sensing_range: 150
+      agent_spacing: 200
+      scaled_agent_spacing: 0.5
