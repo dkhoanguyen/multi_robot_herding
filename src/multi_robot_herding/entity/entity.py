@@ -3,8 +3,8 @@
 import pymunk
 import pygame
 from enum import Enum
-from app import params
-from app.utils import *
+from utils import params
+from utils.utils import *
 
 from spatialmath import SE2
 from spatialmath.base import *

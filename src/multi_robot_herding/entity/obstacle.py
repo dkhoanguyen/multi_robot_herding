@@ -4,7 +4,7 @@ import numpy as np
 
 from abc import abstractmethod
 from entity.entity import Entity
-from app.utils import *
+from utils.utils import *
 
 
 class Obstacle(Entity):

@@ -4,7 +4,7 @@ import time
 
 import pygame
 import numpy as np
-from app import params, utils
+from utils import params, utils
 from behavior.behavior import Behavior
 from behavior.mathematical_flock import MathematicalFlock
 from entity.herd import Herd

@@ -6,7 +6,7 @@ from spatialmath import SE2
 from spatialmath.base import *
 
 from entity.entity import Autonomous, Entity
-from app.utils import *
+from utils.utils import *
 
 class Shepherd(Autonomous):
     def __init__(self,

@@ -6,7 +6,7 @@ from spatialmath.base import *
 
 import pygame
 import numpy as np
-from app import params, utils
+from utils import params, utils
 from behavior.behavior import Behavior
 from entity.herd import Herd
 from entity.shepherd import Shepherd

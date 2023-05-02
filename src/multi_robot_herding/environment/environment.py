@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import pygame
-from app import params
+from utils import params
 
 from entity.entity import Entity
 from behavior.behavior import Behavior

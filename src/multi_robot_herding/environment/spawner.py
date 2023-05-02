@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 import numpy as np
-from app import params
+from utils import params
 
 from entity.herd import Herd
 from entity.shepherd import Shepherd

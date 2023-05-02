@@ -2,7 +2,7 @@
 
 import pygame
 import numpy as np
-from app import utils
+from utils import utils
 from behavior.behavior import Behavior
 from behavior.mathematical_flock import MathematicalFlock
 from behavior.mathematical_flock import MathUtils
