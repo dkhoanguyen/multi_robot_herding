@@ -1,17 +1,11 @@
 # !/usr/bin/python3
 
-import pymunk
 import pygame
-from enum import Enum
-from utils import params
-from utils.utils import *
-
-from spatialmath import SE2
 from spatialmath.base import *
 
 import numpy as np
 
-from entity.entity import Entity
+from src.multi_robot_herding.entity.entity import Entity
 
 
 class VisualisationEntity(Entity):

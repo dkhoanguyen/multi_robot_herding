@@ -2,22 +2,18 @@
 
 import yaml
 
-import pygame
-import numpy as np
-from app import params
+from src.multi_robot_herding.entity.herd import Herd
+from src.multi_robot_herding.entity.shepherd import Shepherd
+from src.multi_robot_herding.entity.obstacle import Hyperplane, Sphere
+from src.multi_robot_herding.entity.visualise_agent import VisualisationEntity
 
-from entity.herd import Herd
-from entity.shepherd import Shepherd
-from entity.obstacle import Hyperplane, Sphere
-from entity.visualise_agent import VisualisationEntity
+from src.multi_robot_herding.behavior.behavior import Behavior
+from src.multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
+from src.multi_robot_herding.behavior.mathematical_formation import MathematicalFormation
+from src.multi_robot_herding.behavior.orbit import Orbit
 
-from behavior.behavior import Behavior
-from behavior.mathematical_flock import MathematicalFlock
-from behavior.mathematical_formation import MathematicalFormation
-from behavior.orbit import Orbit
-
-from environment.environment import Environment
-from environment.spawner import Spawner
+from src.multi_robot_herding.environment.environment import Environment
+from src.multi_robot_herding.environment.spawner import Spawner
 
 
 def main():

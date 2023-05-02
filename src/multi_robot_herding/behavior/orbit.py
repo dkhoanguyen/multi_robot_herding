@@ -1,16 +1,14 @@
 # !/usr/bin/python3
 import math
-import time
 
 from spatialmath.base import *
 
-import pygame
 import numpy as np
-from utils import params, utils
-from behavior.behavior import Behavior
-from entity.herd import Herd
-from entity.shepherd import Shepherd
-from entity.obstacle import Obstacle
+from src.multi_robot_herding.utils import params, utils
+from src.multi_robot_herding.behavior.behavior import Behavior
+from src.multi_robot_herding.entity.herd import Herd
+from src.multi_robot_herding.entity.shepherd import Shepherd
+from src.multi_robot_herding.entity.obstacle import Obstacle
 
 
 class Orbit(Behavior):

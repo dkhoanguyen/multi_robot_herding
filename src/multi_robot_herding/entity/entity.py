@@ -1,12 +1,8 @@
 # !/usr/bin/python3
-
-import pymunk
+import math
 import pygame
 from enum import Enum
-from utils import params
-from utils.utils import *
-
-from spatialmath import SE2
+from src.multi_robot_herding.utils import params, utils
 from spatialmath.base import *
 
 import numpy as np
@@ -107,7 +103,7 @@ class Autonomous(Entity):
 
         # self._heading =
         self._steering = np.zeros(2)
-        self._wandering_angle = randrange(-np.pi, np.pi)
+        self._wandering_angle = utils.randrange(-np.pi, np.pi)
 
         self._min_v = min_v
         self._max_v = max_v
@@ -144,18 +140,18 @@ class Autonomous(Entity):
         return self._at_pose
 
     def steer(self, force, alt_max):
-        self._steering += truncate(force / self.mass, alt_max)
+        self._steering += utils.truncate(force / self.mass, alt_max)
 
     def update(self):
         if self._speed == 0.0 and \
                 not np.array_equal(self._velocity, np.array([0.0, 0.0])):
             self._pre_vel = self._velocity.copy()
             self._rotate_image(self._pre_vel)
-            self._velocity = truncate(
+            self._velocity = utils.truncate(
                 self._velocity + self._steering, self._speed)
 
         elif self._speed != 0.0:
-            self._velocity = truncate(
+            self._velocity = utils.truncate(
                 self._velocity + self._steering, self._speed)
             self._rotate_image(self._velocity)
 

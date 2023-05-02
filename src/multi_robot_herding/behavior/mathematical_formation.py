@@ -2,12 +2,12 @@
 
 import pygame
 import numpy as np
-from utils import utils
-from behavior.behavior import Behavior
-from behavior.mathematical_flock import MathematicalFlock
-from behavior.mathematical_flock import MathUtils
-from entity.herd import Herd
-from entity.shepherd import Shepherd
+from src.multi_robot_herding.utils import utils
+from src.multi_robot_herding.behavior.behavior import Behavior
+from src.multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
+from src.multi_robot_herding.behavior.mathematical_flock import MathUtils
+from src.multi_robot_herding.entity.herd import Herd
+from src.multi_robot_herding.entity.shepherd import Shepherd
 
 from scipy.spatial import ConvexHull
 

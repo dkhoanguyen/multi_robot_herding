@@ -1,10 +1,10 @@
 #!/usr/bin/python3
 
 import pygame
-from utils import params
+from src.multi_robot_herding.utils import params
 
-from entity.entity import Entity
-from behavior.behavior import Behavior
+from src.multi_robot_herding.entity.entity import Entity
+from src.multi_robot_herding.behavior.behavior import Behavior
 
 
 class Environment(object):

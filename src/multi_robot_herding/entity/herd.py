@@ -1,11 +1,8 @@
 # !/usr/bin/python3
-import time
-import pygame
+
 import numpy as np
 
-from entity.entity import Entity, Autonomous
-from utils.utils import *
-
+from src.multi_robot_herding.entity.entity import Autonomous
 
 class Herd(Autonomous):
     def __init__(self,
@@ -40,6 +37,3 @@ class Herd(Autonomous):
     @property
     def personal_space(self):
         return self._personal_space
-
-    def in_local_perception(self, entity: Entity):
-        pass

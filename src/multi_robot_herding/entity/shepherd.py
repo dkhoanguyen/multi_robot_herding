@@ -2,11 +2,10 @@
 
 import pygame
 import numpy as np
-from spatialmath import SE2
 from spatialmath.base import *
 
-from entity.entity import Autonomous, Entity
-from utils.utils import *
+from src.multi_robot_herding.entity.entity import Autonomous, Entity
+
 
 class Shepherd(Autonomous):
     def __init__(self,
