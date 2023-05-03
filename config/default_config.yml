@@ -18,17 +18,17 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [1100, 200]
+      - pose: [800, 200]
         angle: 1.57
-      - pose: [1100, 240]
+      - pose: [800, 240]
         angle: 1.57
-      - pose: [1100, 280]
+      - pose: [800, 280]
         angle: 1.57
-      - pose: [1100, 320]
+      - pose: [800, 320]
         angle: 1.57
-      - pose: [1100, 380]
+      - pose: [800, 380]
         angle: 1.57
-      - pose: [1100, 420]
+      - pose: [800, 420]
         angle: 1.57
       # - pose: [1100, 460]
       #   angle: 1.57
@@ -94,7 +94,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 40
+      danger_range: 100
       initial_consensus: [500, 360]
     constants:
       c1_alpha: 3

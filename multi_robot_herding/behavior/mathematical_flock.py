@@ -152,6 +152,8 @@ class MathematicalFlock(Behavior):
             self._flocking_condition = 1
         else:
             self._flocking_condition = 0
+        
+        self._flocking_condition = 1
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -239,7 +241,7 @@ class MathematicalFlock(Behavior):
                 herd_states=herd_states)
 
             # Ultimate flocking model
-            u[idx] = u_alpha + u_beta + self._flocking_condition * u_delta
+            u[idx] = u_alpha + u_beta + u_delta
         return u
 
     def _global_clustering(self, herd_states: np.ndarray,

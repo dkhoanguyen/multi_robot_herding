@@ -1,7 +1,11 @@
 # !/usr/bin/python3
 
+import csv
+import time
 import pygame
 import numpy as np
+from collections import deque
+
 from multi_robot_herding.utils import utils
 from multi_robot_herding.behavior.behavior import Behavior
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
@@ -10,6 +14,7 @@ from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
 
 from scipy.spatial import ConvexHull
+from scipy.optimize import curve_fit
 
 
 class MathematicalFormation(Behavior):
@@ -31,6 +36,10 @@ class MathematicalFormation(Behavior):
         self._stop = True
         self._move_toward_herds = 1
 
+        self._shrink = 0
+        self._time_horizon = 400
+        self._total_ps_over_time = deque(maxlen=self._time_horizon)
+
         # Stuff to display
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
@@ -38,6 +47,11 @@ class MathematicalFormation(Behavior):
 
         self._vis_boundary = False
         self._boundary_agents = []
+
+        # # create the csv writer
+        # self._file = open(f"shrink_condition_{time.time()}.csv","w")
+        # self._writer = csv.writer(self._file)
+        # self._write_header = True
 
     def add_herd(self, herd):
         self._herds.append(herd)
@@ -51,8 +65,15 @@ class MathematicalFormation(Behavior):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_DOWN and not self._stop:
                     self._stop = True
+                    # self._shrink = 0
                 if event.key == pygame.K_UP and self._stop:
                     self._stop = False
+                    # self._shrink = 1
+
+        # if self._write_header:
+        #     self._write_header = False
+        #     header = ["shrink_condition"]
+        #     self._writer.writerow(header)
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -83,6 +104,8 @@ class MathematicalFormation(Behavior):
 
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
+        
+        total_ps = 0
         for idx, shepherd in enumerate(self._shepherds):
             di = shepherd_states[idx, :2]
             d_dot_i = shepherd_states[idx, 2:]
@@ -93,20 +116,25 @@ class MathematicalFormation(Behavior):
 
             neighbor_herd_idxs = delta_adjacency_matrix[idx]
             ps = np.zeros(2)
+
             if sum(neighbor_herd_idxs) > 0:
                 sj = herd_states[neighbor_herd_idxs, :2]
 
                 stabilised_range = self._sensing_range
-                pairwise_density = self._pairwise_density(
-                    si=di, sj=sj, k=0.125, r=stabilised_range)
+                if self._shrink:
+                    stabilised_range = 100
+                local_crowd_horizon = self._local_crowd_horizon(
+                    si=di, sj=sj, di=di, k=0.125, r=stabilised_range)
 
                 ps = -MathematicalFormation.Cs * \
-                    (1/np.linalg.norm(pairwise_density)) * \
-                    utils.unit_vector(pairwise_density)
+                    (1/np.linalg.norm(local_crowd_horizon)) * \
+                    utils.unit_vector(local_crowd_horizon)
+                total_ps += np.linalg.norm(ps)
 
             po = np.zeros(2)
-            # Enforce virual beta agent
             agent_spacing = self._default_agent_spacing
+            if self._shrink:
+                agent_spacing = 150
             if approach_herd:
                 agent_spacing = self._scaled_agent_spacing * self._default_agent_spacing
 
@@ -129,28 +157,32 @@ class MathematicalFormation(Behavior):
                 qi=di, pi=d_dot_i)
 
             # Total density p
-            p[idx] = (1 - approach_herd) * ps + po + approach_herd * p_gamma
-            
+            p[idx] = (1 - approach_herd) * ps + \
+                po + \
+                approach_herd * p_gamma
+
             if np.linalg.norm(p[idx]) > 10:
                 p[idx] = 10 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
+        # self._writer.writerow([total_ps])
+        self._total_ps_over_time.append(total_ps)
+        if self._shrink == 0:
+            self._shrink = self._shrink_condition()
 
-        if not self._stop:
-            # Control for the agent
-            qdot = p
-            shepherd_states[:, 2:] = qdot
-            pdot = shepherd_states[:, 2:]
-            shepherd_states[:, :2] += pdot * 0.15
+        qdot = p
+        shepherd_states[:, 2:] = qdot
+        pdot = shepherd_states[:, 2:]
+        shepherd_states[:, :2] += pdot * 0.15
 
-            shepherd: Shepherd
-            for idx, shepherd in enumerate(self._shepherds):
-                # self._remain_in_screen(herd)
-                shepherd._plot_velocity = True
-                shepherd.velocity = shepherd_states[idx, 2:]
-                shepherd.pose = shepherd_states[idx, :2]
-                shepherd._rotate_image(shepherd.velocity)
-                shepherd.reset_steering()
+        shepherd: Shepherd
+        for idx, shepherd in enumerate(self._shepherds):
+            # self._remain_in_screen(herd)
+            shepherd._plot_velocity = True
+            shepherd.velocity = shepherd_states[idx, 2:]
+            shepherd.pose = shepherd_states[idx, :2]
+            shepherd._rotate_image(shepherd.velocity)
+            shepherd.reset_steering()
 
     def display(self, screen: pygame.Surface):
         if self._plot_enforced_agent:
@@ -227,24 +259,8 @@ class MathematicalFormation(Behavior):
         return MathUtils.sigma_norm_grad(q_js - q_i)
 
     # Experimental function
-    # Pairwise potential
-    def _pairwise_potentia_vec(self, qi: np.ndarray, qj: np.ndarray, d: float):
-        pw_sum = np.zeros(2)
-        for i in range(qj.shape[0]):
-            qji = qj[i, :] - qi
-            pw = (np.linalg.norm(qj[i, :] - qi) -
-                  d) ** 2 * utils.unit_vector(qji)
-            pw_sum += pw
-        return pw_sum
-
-    def _pairwise_potential_mag(self, qi: np.ndarray, qj: np.ndarray, d: float):
-        pw_sum = 0
-        for i in range(qj.shape[0]):
-            pw = (np.linalg.norm(qj[i, :] - qi) - d) ** 2
-            pw_sum += pw
-        return pw_sum
-
-    def _pairwise_density(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
+    def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray,
+                             di: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
         for i in range(sj.shape[0]):
             sij = si - sj[i, :]
@@ -267,3 +283,16 @@ class MathematicalFormation(Behavior):
         qik = mu * di + (1 - mu) * yk
         pik = mu * P @ di_dot
         return np.hstack((qik.transpose(), pik.transpose())).reshape(4,)
+
+    def _shrink_condition(self):
+        if len(self._total_ps_over_time) != self._time_horizon:
+            return False
+        y = np.array(self._total_ps_over_time)
+        x = np.linspace(0,self._time_horizon,self._time_horizon,endpoint=False) 
+        coeff = np.polyfit(x,y,deg=1)
+        poly = np.poly1d(coeff)
+        polyder = np.polyder(poly)
+        return not bool(np.abs(np.round(float(polyder.coef[0]),2)))
+
+    def _enforce_formation(self):
+        pass
