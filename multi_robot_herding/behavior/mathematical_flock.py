@@ -92,7 +92,7 @@ class MathematicalFlock(Behavior):
         self._danger_range = danger_range
         self._consensus_pose = np.array(initial_consensus)
 
-        self._enable_flocking = False
+        self._enable_flocking = True
 
         # For control
         self._mass = 0
@@ -101,10 +101,10 @@ class MathematicalFlock(Behavior):
         self._dt_sqr = 0.1
 
         self._boundary = {
-            'x_min': 200,
-            'x_max': 700,
-            'y_min': 150,
-            'y_max': 650,
+            'x_min': 300,
+            'x_max': 600,
+            'y_min': 300,
+            'y_max': 500,
         }
 
         # For visualization
@@ -153,7 +153,7 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
         
-        self._flocking_condition = 1
+        # self._flocking_condition = 1
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -440,7 +440,7 @@ class MathematicalFlock(Behavior):
             u_delta = delta_grad + delta_consensus
 
         u_delta += self._predator_avoidance_term(
-            si=qi, r=self._danger_range, k=175000)
+            si=qi, r=self._danger_range, k=200000)
 
         return u_delta
 

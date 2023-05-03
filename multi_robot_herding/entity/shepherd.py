@@ -29,6 +29,7 @@ class Shepherd(Autonomous):
 
         self._r = 40
         self._consensus_r = 200
+        self._sensing_range = 0
 
         self._consensus_point = np.zeros((2,))
 
@@ -38,7 +39,7 @@ class Shepherd(Autonomous):
 
     def display(self, screen: pygame.Surface, debug=False):
         pygame.draw.circle(screen, pygame.Color(
-            'white'), center=self._pose, radius=100, width=1)
+            'white'), center=self._pose, radius=self._sensing_range, width=1)
         # pygame.draw.circle(screen, pygame.Color(
         #     'white'), center=self._consensus_point, radius=10, width=3)
         return super().display(screen, debug)

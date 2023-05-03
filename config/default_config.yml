@@ -18,17 +18,17 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [800, 200]
+      - pose: [900, 200]
         angle: 1.57
-      - pose: [800, 240]
+      - pose: [900, 240]
         angle: 1.57
-      - pose: [800, 280]
+      - pose: [900, 280]
         angle: 1.57
-      - pose: [800, 320]
+      - pose: [900, 320]
         angle: 1.57
-      - pose: [800, 380]
+      - pose: [900, 380]
         angle: 1.57
-      - pose: [800, 420]
+      - pose: [900, 420]
         angle: 1.57
       # - pose: [1100, 460]
       #   angle: 1.57
@@ -109,6 +109,6 @@ behavior:
         - shepherd
         - obstacle
     params:
-      sensing_range: 150
-      agent_spacing: 200
+      sensing_range: 200
+      agent_spacing: 250
       scaled_agent_spacing: 0.5

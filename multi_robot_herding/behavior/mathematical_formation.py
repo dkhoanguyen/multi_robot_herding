@@ -29,16 +29,23 @@ class MathematicalFormation(Behavior):
         self._sensing_range = sensing_range
         self._default_agent_spacing = agent_spacing
         self._scaled_agent_spacing = scaled_agent_spacing
+        self._shrink_spacing = 150
 
         self._herds = []
         self._shepherds = []
 
-        self._stop = True
         self._move_toward_herds = 1
 
         self._shrink = 0
-        self._time_horizon = 400
+        self._time_horizon = 300
         self._total_ps_over_time = deque(maxlen=self._time_horizon)
+
+        self._follow_cursor = False
+
+        # Formation
+        self._enforce_formation = False
+        self._formation_calc = False
+        self._formation = None
 
         # Stuff to display
         self._plot_enforced_agent = False
@@ -47,6 +54,11 @@ class MathematicalFormation(Behavior):
 
         self._vis_boundary = False
         self._boundary_agents = []
+
+        self._font = pygame.font.SysFont("comicsans", 16)
+        self._text_list = []
+
+        self._formation_cluster = []
 
         # # create the csv writer
         # self._file = open(f"shrink_condition_{time.time()}.csv","w")
@@ -63,17 +75,24 @@ class MathematicalFormation(Behavior):
         events = self._get_events(args)
         for event in events:
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN and not self._stop:
-                    self._stop = True
-                    # self._shrink = 0
-                if event.key == pygame.K_UP and self._stop:
-                    self._stop = False
-                    # self._shrink = 1
+                if event.key == pygame.K_DOWN and not self._enforce_formation:
+                    self._enforce_formation = True
+                if event.key == pygame.K_UP and self._enforce_formation:
+                    self._enforce_formation = False
+
+                if event.key == pygame.K_LEFT and not self._follow_cursor:
+                    self._follow_cursor = True
+                if event.key == pygame.K_RIGHT and self._follow_cursor:
+                    self._follow_cursor = False
 
         # if self._write_header:
         #     self._write_header = False
         #     header = ["shrink_condition"]
         #     self._writer.writerow(header)
+
+        encircle_gain = MathematicalFormation.Cs
+        if self._follow_cursor:
+            encircle_gain = 0
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -102,10 +121,18 @@ class MathematicalFormation(Behavior):
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(shepherd_states,
                                                                   r=self._default_agent_spacing)
 
+        # Enforce formation
+        if self._enforce_formation:
+            if not self._formation_calc:
+                self._formation = self._generate_minimal_rigid_formation(
+                    shepherd_states=shepherd_states)
+                self._formation_calc = True
+
         p = np.zeros((len(self._shepherds), 2))
         shepherd: Shepherd
-        
+
         total_ps = 0
+        self._formation_cluster = []
         for idx, shepherd in enumerate(self._shepherds):
             di = shepherd_states[idx, :2]
             d_dot_i = shepherd_states[idx, 2:]
@@ -122,11 +149,11 @@ class MathematicalFormation(Behavior):
 
                 stabilised_range = self._sensing_range
                 if self._shrink:
-                    stabilised_range = 100
+                    stabilised_range = 95
                 local_crowd_horizon = self._local_crowd_horizon(
                     si=di, sj=sj, di=di, k=0.125, r=stabilised_range)
 
-                ps = -MathematicalFormation.Cs * \
+                ps = -encircle_gain * \
                     (1/np.linalg.norm(local_crowd_horizon)) * \
                     utils.unit_vector(local_crowd_horizon)
                 total_ps += np.linalg.norm(ps)
@@ -134,7 +161,7 @@ class MathematicalFormation(Behavior):
             po = np.zeros(2)
             agent_spacing = self._default_agent_spacing
             if self._shrink:
-                agent_spacing = 150
+                agent_spacing = self._shrink_spacing
             if approach_herd:
                 agent_spacing = self._scaled_agent_spacing * self._default_agent_spacing
 
@@ -156,26 +183,69 @@ class MathematicalFormation(Behavior):
                 target=target,
                 qi=di, pi=d_dot_i)
 
+            # Move toward herd mean
+            target = np.array(pygame.mouse.get_pos())
+            p_follow_user = self._calc_group_objective_control(
+                target=target,
+                qi=di, pi=d_dot_i)
+
             # Total density p
             p[idx] = (1 - approach_herd) * ps + \
                 po + \
-                approach_herd * p_gamma
+                approach_herd * p_gamma + \
+                int(self._follow_cursor) * p_follow_user
 
-            if np.linalg.norm(p[idx]) > 10:
-                p[idx] = 10 * utils.unit_vector(p[idx])
+            if self._enforce_formation:
+                di = shepherd_states[idx, :2]
+                dist_vec = self._formation[idx]
+                po = np.zeros(2)
+                all_alpha = np.zeros(2)
+                for other_idx in range(len(dist_vec)):
+                    if dist_vec[other_idx] > 0.0:
+                        # print(other_idx)
+                        dj = shepherd_states[other_idx, :2]
+                        d_dot_j = shepherd_states[other_idx, 2:]
+                        n_ij = self._get_n_ij(di, dj)
+                        grad = MathUtils.phi_alpha(
+                            MathUtils.sigma_norm(dj-di),
+                            r=np.round(dist_vec[other_idx]),
+                            d=np.round(dist_vec[other_idx]))*n_ij
+                        all_alpha += grad
+                        self._formation_cluster.append((di, dj))
+
+                        vel_consensus = self._velocity_consensus_term(
+                            c=MathematicalFlock.C2_alpha,
+                            qi=di, qj=dj,
+                            pi=d_dot_i, pj=d_dot_j,
+                            r=np.round(dist_vec[other_idx]))
+
+                po = 20 * MathematicalFlock.C2_alpha * all_alpha + vel_consensus
+                p[idx] = po + int(self._follow_cursor) * \
+                    p_follow_user
+
+            if not self._enforce_formation:
+                if np.linalg.norm(p[idx]) > 15:
+                    p[idx] = 15 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
         # self._writer.writerow([total_ps])
         self._total_ps_over_time.append(total_ps)
-        if self._shrink == 0:
+        if self._shrink == 0 and not approach_herd:
             self._shrink = self._shrink_condition()
 
-        qdot = p
-        shepherd_states[:, 2:] = qdot
-        pdot = shepherd_states[:, 2:]
-        shepherd_states[:, :2] += pdot * 0.15
+        if not self._enforce_formation:
+            qdot = p
+            shepherd_states[:, 2:] = qdot
+            pdot = shepherd_states[:, 2:]
+            shepherd_states[:, :2] += pdot * 0.15
+        else:
+            qdot = p
+            shepherd_states[:, 2:] += qdot * 0.1
+            pdot = shepherd_states[:, 2:]
+            shepherd_states[:, :2] += pdot * 0.1
 
         shepherd: Shepherd
+        self._text_list.clear()
         for idx, shepherd in enumerate(self._shepherds):
             # self._remain_in_screen(herd)
             shepherd._plot_velocity = True
@@ -183,6 +253,9 @@ class MathematicalFormation(Behavior):
             shepherd.pose = shepherd_states[idx, :2]
             shepherd._rotate_image(shepherd.velocity)
             shepherd.reset_steering()
+
+            text = self._font.render(str(idx), 1, pygame.Color("white"))
+            self._text_list.append((text, shepherd.pose - np.array([20, 20])))
 
     def display(self, screen: pygame.Surface):
         if self._plot_enforced_agent:
@@ -197,6 +270,13 @@ class MathematicalFormation(Behavior):
             pygame.draw.line(screen, pygame.Color("white"), tuple(
                 self._boundary_agents[self._boundary_agents.shape[0] - 1, :]),
                 tuple(self._boundary_agents[0, :]))
+
+        for text in self._text_list:
+            self._screen.blit(text[0], tuple(text[1]))
+
+        for line in self._formation_cluster:
+            pygame.draw.line(screen, pygame.Color("white"), tuple(line[0]),
+                             tuple(line[1]))
 
     # Common functions with MathematicalFlock
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
@@ -288,11 +368,25 @@ class MathematicalFormation(Behavior):
         if len(self._total_ps_over_time) != self._time_horizon:
             return False
         y = np.array(self._total_ps_over_time)
-        x = np.linspace(0,self._time_horizon,self._time_horizon,endpoint=False) 
-        coeff = np.polyfit(x,y,deg=1)
+        x = np.linspace(0, self._time_horizon,
+                        self._time_horizon, endpoint=False)
+        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
         poly = np.poly1d(coeff)
         polyder = np.polyder(poly)
-        return not bool(np.abs(np.round(float(polyder.coef[0]),2)))
+        cond = np.abs(np.round(float(polyder.coef[0]), 3))
+        return not bool(cond)
 
-    def _enforce_formation(self):
-        pass
+    def _generate_minimal_rigid_formation(self, shepherd_states: np.ndarray):
+        # alpha_adj = self._get_alpha_adjacency_matrix(shepherd_states,
+        #                                              r=self._shrink_spacing)
+        # for row in alpha_adj:
+        #     pair = np.where(row == True)[0]
+        #     if len(pair) > 1:
+        #         alpha_adj[pair[0], pair[1]] = True
+        #         alpha_adj[pair[1], pair[0]] = True
+        dist_mat = np.array(
+            [np.linalg.norm(shepherd_states[i, :2]-shepherd_states[:, :2], axis=-1)
+             for i in range(len(shepherd_states))])
+        # formation = alpha_adj.astype(np.float64) * dist_mat
+        formation = dist_mat
+        return formation
