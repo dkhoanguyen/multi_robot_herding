@@ -4,11 +4,11 @@ import math
 from spatialmath.base import *
 
 import numpy as np
-from src.multi_robot_herding.utils import params, utils
-from src.multi_robot_herding.behavior.behavior import Behavior
-from src.multi_robot_herding.entity.herd import Herd
-from src.multi_robot_herding.entity.shepherd import Shepherd
-from src.multi_robot_herding.entity.obstacle import Obstacle
+from multi_robot_herding.utils import params, utils
+from multi_robot_herding.behavior.behavior import Behavior
+from multi_robot_herding.entity.herd import Herd
+from multi_robot_herding.entity.shepherd import Shepherd
+from multi_robot_herding.entity.obstacle import Obstacle
 
 
 class Orbit(Behavior):

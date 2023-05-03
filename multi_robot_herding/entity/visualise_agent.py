@@ -5,7 +5,7 @@ from spatialmath.base import *
 
 import numpy as np
 
-from src.multi_robot_herding.entity.entity import Entity
+from multi_robot_herding.entity.entity import Entity
 
 
 class VisualisationEntity(Entity):

@@ -2,18 +2,18 @@
 
 import yaml
 
-from src.multi_robot_herding.entity.herd import Herd
-from src.multi_robot_herding.entity.shepherd import Shepherd
-from src.multi_robot_herding.entity.obstacle import Hyperplane, Sphere
-from src.multi_robot_herding.entity.visualise_agent import VisualisationEntity
+from multi_robot_herding.entity.herd import Herd
+from multi_robot_herding.entity.shepherd import Shepherd
+from multi_robot_herding.entity.obstacle import Hyperplane, Sphere
+from multi_robot_herding.entity.visualise_agent import VisualisationEntity
 
-from src.multi_robot_herding.behavior.behavior import Behavior
-from src.multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
-from src.multi_robot_herding.behavior.mathematical_formation import MathematicalFormation
-from src.multi_robot_herding.behavior.orbit import Orbit
+from multi_robot_herding.behavior.behavior import Behavior
+from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
+from multi_robot_herding.behavior.mathematical_formation import MathematicalFormation
+from multi_robot_herding.behavior.orbit import Orbit
 
-from src.multi_robot_herding.environment.environment import Environment
-from src.multi_robot_herding.environment.spawner import Spawner
+from multi_robot_herding.environment.environment import Environment
+from multi_robot_herding.environment.spawner import Spawner
 
 
 def main():
@@ -66,18 +66,10 @@ def main():
     for shepherd in shepherds:
         math_formation.add_shepherd(shepherd)
 
-    # # Orbit
-    # orbit = Orbit()
-    # orbit.add_entity(shepherds[0])
-
-    # Visualisation Entity
-    vis_entity = VisualisationEntity()
-
     # Behaviours
     behaviors = []
     behaviors.append(math_flock)
     behaviors.append(math_formation)
-    # behaviors.append(orbit)
 
     # Environment
     env = Environment()
@@ -90,11 +82,8 @@ def main():
     for obstacle in obstacles:
         env.add_entity(obstacle)
 
-    env.add_entity(vis_entity)
-
     behavior: Behavior
     for behavior in behaviors:
-        behavior.set_vis_entity(vis_entity)
         env.add_behaviour(behavior)
 
     while env.ok:

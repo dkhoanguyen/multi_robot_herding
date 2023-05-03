@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import numpy as np
-from src.multi_robot_herding.utils import params
+from multi_robot_herding.utils import params
 
-from src.multi_robot_herding.entity.herd import Herd
-from src.multi_robot_herding.entity.shepherd import Shepherd
-from src.multi_robot_herding.entity.obstacle import Hyperplane, Sphere
+from multi_robot_herding.entity.herd import Herd
+from multi_robot_herding.entity.shepherd import Shepherd
+from multi_robot_herding.entity.obstacle import Hyperplane, Sphere
 
 class Spawner(object):
     def __init__(self):

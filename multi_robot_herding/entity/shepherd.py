@@ -4,7 +4,7 @@ import pygame
 import numpy as np
 from spatialmath.base import *
 
-from src.multi_robot_herding.entity.entity import Autonomous, Entity
+from multi_robot_herding.entity.entity import Autonomous, Entity
 
 
 class Shepherd(Autonomous):

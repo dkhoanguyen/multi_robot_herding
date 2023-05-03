@@ -2,7 +2,7 @@
 import math
 import pygame
 from enum import Enum
-from src.multi_robot_herding.utils import params, utils
+from multi_robot_herding.utils import params, utils
 from spatialmath.base import *
 
 import numpy as np

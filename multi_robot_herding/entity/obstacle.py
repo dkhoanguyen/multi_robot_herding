@@ -3,7 +3,7 @@ import pygame
 import numpy as np
 
 from abc import abstractmethod
-from src.multi_robot_herding.entity.entity import Entity
+from multi_robot_herding.entity.entity import Entity
 
 class Obstacle(Entity):
 

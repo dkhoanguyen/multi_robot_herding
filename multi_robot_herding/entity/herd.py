@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from src.multi_robot_herding.entity.entity import Autonomous
+from multi_robot_herding.entity.entity import Autonomous
 
 class Herd(Autonomous):
     def __init__(self,
