@@ -31,9 +31,10 @@ class BearingFormation(Behavior):
         self._total_ps_over_time = deque(maxlen=self._time_horizon)
 
         self._formation_generated = False
-        self._p_star = np.empty((0,2))
+        self._p_star = np.empty((0, 2))
+        self._g_star = np.empty((0, 2))
         self._trigger_formation = False
-        self._formation = np.empty((0,2))
+        self._formation = np.empty((0, 2))
 
         # Stuff to display
         self._plot_enforced_agent = False
@@ -92,14 +93,14 @@ class BearingFormation(Behavior):
 
         if formation_stable:
             if not self._formation_generated:
-                ret, p_star = self._generate_formation(shepherd_states[:,:2])
+                ret, p_star = self._generate_formation(shepherd_states[:, :2])
                 if ret:
-                    self._p_star = p_star
+                    self._g_star = p_star
                     self._formation_generated = True
 
-                if self._p_star.shape[0] > 0:
-                    u = self._enforce_formation(shepherd_states)
-                    p = u.reshape((int(u.size/2),2))
+        if self._g_star.shape[0] > 0:
+            p = self._enforce_formation(shepherd_states[:, :2])
+            self._maneuver_formation(shepherd_states)
 
         qdot = p
         shepherd_states[:, 2:] = qdot
@@ -124,18 +125,9 @@ class BearingFormation(Behavior):
                 'white'), center=tuple(self._herd_mean),
                 radius=self._herd_radius, width=2)
 
-        if self._vis_boundary and self._boundary_agents is not None:
-            for idx in range(self._boundary_agents.shape[0] - 1):
-                pygame.draw.line(screen, pygame.Color("white"), tuple(
-                    self._boundary_agents[idx, :]), tuple(self._boundary_agents[idx + 1, :]))
-            pygame.draw.line(screen, pygame.Color("white"), tuple(
-                self._boundary_agents[self._boundary_agents.shape[0] - 1, :]),
-                tuple(self._boundary_agents[0, :]))
-
-        for i in range(self._p_star.shape[0] - 1):
-            print(i)
-            pygame.draw.line(screen, pygame.Color("white"), tuple(self._p_star[i,:]),
-                             tuple(self._p_star[i+1,:]))
+        for i in range(self._g_star.shape[0] - 1):
+            pygame.draw.line(screen, pygame.Color("white"), tuple(self._g_star[i, :]),
+                             tuple(self._g_star[i+1, :]))
 
         for text in self._text_list:
             screen.blit(text[0], tuple(text[1]))
@@ -206,6 +198,20 @@ class BearingFormation(Behavior):
         self._total_ps_over_time.append(total_ps)
         return u
 
+    def _follow_cursor(self, shepherd_states: np.ndarray):
+        target = np.array(pygame.mouse.get_pos())
+        u = np.zeros((shepherd_states.shape[0], 2))
+        for idx in range(shepherd_states.shape[0]):
+            di = shepherd_states[idx, :2]
+            d_dot_i = shepherd_states[idx, 2:]
+
+            u[idx] = self._calc_group_objective_control(
+                target=target,
+                c1=1.5 * MathematicalFlock.C1_gamma,
+                c2=1.5 * MathematicalFlock.C2_gamma,
+                qi=di, pi=d_dot_i)
+        return u
+
     def _generate_formation(self, states: np.ndarray):
         p_star = states
         start_end = self._calc_start_end(
@@ -217,12 +223,13 @@ class BearingFormation(Behavior):
         n = len(self._shepherds)
         if np.linalg.matrix_rank(Rd) != (2*n - 3):
             return False, None
+        self._p_star = p_star
         return True, g_star
 
-    def _enforce_formation(self, shepherd_states: np.ndarray):
-        u = np.zeros((shepherd_states.shape[0], 2))
-        p = shepherd_states[:, :2]
-        p_star = self._p_star
+    def _enforce_formation(self, states: np.ndarray):
+        u = np.zeros((states.shape[0], 2))
+        p = states
+        p_star = self._g_star
 
         start_end = self._calc_start_end(
             np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
@@ -232,7 +239,29 @@ class BearingFormation(Behavior):
         diagP = self._calc_diagPg(g, e_norm)
         flatten_p_star = np.ravel(p_star)
         u = H_bar.transpose() @ diagP @ flatten_p_star
+        u = np.reshape(u, (int(u.size/2), 2))
         return u
+
+    def _maneuver_formation(self, shepherd_states: np.ndarray):
+        u = np.zeros((shepherd_states.shape[0], 2))
+        p_star = self._p_star
+
+        start_end = self._calc_start_end(
+            np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
+        g, e_norm = self._calc_g(p_star, start_end[0, :], start_end[1, :])
+
+        # Decentralise control
+        leader_idx = [0, 1]
+        current_i = 0
+        for idx in range(start_end.shape[1]):
+            if start_end[0, idx] in leader_idx:
+                continue
+            pair_ij = start_end[:,idx]
+            g, e_norm = self._calc_g(p_star, [pair_ij[0]], [pair_ij[1]])
+            Pg_ij = self._calc_diagPg(g, e_norm)
+            
+
+
 
     # Inter-robot Interaction Control
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
@@ -329,7 +358,6 @@ class BearingFormation(Behavior):
                     end_i.append(j)
             start = start + start_i
             end = end + end_i
-
         return np.array([start, end])
 
     def _calc_H(self, start: np.ndarray, end: np.ndarray):
@@ -351,9 +379,6 @@ class BearingFormation(Behavior):
         H_bar = np.kron(H, np.eye(2))
         return H_bar
 
-    def _calc_e(self, p: np.ndarray):
-        pass
-
     def _calc_g(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
         g_vec = np.empty((0, p.shape[1]))
         g_norm_vec = []
@@ -365,7 +390,7 @@ class BearingFormation(Behavior):
 
     def _calc_diagPg(self, g: np.ndarray, e_norm: np.ndarray):
         Pg = np.empty((0, g.shape[1]))
-        for i in range(len(g)):
+        for i in range(g.shape[0]):
             gk = g[i, :]
             Pgk = utils.MathUtils.orthogonal_projection_matrix(gk) / e_norm[i]
             Pg = np.vstack((Pg, Pgk))
@@ -384,6 +409,12 @@ class BearingFormation(Behavior):
         H_bar = self._calc_H_bar(start, end)
         Rd = diagPg @ H_bar
         return Rd
+
+    def _calc_BL(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
+        g, e_norm = self._calc_g(p, start, end)
+        diagPg = self._calc_diagPg(g, e_norm)
+        H_bar = self._calc_H_bar(start, end)
+        return H_bar.transpose() @ diagPg @ H_bar
 
     def _formation_stable(self):
         if len(self._total_ps_over_time) != self._time_horizon:
