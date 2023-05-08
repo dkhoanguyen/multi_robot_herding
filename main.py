@@ -10,7 +10,7 @@ from multi_robot_herding.entity.visualise_agent import VisualisationEntity
 from multi_robot_herding.behavior.behavior import Behavior
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 from multi_robot_herding.behavior.mathematical_formation import MathematicalFormation
-from multi_robot_herding.behavior.orbit import Orbit
+from multi_robot_herding.behavior.bearing_formation import BearingFormation
 
 from multi_robot_herding.environment.environment import Environment
 from multi_robot_herding.environment.spawner import Spawner
@@ -56,7 +56,7 @@ def main():
         math_flock.add_shepherd(shepherd)
 
     math_formation_config = behavior_config['math_formation']
-    math_formation = MathematicalFormation(**math_formation_config['params'])
+    math_formation = BearingFormation(**math_formation_config['params'])
 
     # Add herds
     for herd in herds:

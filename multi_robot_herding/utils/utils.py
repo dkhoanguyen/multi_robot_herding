@@ -77,5 +77,68 @@ def truncate(vector, max_length):
     else:
         return vector
 
+
 def unit_vector(vector):
     return np.array(vector) / np.linalg.norm(vector)
+
+
+class MathUtils():
+
+    EPSILON = 0.1
+    H = 0.2
+    A, B = 5, 5
+    C = np.abs(A-B)/np.sqrt(4*A*B)  # phi
+
+    R = 40
+    D = 40
+
+    # Math functions for flocking
+    @staticmethod
+    def sigma_1(z):
+        return z / np.sqrt(1 + z**2)
+
+    @staticmethod
+    def sigma_norm(z, e=EPSILON):
+        return (np.sqrt(1 + e * np.linalg.norm(z, axis=-1, keepdims=True)**2) - 1) / e
+
+    @staticmethod
+    def sigma_norm_grad(z, e=EPSILON):
+        return z/np.sqrt(1 + e * np.linalg.norm(z, axis=-1, keepdims=True)**2)
+
+    @staticmethod
+    def bump_function(z, h=H):
+        ph = np.zeros_like(z)
+        ph[z <= 1] = (1 + np.cos(np.pi * (z[z <= 1] - h)/(1 - h)))/2
+        ph[z < h] = 1
+        ph[z < 0] = 0
+        return ph
+
+    @staticmethod
+    def phi(z, a=A, b=B, c=C):
+        return ((a + b) * MathUtils.sigma_1(z + c) + (a - b)) / 2
+
+    @staticmethod
+    def phi_alpha(z, r=R, d=D):
+        r_alpha = MathUtils.sigma_norm([r])
+        d_alpha = MathUtils.sigma_norm([d])
+        return MathUtils.bump_function(z/r_alpha) * MathUtils.phi(z-d_alpha)
+
+    @staticmethod
+    def normalise(v, pre_computed=None):
+        n = pre_computed if pre_computed is not None else math.sqrt(
+            v[0]**2 + v[1]**2)
+        if n < 1e-13:
+            return np.zeros(2)
+        else:
+            return np.array(v) / n
+
+    # Math for bearing formation control
+    @staticmethod
+    def orthogonal_projection_matrix(v: np.ndarray):
+        d = v.size
+        v = np.reshape(v, (d, 1))
+        return np.eye(d) - (v @ v.transpose()) / (np.linalg.norm(v)**2)
+
+    @staticmethod
+    def g_ij(vi: np.ndarray, vj: np.ndarray):
+        return (vj - vi) / (np.linalg.norm(vj - vi))

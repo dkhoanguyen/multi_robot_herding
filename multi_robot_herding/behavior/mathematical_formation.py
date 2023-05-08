@@ -1,7 +1,5 @@
 # !/usr/bin/python3
 
-import csv
-import time
 import pygame
 import numpy as np
 from collections import deque
@@ -12,9 +10,6 @@ from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 from multi_robot_herding.behavior.mathematical_flock import MathUtils
 from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
-
-from scipy.spatial import ConvexHull
-from scipy.optimize import curve_fit
 
 
 class MathematicalFormation(Behavior):
@@ -149,7 +144,7 @@ class MathematicalFormation(Behavior):
 
                 stabilised_range = self._sensing_range
                 if self._shrink:
-                    stabilised_range = 95
+                    stabilised_range = 100
                 local_crowd_horizon = self._local_crowd_horizon(
                     si=di, sj=sj, di=di, k=0.125, r=stabilised_range)
 
@@ -181,12 +176,15 @@ class MathematicalFormation(Behavior):
             target = self._herd_mean
             p_gamma = self._calc_group_objective_control(
                 target=target,
+                c1=MathematicalFlock.C1_gamma,
+                c2=MathematicalFlock.C2_gamma,
                 qi=di, pi=d_dot_i)
-
-            # Move toward herd mean
+            
             target = np.array(pygame.mouse.get_pos())
             p_follow_user = self._calc_group_objective_control(
                 target=target,
+                c1=1.5 * MathematicalFlock.C1_gamma,
+                c2=1.5 * MathematicalFlock.C2_gamma,
                 qi=di, pi=d_dot_i)
 
             # Total density p
@@ -196,42 +194,50 @@ class MathematicalFormation(Behavior):
                 int(self._follow_cursor) * p_follow_user
 
             if self._enforce_formation:
-                di = shepherd_states[idx, :2]
-                dist_vec = self._formation[idx]
-                po = np.zeros(2)
-                all_alpha = np.zeros(2)
-                for other_idx in range(len(dist_vec)):
-                    if dist_vec[other_idx] > 0.0:
-                        # print(other_idx)
-                        dj = shepherd_states[other_idx, :2]
-                        d_dot_j = shepherd_states[other_idx, 2:]
-                        n_ij = self._get_n_ij(di, dj)
-                        grad = MathUtils.phi_alpha(
-                            MathUtils.sigma_norm(dj-di),
-                            r=np.round(dist_vec[other_idx]),
-                            d=np.round(dist_vec[other_idx]))*n_ij
-                        all_alpha += grad
-                        self._formation_cluster.append((di, dj))
+                pass
+                # di = shepherd_states[idx, :2]
+                # dist_vec = self._formation[idx]
+                # po = np.zeros(2)
+                # all_alpha = np.zeros(2)
+                # for other_idx in range(len(dist_vec)):
+                #     if dist_vec[other_idx] > 0.0:
+                #         # print(other_idx)
+                #         dj = shepherd_states[other_idx, :2]
+                #         d_dot_j = shepherd_states[other_idx, 2:]
 
-                        vel_consensus = self._velocity_consensus_term(
-                            c=MathematicalFlock.C2_alpha,
-                            qi=di, qj=dj,
-                            pi=d_dot_i, pj=d_dot_j,
-                            r=np.round(dist_vec[other_idx]))
+                #         n_ij = self._get_n_ij(di, dj)
+                #         grad = MathUtils.phi_alpha(
+                #             MathUtils.sigma_norm(dj-di),
+                #             r=np.round(dist_vec[other_idx]),
+                #             d=np.round(dist_vec[other_idx]))*n_ij
+                #         all_alpha += grad
+                #         self._formation_cluster.append((di, dj))
 
-                po = 20 * MathematicalFlock.C2_alpha * all_alpha + vel_consensus
-                p[idx] = po + int(self._follow_cursor) * \
-                    p_follow_user
+                #         vel_consensus = self._velocity_consensus_term(
+                #             c=20 * MathematicalFlock.C2_alpha,
+                #             qi=di, qj=dj,
+                #             pi=d_dot_i, pj=d_dot_j,
+                #             r=np.round(dist_vec[other_idx]))
+
+                # po = 10000 * MathematicalFlock.C2_alpha * all_alpha + vel_consensus
+                # p[idx] = po + int(self._follow_cursor) * \
+                #     p_follow_user + ps
 
             if not self._enforce_formation:
                 if np.linalg.norm(p[idx]) > 15:
                     p[idx] = 15 * utils.unit_vector(p[idx])
+            # else:
+            #     if np.linalg.norm(p[idx]) > 15:
+            #         p[idx] = 15 * utils.unit_vector(p[idx])
 
         self._plot_enforced_agent = False
         # self._writer.writerow([total_ps])
         self._total_ps_over_time.append(total_ps)
-        if self._shrink == 0 and not approach_herd:
-            self._shrink = self._shrink_condition()
+        # if self._shrink == 0 and not approach_herd:
+        #     self._shrink = self._shrink_condition()
+        
+        if self._formation_stable():
+            self._enforce_formation = True
 
         if not self._enforce_formation:
             qdot = p
@@ -242,7 +248,7 @@ class MathematicalFormation(Behavior):
             qdot = p
             shepherd_states[:, 2:] += qdot * 0.1
             pdot = shepherd_states[:, 2:]
-            shepherd_states[:, :2] += pdot * 0.1
+            shepherd_states[:, :2] += pdot * 0.05
 
         shepherd: Shepherd
         self._text_list.clear()
@@ -301,10 +307,11 @@ class MathematicalFormation(Behavior):
         return -c1 * MathUtils.sigma_1(qi - pos) - c2 * (pi)
 
     def _calc_group_objective_control(self, target: np.ndarray,
+                                      c1: float, c2: float,
                                       qi: np.ndarray, pi: np.ndarray):
         u_gamma = self._group_objective_term(
-            c1=MathematicalFlock.C1_gamma,
-            c2=MathematicalFlock.C2_gamma,
+            c1=c1,
+            c2=c2,
             pos=target,
             qi=qi,
             pi=pi)
@@ -374,6 +381,20 @@ class MathematicalFormation(Behavior):
         poly = np.poly1d(coeff)
         polyder = np.polyder(poly)
         cond = np.abs(np.round(float(polyder.coef[0]), 3))
+        return not bool(cond)
+    
+    def _formation_stable(self):
+        if len(self._total_ps_over_time) != self._time_horizon:
+            return False
+        y = np.array(self._total_ps_over_time)
+        x = np.linspace(0, self._time_horizon,
+                        self._time_horizon, endpoint=False)
+        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
+        if np.sqrt(err) >= 20:
+            return False
+        poly = np.poly1d(coeff)
+        polyder = np.polyder(poly)
+        cond = np.abs(np.round(float(polyder.coef[0]), 2))
         return not bool(cond)
 
     def _generate_minimal_rigid_formation(self, shepherd_states: np.ndarray):

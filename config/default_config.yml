@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 10
+    num: 20
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -18,23 +18,23 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [900, 200]
+      - pose: [1000, 200]
         angle: 1.57
-      - pose: [900, 240]
+      - pose: [1000, 240]
         angle: 1.57
-      - pose: [900, 280]
+      - pose: [1000, 280]
         angle: 1.57
-      - pose: [900, 320]
+      - pose: [1000, 320]
         angle: 1.57
-      - pose: [900, 380]
+      - pose: [1000, 380]
         angle: 1.57
-      - pose: [900, 420]
+      - pose: [1000, 420]
         angle: 1.57
-      # - pose: [1100, 460]
-      #   angle: 1.57
-      # - pose: [1100, 500]
-      #   angle: 1.57
-      # - pose: [1140, 200]
+      - pose: [1000, 460]
+        angle: 1.57
+      - pose: [1000, 500]
+        angle: 1.57
+      # - pose: [1000, 540]
       #   angle: 1.57
       # - pose: [1140, 240]
       #   angle: 1.57
@@ -94,7 +94,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 100
+      danger_range: 90
       initial_consensus: [500, 360]
     constants:
       c1_alpha: 3
@@ -111,4 +111,4 @@ behavior:
     params:
       sensing_range: 200
       agent_spacing: 250
-      scaled_agent_spacing: 0.5
+      scaled_agent_spacing: 0.4
