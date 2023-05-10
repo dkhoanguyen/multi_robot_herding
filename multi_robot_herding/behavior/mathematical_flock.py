@@ -183,18 +183,18 @@ class MathematicalFlock(Behavior):
         qdot = (1 - self._flocking_condition) * local_clustering + \
             flocking + self._flocking_condition * global_clustering + \
             (1 - self._flocking_condition) * remain_in_bound_u
-        herd_states[:, 2:] += qdot * self._dt_sqr
-        pdot = herd_states[:, 2:]
+        herd_states[:, 2:4] += qdot * self._dt_sqr
+        pdot = herd_states[:, 2:4]
         herd_states[:, :2] += pdot * self._dt
 
         herd: Herd
         for idx, herd in enumerate(self._herds):
             # Scale velocity
-            if np.linalg.norm(herd_states[idx, 2:]) > herd._max_v:
-                herd_states[idx, 2:] = herd._max_v * \
-                    utils.unit_vector(herd_states[idx, 2:])
+            if np.linalg.norm(herd_states[idx, 2:4]) > herd._max_v:
+                herd_states[idx, 2:4] = herd._max_v * \
+                    utils.unit_vector(herd_states[idx, 2:4])
 
-            herd.velocity = herd_states[idx, 2:]
+            herd.velocity = herd_states[idx, 2:4]
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
@@ -248,7 +248,7 @@ class MathematicalFlock(Behavior):
         u = np.zeros((herd_states.shape[0], 2))
         for idx in range(herd_states.shape[0]):
             qi = herd_states[idx, :2]
-            pi = herd_states[idx, 2:]
+            pi = herd_states[idx, 2:4]
 
             # Group consensus term
             target = self._consensus_pose
@@ -307,7 +307,7 @@ class MathematicalFlock(Behavior):
 
             for idx in range(local_cluster_states.shape[0]):
                 qi = local_cluster_states[idx, :2]
-                pi = local_cluster_states[idx, 2:]
+                pi = local_cluster_states[idx, 2:4]
 
                 this_indx = cluster_indx_list[cluster_indx][idx]
 
@@ -328,7 +328,7 @@ class MathematicalFlock(Behavior):
         y_min = boundary['y_min']
         y_max = boundary['y_max']
 
-        u = np.zeros_like(herd_states[:, 2:])
+        u = np.zeros_like(herd_states[:, 2:4])
         for idx in range(herd_states.shape[0]):
             qi = herd_states[idx, :2]
 
@@ -349,11 +349,11 @@ class MathematicalFlock(Behavior):
                                neighbors_idxs: np.ndarray,
                                herd_states: np.ndarray):
         qi = herd_states[idx, :2]
-        pi = herd_states[idx, 2:]
+        pi = herd_states[idx, 2:4]
         u_alpha = np.zeros(2)
         if sum(neighbors_idxs) > 0:
             qj = herd_states[neighbors_idxs, :2]
-            pj = herd_states[neighbors_idxs, 2:]
+            pj = herd_states[neighbors_idxs, 2:4]
 
             alpha_grad = self._gradient_term(
                 c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
@@ -373,7 +373,7 @@ class MathematicalFlock(Behavior):
                                          beta_adj_matrix: np.ndarray,
                                          herd_states: np.ndarray):
         qi = herd_states[idx, :2]
-        pi = herd_states[idx, 2:]
+        pi = herd_states[idx, 2:4]
         u_beta = np.zeros(2)
         if sum(obstacle_idxs) > 0:
             # Create beta agent
@@ -385,7 +385,7 @@ class MathematicalFlock(Behavior):
                 beta_agents = np.vstack((beta_agents, beta_agent))
 
             qik = beta_agents[:, :2]
-            pik = beta_agents[:, 2:]
+            pik = beta_agents[:, 2:4]
             beta_grad = self._gradient_term(
                 c=MathematicalFlock.C2_beta, qi=qi, qj=qik,
                 r=MathematicalFlock.BETA_RANGE,
@@ -414,7 +414,7 @@ class MathematicalFlock(Behavior):
                                            delta_adj_matrix: np.ndarray,
                                            herd_states: np.ndarray):
         qi = herd_states[idx, :2]
-        pi = herd_states[idx, 2:]
+        pi = herd_states[idx, 2:4]
         u_delta = np.zeros(2)
         if sum(shepherd_idxs) > 0:
             # Create delta_agent
@@ -426,7 +426,7 @@ class MathematicalFlock(Behavior):
                 delta_agents = np.vstack((delta_agents, delta_agent))
 
             qid = delta_agents[:, :2]
-            pid = delta_agents[:, 2:]
+            pid = delta_agents[:, 2:4]
             delta_grad = self._gradient_term(
                 c=MathematicalFlock.C2_beta, qi=qi, qj=qid,
                 r=MathematicalFlock.BETA_RANGE,

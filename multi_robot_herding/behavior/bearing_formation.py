@@ -167,10 +167,10 @@ class BearingFormation(Behavior):
         self._herd_radius = np.max(d_to_herd_mean)
 
         shepherd: Shepherd
-        shepherd_states = np.array([]).reshape((0, 4))
+        shepherd_states = np.array([]).reshape((0, 6))
         for shepherd in self._shepherds:
             shepherd_states = np.vstack(
-                (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity))))
+                (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity, shepherd.acceleration))))
 
         self._formation_cluster = []
         p = self._herd_surrounding(herd_states=herd_states,
@@ -186,19 +186,19 @@ class BearingFormation(Behavior):
                     self._formation_generated = True
 
         if self._g_star.shape[0] > 0:
-            p = self._enforce_formation(shepherd_states[:, :2])
-            self._maneuver_formation(shepherd_states)
+            # p = self._enforce_formation(shepherd_states[:, :2])
+            p = self._maneuver_formation(shepherd_states)
 
         qdot = p
-        shepherd_states[:, 2:] = qdot
-        pdot = shepherd_states[:, 2:]
+        shepherd_states[:, 2:4] = qdot
+        pdot = shepherd_states[:, 2:4]
         shepherd_states[:, :2] += pdot * 0.15
 
         shepherd: Shepherd
         self._text_list.clear()
         for idx, shepherd in enumerate(self._shepherds):
             shepherd._plot_velocity = True
-            shepherd.velocity = shepherd_states[idx, 2:]
+            shepherd.velocity = shepherd_states[idx, 2:4]
             shepherd.pose = shepherd_states[idx, :2]
             shepherd._rotate_image(shepherd.velocity)
 
@@ -234,7 +234,7 @@ class BearingFormation(Behavior):
 
         for idx in range(shepherd_states.shape[0]):
             di = shepherd_states[idx, :2]
-            d_dot_i = shepherd_states[idx, 2:]
+            d_dot_i = shepherd_states[idx, 2:4]
 
             approach_herd = 1
             if np.linalg.norm(di - self._herd_mean) <= \
@@ -265,7 +265,6 @@ class BearingFormation(Behavior):
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
 
                 po = self._collision_avoidance_term(
-                    
                     gain=MathematicalFlock.C2_alpha,
                     qi=di, qj=dj,
                     r=agent_spacing)
@@ -290,7 +289,7 @@ class BearingFormation(Behavior):
         u = np.zeros((shepherd_states.shape[0], 2))
         for idx in range(shepherd_states.shape[0]):
             di = shepherd_states[idx, :2]
-            d_dot_i = shepherd_states[idx, 2:]
+            d_dot_i = shepherd_states[idx, 2:4]
 
             u[idx] = self._calc_group_objective_control(
                 target=target,
@@ -339,8 +338,6 @@ class BearingFormation(Behavior):
 
         # Decentralise control
         leader_idx = [0, 1]
-        num_leader = len(leader_idx)
-        current_i = 0
         all_total_Pg_ij = np.zeros(
             (2, 2, shepherd_states.shape[0]))
         all_Pg_ij = np.zeros((2, 2, start_end.shape[1], start_end.shape[1]))
@@ -354,10 +351,12 @@ class BearingFormation(Behavior):
             all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
 
-        kp = 1
-        kv = 1
+        kp = 6
+        kv = 0.95
+        scale = 1.0
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
+                u[i] = np.array([3,0])
                 continue
 
             ui = np.zeros((2, 1))
@@ -368,12 +367,12 @@ class BearingFormation(Behavior):
                 Pg_ij = all_Pg_ij[:, :, i, j]
                 pi = shepherd_states[i, :2]
                 pj = shepherd_states[j, :2]
-                vi = shepherd_states[i, 2:]
-                vj = shepherd_states[j, 2:]
-                vj_dot = np.array([0,0])
-                ui += Pg_ij @ (kp * (pi - pj) + kv * (vi - vj) - vj_dot).reshape((2,1))
+                vi = shepherd_states[i, 2:4]
+                vj = shepherd_states[j, 2:4]
+                vj_dot = shepherd_states[j, 4:]
+                ui += Pg_ij @ (kp * (pi - pj) + kv * (vi - vj) - vj_dot).reshape((2, 1))
             ui = -np.linalg.inv(Ki) @ ui
-            u[i] = ui.reshape((1,2))
+            u[i] = ui.reshape((1, 2))
         return u
 
     # Inter-robot Interaction Control
@@ -452,7 +451,7 @@ class BearingFormation(Behavior):
 
     # Private
     def _calc_start_end(self, adj_matrix: np.ndarray,
-                        global_rigid: bool = True):
+                        global_rigid: bool = True) -> np.ndarray:
         start = []
         end = []
 

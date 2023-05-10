@@ -130,7 +130,7 @@ class MathematicalFormation(Behavior):
         self._formation_cluster = []
         for idx, shepherd in enumerate(self._shepherds):
             di = shepherd_states[idx, :2]
-            d_dot_i = shepherd_states[idx, 2:]
+            d_dot_i = shepherd_states[idx, 2:4]
 
             approach_herd = 1
             if np.linalg.norm(di - self._herd_mean) <= (self._sensing_range + self._herd_radius):
@@ -163,7 +163,7 @@ class MathematicalFormation(Behavior):
             neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_shepherd_idxs) > 0:
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
-                d_dot_j = shepherd_states[neighbor_shepherd_idxs, 2:]
+                d_dot_j = shepherd_states[neighbor_shepherd_idxs, 2:4]
 
                 alpha_grad = self._gradient_term(
                     c=MathematicalFlock.C2_alpha,
@@ -203,7 +203,7 @@ class MathematicalFormation(Behavior):
                 #     if dist_vec[other_idx] > 0.0:
                 #         # print(other_idx)
                 #         dj = shepherd_states[other_idx, :2]
-                #         d_dot_j = shepherd_states[other_idx, 2:]
+                #         d_dot_j = shepherd_states[other_idx, 2:4]
 
                 #         n_ij = self._get_n_ij(di, dj)
                 #         grad = MathUtils.phi_alpha(
@@ -241,13 +241,13 @@ class MathematicalFormation(Behavior):
 
         if not self._enforce_formation:
             qdot = p
-            shepherd_states[:, 2:] = qdot
-            pdot = shepherd_states[:, 2:]
+            shepherd_states[:, 2:4] = qdot
+            pdot = shepherd_states[:, 2:4]
             shepherd_states[:, :2] += pdot * 0.15
         else:
             qdot = p
-            shepherd_states[:, 2:] += qdot * 0.1
-            pdot = shepherd_states[:, 2:]
+            shepherd_states[:, 2:4] += qdot * 0.1
+            pdot = shepherd_states[:, 2:4]
             shepherd_states[:, :2] += pdot * 0.05
 
         shepherd: Shepherd
@@ -255,7 +255,7 @@ class MathematicalFormation(Behavior):
         for idx, shepherd in enumerate(self._shepherds):
             # self._remain_in_screen(herd)
             shepherd._plot_velocity = True
-            shepherd.velocity = shepherd_states[idx, 2:]
+            shepherd.velocity = shepherd_states[idx, 2:4]
             shepherd.pose = shepherd_states[idx, :2]
             shepherd._rotate_image(shepherd.velocity)
 

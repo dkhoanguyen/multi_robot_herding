@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import yaml
+import argparse
 
 from multi_robot_herding.behavior.behavior import Behavior
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock

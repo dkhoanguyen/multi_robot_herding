@@ -32,8 +32,8 @@ entity:
         angle: 1.57
       - pose: [1000, 460]
         angle: 1.57
-      - pose: [1000, 500]
-        angle: 1.57
+      # - pose: [1000, 500]
+      #   angle: 1.57
       # - pose: [1000, 540]
       #   angle: 1.57
       # - pose: [1140, 240]
