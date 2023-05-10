@@ -3,4 +3,4 @@ numpy
 networkx
 scipy
 matplotlib
-spatialmath
+spatialmath-python

@@ -123,6 +123,8 @@ class BearingFormation(Behavior):
         self._trigger_formation = False
         self._formation = np.empty((0, 2))
 
+        self._centroid_p_star = np.zeros((1, 2))
+
         # Stuff to display
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
@@ -210,6 +212,10 @@ class BearingFormation(Behavior):
             pygame.draw.circle(screen, pygame.Color(
                 'white'), center=tuple(self._herd_mean),
                 radius=self._herd_radius, width=2)
+
+        pygame.draw.circle(screen, pygame.Color(
+            'white'), center=tuple(self._centroid_p_star),
+            radius=20, width=2)
 
         for i in range(self._g_star.shape[0] - 1):
             pygame.draw.line(screen, pygame.Color("white"), tuple(self._g_star[i, :]),
@@ -337,10 +343,23 @@ class BearingFormation(Behavior):
         g, e_norm = self._calc_g(p_star, start_end[0, :], start_end[1, :])
 
         # Decentralise control
-        leader_idx = [0, 1]
+        leader_idx = [0, 1, 2]
         all_total_Pg_ij = np.zeros(
             (2, 2, shepherd_states.shape[0]))
         all_Pg_ij = np.zeros((2, 2, start_end.shape[1], start_end.shape[1]))
+
+        # Centroid
+        centroid_p_star = np.zeros((1, 2))
+        for idx in range(shepherd_states.shape[0]):
+            centroid_p_star += shepherd_states[idx, :2]
+        centroid_p_star = centroid_p_star/shepherd_states.shape[0]
+
+        # Scale
+        scale = 0
+        for idx in range(shepherd_states.shape[0]):
+            scale += np.linalg.norm(
+                shepherd_states[idx, :2] - centroid_p_star) ** 2
+        scale = np.sqrt(scale / shepherd_states.shape[0])
 
         for idx in range(start_end.shape[1]):
             if start_end[0, idx] in leader_idx:
@@ -351,12 +370,21 @@ class BearingFormation(Behavior):
             all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
 
-        kp = 6
-        kv = 0.95
-        scale = 1.0
+        kp = 4
+        kv = 0.9
+        alpha = -0.1
+        desired_length = 130
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
-                u[i] = np.array([3,0])
+                u[i] = alpha * (np.linalg.norm(shepherd_states[i, :2] -
+                                centroid_p_star) - desired_length) * utils.unit_vector(shepherd_states[i, :2] - centroid_p_star)
+                if np.linalg.norm(u[i]) < 0.1:
+                    u[i] = np.zeros((1, 2))
+                
+                # target = np.array(pygame.mouse.get_pos())
+                target = np.array([1100,350])
+                vc = -3 * utils.unit_vector(centroid_p_star - target)
+                u[i] = u[i] + vc
                 continue
 
             ui = np.zeros((2, 1))
@@ -370,7 +398,8 @@ class BearingFormation(Behavior):
                 vi = shepherd_states[i, 2:4]
                 vj = shepherd_states[j, 2:4]
                 vj_dot = shepherd_states[j, 4:]
-                ui += Pg_ij @ (kp * (pi - pj) + kv * (vi - vj) - vj_dot).reshape((2, 1))
+                ui += Pg_ij @ (kp * (pi - pj) + kv *
+                               (vi - vj) - vj_dot).reshape((2, 1))
             ui = -np.linalg.inv(Ki) @ ui
             u[i] = ui.reshape((1, 2))
         return u

@@ -113,6 +113,7 @@ class MathematicalFlock(Behavior):
         # Clusters
         self._total_clusters = 0
         self._clusters = []
+        self._plot_cluster = False
 
     # Herd
     def add_herd(self, herd: Herd):
@@ -153,7 +154,7 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
         
-        self._flocking_condition = 1
+        # self._flocking_condition = 1
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -199,7 +200,7 @@ class MathematicalFlock(Behavior):
             herd._rotate_image(herd.velocity)
 
     def display(self, screen: pygame.Surface):
-        if self._clusters is not None and len(self._clusters) > 0:
+        if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
             for cluster in self._clusters:
                 for edge in cluster:
                     pygame.draw.line(screen, pygame.Color("white"), tuple(edge[0, :2]),
