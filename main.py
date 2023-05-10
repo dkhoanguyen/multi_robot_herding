@@ -2,14 +2,8 @@
 
 import yaml
 
-from multi_robot_herding.entity.herd import Herd
-from multi_robot_herding.entity.shepherd import Shepherd
-from multi_robot_herding.entity.obstacle import Hyperplane, Sphere
-from multi_robot_herding.entity.visualise_agent import VisualisationEntity
-
 from multi_robot_herding.behavior.behavior import Behavior
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
-from multi_robot_herding.behavior.mathematical_formation import MathematicalFormation
 from multi_robot_herding.behavior.bearing_formation import BearingFormation
 
 from multi_robot_herding.environment.environment import Environment
@@ -23,7 +17,7 @@ def main():
         config = yaml.safe_load(file)
 
     entities = []
-    ## Entity related configuration
+    # Entity related configuration
     entity_config = config['entity']
     # Create herds
     herd_config = entity_config['herd']
@@ -38,7 +32,7 @@ def main():
     shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
     entities = entities + shepherds
 
-    ## Behavior related configuration
+    # Behavior related configuration
     behavior_config = config['behavior']
     math_flock_config = behavior_config['math_flock']
     math_flock = MathematicalFlock(**math_flock_config['params'])
@@ -89,6 +83,7 @@ def main():
     while env.ok:
         env.run_once()
         env.render()
+
 
 if __name__ == '__main__':
     main()

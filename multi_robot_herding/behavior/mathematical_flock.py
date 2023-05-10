@@ -197,7 +197,6 @@ class MathematicalFlock(Behavior):
             herd.velocity = herd_states[idx, 2:]
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
-            herd.reset_steering()
 
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0:

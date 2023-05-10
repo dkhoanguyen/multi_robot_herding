@@ -12,6 +12,93 @@ from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
 
 
+class Formation():
+    def __init__(self, p_star):
+        self._p_star = p_star
+
+        self._start_end = None
+
+    # Private
+    def _calc_start_end(self, adj_matrix: np.ndarray,
+                        global_rigid: bool = True):
+        start = []
+        end = []
+
+        # Fully connected graph
+        if global_rigid:
+            adj_matrix = np.ones_like(adj_matrix)
+            np.fill_diagonal(adj_matrix, 0)
+
+        for i in range(len(adj_matrix)):
+            start_i = []
+            end_i = []
+            for j in range(len(adj_matrix[i, :])):
+                if adj_matrix[i, j] == 0:
+                    continue
+                start_i.append(i)
+                if adj_matrix[i, j] and j not in end_i:
+                    end_i.append(j)
+            start = start + start_i
+            end = end + end_i
+        return np.array([start, end])
+
+    def _calc_H(self, start: np.ndarray, end: np.ndarray):
+        n = max(start) + 1
+        m = len(start)
+        H = np.zeros((m, n))
+        for i in range(m):
+            H[i, start[i]] = -1
+            H[i, end[i]] = 1
+        return H
+
+    def _calc_H_bar(self, start: np.ndarray, end: np.ndarray):
+        n = max(start) + 1
+        m = len(start)
+        H = np.zeros((m, n))
+        for i in range(m):
+            H[i, start[i]] = -1
+            H[i, end[i]] = 1
+        H_bar = np.kron(H, np.eye(2))
+        return H_bar
+
+    def _calc_g(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
+        g_vec = np.empty((0, p.shape[1]))
+        g_norm_vec = []
+        for i in range(len(start)):
+            g = utils.unit_vector(p[end[i]] - p[start[i]])
+            g_vec = np.vstack((g_vec, g))
+            g_norm_vec.append(np.linalg.norm(p[end[i]] - p[start[i]]))
+        return g_vec, np.array(g_norm_vec)
+
+    def _calc_diagPg(self, g: np.ndarray, e_norm: np.ndarray):
+        Pg = np.empty((0, g.shape[1]))
+        for i in range(g.shape[0]):
+            gk = g[i, :]
+            Pgk = utils.MathUtils.orthogonal_projection_matrix(gk) / e_norm[i]
+            Pg = np.vstack((Pg, Pgk))
+        n = Pg.shape[0]
+        total = Pg.shape[0] / Pg.shape[1]
+        diagPg = np.eye(n)
+        for element in range(int(total)):
+            m = Pg.shape[1]
+            diagPg[m*element:m*element+2, m*element:m*element +
+                   2] = Pg[m*element:m*element+2, :]
+        return diagPg
+
+    def _calc_Rd(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
+        g, e_norm = self._calc_g(p, start, end)
+        diagPg = self._calc_diagPg(g, e_norm)
+        H_bar = self._calc_H_bar(start, end)
+        Rd = diagPg @ H_bar
+        return Rd
+
+    def _calc_BL(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
+        g, e_norm = self._calc_g(p, start, end)
+        diagPg = self._calc_diagPg(g, e_norm)
+        H_bar = self._calc_H_bar(start, end)
+        return H_bar.transpose() @ diagPg @ H_bar
+
+
 class BearingFormation(Behavior):
     def __init__(self, sensing_range: float,
                  agent_spacing: float,
@@ -114,7 +201,6 @@ class BearingFormation(Behavior):
             shepherd.velocity = shepherd_states[idx, 2:]
             shepherd.pose = shepherd_states[idx, :2]
             shepherd._rotate_image(shepherd.velocity)
-            shepherd.reset_steering()
 
             text = self._font.render(str(idx), 1, pygame.Color("white"))
             self._text_list.append((text, shepherd.pose - np.array([20, 20])))
@@ -179,6 +265,7 @@ class BearingFormation(Behavior):
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
 
                 po = self._collision_avoidance_term(
+                    
                     gain=MathematicalFlock.C2_alpha,
                     qi=di, qj=dj,
                     r=agent_spacing)
@@ -252,18 +339,45 @@ class BearingFormation(Behavior):
 
         # Decentralise control
         leader_idx = [0, 1]
+        num_leader = len(leader_idx)
         current_i = 0
+        all_total_Pg_ij = np.zeros(
+            (2, 2, shepherd_states.shape[0]))
+        all_Pg_ij = np.zeros((2, 2, start_end.shape[1], start_end.shape[1]))
+
         for idx in range(start_end.shape[1]):
             if start_end[0, idx] in leader_idx:
                 continue
-            pair_ij = start_end[:,idx]
+            pair_ij = start_end[:, idx]
             g, e_norm = self._calc_g(p_star, [pair_ij[0]], [pair_ij[1]])
             Pg_ij = self._calc_diagPg(g, e_norm)
-            
+            all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
+            all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
 
+        kp = 1
+        kv = 1
+        for i in range(shepherd_states.shape[0]):
+            if i in leader_idx:
+                continue
 
+            ui = np.zeros((2, 1))
+            Ki = all_total_Pg_ij[:, :, i]
+            for j in range(start_end.shape[0]):
+                if i == j:
+                    continue
+                Pg_ij = all_Pg_ij[:, :, i, j]
+                pi = shepherd_states[i, :2]
+                pj = shepherd_states[j, :2]
+                vi = shepherd_states[i, 2:]
+                vj = shepherd_states[j, 2:]
+                vj_dot = np.array([0,0])
+                ui += Pg_ij @ (kp * (pi - pj) + kv * (vi - vj) - vj_dot).reshape((2,1))
+            ui = -np.linalg.inv(Ki) @ ui
+            u[i] = ui.reshape((1,2))
+        return u
 
     # Inter-robot Interaction Control
+
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):
         n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)

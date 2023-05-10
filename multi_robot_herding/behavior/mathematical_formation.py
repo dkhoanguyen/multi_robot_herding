@@ -258,7 +258,6 @@ class MathematicalFormation(Behavior):
             shepherd.velocity = shepherd_states[idx, 2:]
             shepherd.pose = shepherd_states[idx, :2]
             shepherd._rotate_image(shepherd.velocity)
-            shepherd.reset_steering()
 
             text = self._font.render(str(idx), 1, pygame.Color("white"))
             self._text_list.append((text, shepherd.pose - np.array([20, 20])))
