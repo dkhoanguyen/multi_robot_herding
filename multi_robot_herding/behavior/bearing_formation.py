@@ -125,6 +125,9 @@ class BearingFormation(Behavior):
 
         self._centroid_p_star = np.zeros((1, 2))
 
+        self._error_pose_ij = None
+        self._init_error_pose = False
+
         # Stuff to display
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
@@ -188,7 +191,6 @@ class BearingFormation(Behavior):
                     self._formation_generated = True
 
         if self._g_star.shape[0] > 0:
-            # p = self._enforce_formation(shepherd_states[:, :2])
             p = self._maneuver_formation(shepherd_states)
 
         qdot = p
@@ -342,6 +344,10 @@ class BearingFormation(Behavior):
             np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
         g, e_norm = self._calc_g(p_star, start_end[0, :], start_end[1, :])
 
+        if not self._init_error_pose:
+            self._error_pose_ij = np.zeros(
+                (1, 2, start_end.shape[1], start_end.shape[1]))
+
         # Decentralise control
         leader_idx = [0, 1, 2]
         all_total_Pg_ij = np.zeros(
@@ -372,17 +378,19 @@ class BearingFormation(Behavior):
 
         kp = 4
         kv = 0.9
+        ki = 1
         alpha = -0.1
         desired_length = 130
+        dt = 0.1
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
                 u[i] = alpha * (np.linalg.norm(shepherd_states[i, :2] -
                                 centroid_p_star) - desired_length) * utils.unit_vector(shepherd_states[i, :2] - centroid_p_star)
                 if np.linalg.norm(u[i]) < 0.1:
                     u[i] = np.zeros((1, 2))
-                
+
                 # target = np.array(pygame.mouse.get_pos())
-                target = np.array([1100,350])
+                target = np.array([1100, 350])
                 vc = -3 * utils.unit_vector(centroid_p_star - target)
                 u[i] = u[i] + vc
                 continue
@@ -398,8 +406,13 @@ class BearingFormation(Behavior):
                 vi = shepherd_states[i, 2:4]
                 vj = shepherd_states[j, 2:4]
                 vj_dot = shepherd_states[j, 4:]
+
+                # Integral term
+                self._error_pose_ij[:, :, i, j] += (pi - pj) * dt
+                integral_term = ki * self._error_pose_ij[:, :, i, j]
+
                 ui += Pg_ij @ (kp * (pi - pj) + kv *
-                               (vi - vj) - vj_dot).reshape((2, 1))
+                               (vi - vj) - vj_dot + integral_term).reshape((2, 1))
             ui = -np.linalg.inv(Ki) @ ui
             u[i] = ui.reshape((1, 2))
         return u
