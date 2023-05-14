@@ -3,6 +3,7 @@
 import pygame
 import numpy as np
 from collections import deque
+from enum import IntEnum
 
 from multi_robot_herding.utils import utils
 from multi_robot_herding.behavior.behavior import Behavior
@@ -100,6 +101,13 @@ class Formation():
 
 
 class BearingFormation(Behavior):
+    class State(IntEnum):
+        IDLE = 0
+        APPROACH = 1
+        SURROUND = 2
+        APPREHEND = 3
+        MOVE = 4
+
     def __init__(self, sensing_range: float,
                  agent_spacing: float,
                  scaled_agent_spacing: float):
@@ -119,6 +127,7 @@ class BearingFormation(Behavior):
 
         self._formation_generated = False
         self._p_star = np.empty((0, 2))
+        self._plotting_p_star = np.empty((0, 4))
         self._g_star = np.empty((0, 2))
         self._trigger_formation = False
         self._formation = np.empty((0, 2))
@@ -128,6 +137,10 @@ class BearingFormation(Behavior):
         self._error_pose_ij = None
         self._init_error_pose = False
 
+        # Formation morphing state machine
+        self._state = BearingFormation.State.IDLE
+        self._states = []
+        self._init_states = False
         self._total_bearing_error = 0
         self._shrink = False
 
@@ -138,6 +151,8 @@ class BearingFormation(Behavior):
 
         self._vis_boundary = False
         self._boundary_agents = []
+
+        self._plot_formation = False
 
         self._font = pygame.font.SysFont("comicsans", 16)
         self._text_list = []
@@ -180,23 +195,42 @@ class BearingFormation(Behavior):
             shepherd_states = np.vstack(
                 (shepherd_states, np.hstack((shepherd.pose, shepherd.velocity, shepherd.acceleration))))
 
-        self._formation_cluster = []
-        p = self._herd_surrounding(herd_states=herd_states,
-                                   shepherd_states=shepherd_states)
+        if not self._init_states:
+            self._states = np.ones(
+                shepherd_states.shape[0], dtype=np.int8) * BearingFormation.State.IDLE
+            self._init_states = True
 
-        # formation_stable = self._formation_stable()
+        # Consensus
+        for idx, _ in enumerate(self._states):
+            if self._states[idx] == BearingFormation.State.IDLE:
+                self._states[idx] = BearingFormation.State.APPROACH
+            elif self._states[idx] == BearingFormation.State.APPROACH and \
+                    np.linalg.norm(shepherd_states[idx, :2] - self._herd_mean) <= (self._sensing_range + self._herd_radius):
+                self._states[idx] = BearingFormation.State.SURROUND
+            elif self._states[idx] == BearingFormation.State.SURROUND and self._formation_stable():
+                self._states[idx] = BearingFormation.State.APPREHEND
+            elif self._states[idx] == BearingFormation.State.APPREHEND and self._formation_stable():
+                self._states[idx] = BearingFormation.State.MOVE
 
-        if self._trigger_formation and self._shrink:
+        approach_u = self._approach_herd(
+            shepherd_states=shepherd_states, herd_mean=self._herd_mean, logic_states=self._states)
+        surround_u = self._herd_surrounding(herd_states=herd_states,
+                                            shepherd_states=shepherd_states,
+                                            logic_states=self._states)
+
+        # If consensus reaches for formatio generation
+        if np.sum(self._states) == BearingFormation.State.MOVE * self._states.size:
             if not self._formation_generated:
                 ret, p_star = self._generate_formation(shepherd_states[:, :2])
                 if ret:
                     self._g_star = p_star
                     self._formation_generated = True
 
-        if self._g_star.shape[0] > 0:
-            p = self._maneuver_formation(shepherd_states)
+        formation_u = self._maneuver_formation(
+            shepherd_states=shepherd_states,
+            formation=self._g_star, logic_states=self._states)
 
-        qdot = p
+        qdot = approach_u + surround_u + formation_u
         shepherd_states[:, 2:4] = qdot
         pdot = shepherd_states[:, 2:4]
         shepherd_states[:, :2] += pdot * 0.15
@@ -222,15 +256,57 @@ class BearingFormation(Behavior):
             'white'), center=tuple(self._centroid_p_star),
             radius=20, width=2)
 
-        for i in range(self._g_star.shape[0] - 1):
-            pygame.draw.line(screen, pygame.Color("white"), tuple(self._g_star[i, :]),
-                             tuple(self._g_star[i+1, :]))
+        if self._plot_formation:
+            for i in range(self._plotting_p_star.shape[0]):
+                pygame.draw.line(screen, pygame.Color("white"), tuple(self._plotting_p_star[i, :2]),
+                                 tuple(self._plotting_p_star[i, 2:]))
 
         for text in self._text_list:
             screen.blit(text[0], tuple(text[1]))
 
+    def _find_herd(self):
+        # TODO
+        pass
+
+    def _approach_herd(self, shepherd_states: np.ndarray,
+                       herd_mean: np.ndarray,
+                       logic_states: np.ndarray) -> np.ndarray:
+        u = np.zeros((shepherd_states.shape[0], 2))
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
+            shepherd_states,
+            r=self._default_agent_spacing)
+
+        for idx in range(shepherd_states.shape[0]):
+            if logic_states[idx] != BearingFormation.State.APPROACH:
+                continue
+
+            di = shepherd_states[idx, :2]
+            d_dot_i = shepherd_states[idx, 2:4]
+
+            agent_spacing = self._scaled_agent_spacing * self._default_agent_spacing
+            po = np.zeros(2)
+            neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
+            if sum(neighbor_shepherd_idxs) > 0:
+                dj = shepherd_states[neighbor_shepherd_idxs, :2]
+
+                po = self._collision_avoidance_term(
+                    gain=0.8 * MathematicalFlock.C2_alpha,
+                    qi=di, qj=dj,
+                    r=agent_spacing)
+
+            # Move toward herd mean
+            p_gamma = self._calc_group_objective_control(
+                target=herd_mean,
+                c1=MathematicalFlock.C1_gamma,
+                c2=MathematicalFlock.C2_gamma,
+                qi=di, pi=d_dot_i)
+
+            u[idx] = po + p_gamma
+        return u
+
     def _herd_surrounding(self, herd_states: np.ndarray,
-                          shepherd_states: np.ndarray) -> np.ndarray:
+                          shepherd_states: np.ndarray,
+                          logic_states: np.ndarray) -> np.ndarray:
         u = np.zeros((shepherd_states.shape[0], 2))
         delta_adjacency_matrix = self._get_delta_adjacency_matrix(
             herd_states,
@@ -241,19 +317,14 @@ class BearingFormation(Behavior):
             shepherd_states,
             r=self._default_agent_spacing)
 
-        if not self._shrink:
-            self._shrink = self._formation_stable()
-
         total_ps = 0
 
         for idx in range(shepherd_states.shape[0]):
-            di = shepherd_states[idx, :2]
-            d_dot_i = shepherd_states[idx, 2:4]
+            if logic_states[idx] != BearingFormation.State.SURROUND and \
+                    logic_states[idx] != BearingFormation.State.APPREHEND:
+                continue
 
-            approach_herd = 1
-            if np.linalg.norm(di - self._herd_mean) <= \
-                    (self._sensing_range + self._herd_radius):
-                approach_herd = 0
+            di = shepherd_states[idx, :2]
 
             neighbor_herd_idxs = delta_adjacency_matrix[idx]
             ps = np.zeros(2)
@@ -261,7 +332,7 @@ class BearingFormation(Behavior):
                 sj = herd_states[neighbor_herd_idxs, :2]
 
                 stabilised_range = self._sensing_range
-                if self._shrink:
+                if logic_states[idx] == BearingFormation.State.APPREHEND:
                     stabilised_range = 110
 
                 ps = self._edge_following(
@@ -273,9 +344,6 @@ class BearingFormation(Behavior):
 
             po = np.zeros(2)
             agent_spacing = self._default_agent_spacing
-            if approach_herd:
-                agent_spacing = self._scaled_agent_spacing * self._default_agent_spacing
-
             neighbor_shepherd_idxs = alpha_adjacency_matrix[idx]
             if sum(neighbor_shepherd_idxs) > 0:
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
@@ -285,15 +353,7 @@ class BearingFormation(Behavior):
                     qi=di, qj=dj,
                     r=agent_spacing)
 
-            # Move toward herd mean
-            target = self._herd_mean
-            p_gamma = self._calc_group_objective_control(
-                target=target,
-                c1=MathematicalFlock.C1_gamma,
-                c2=MathematicalFlock.C2_gamma,
-                qi=di, pi=d_dot_i)
-
-            u[idx] = (1 - approach_herd) * ps + po + approach_herd * p_gamma
+            u[idx] = ps + po
 
             if np.linalg.norm(u[idx]) > 15:
                 u[idx] = 15 * utils.unit_vector(u[idx])
@@ -324,7 +384,7 @@ class BearingFormation(Behavior):
         Rd = diagP @ H_bar
         n = len(self._shepherds)
         if np.linalg.matrix_rank(Rd) != (2*n - 3):
-            return False, None
+            return False, np.empty((0, 2))
         self._p_star = p_star
         return True, g_star
 
@@ -344,8 +404,12 @@ class BearingFormation(Behavior):
         u = np.reshape(u, (int(u.size/2), 2))
         return u
 
-    def _maneuver_formation(self, shepherd_states: np.ndarray):
+    def _maneuver_formation(self, shepherd_states: np.ndarray,
+                            formation: np.ndarray,
+                            logic_states: np.ndarray):
         u = np.zeros((shepherd_states.shape[0], 2))
+        if formation.shape[0] == 0:
+            return u
         p_star = self._p_star
         p = shepherd_states[:, :2]
 
@@ -359,7 +423,7 @@ class BearingFormation(Behavior):
             self._init_error_pose = True
 
         # Decentralise control
-        leader_idx = [0, 1, 2, 3, 4]
+        leader_idx = [0, 1]
         all_total_Pg_ij = np.zeros(
             (2, 2, shepherd_states.shape[0]))
         all_Pg_ij = np.zeros((2, 2, start_end.shape[1], start_end.shape[1]))
@@ -377,15 +441,18 @@ class BearingFormation(Behavior):
                 shepherd_states[idx, :2] - centroid_p_star) ** 2
         scale = np.sqrt(scale / shepherd_states.shape[0])
 
+        self._plotting_p_star = np.empty((0, 4))
         total_bearing_error = 0
         for idx in range(start_end.shape[1]):
             pair_ij = start_end[:, idx]
             g_star, e_norm_star = self._calc_g(
                 p_star, [pair_ij[0]], [pair_ij[1]])
             g, _ = self._calc_g(p, [pair_ij[0]], [pair_ij[1]])
-            total_bearing_error += np.round(np.linalg.norm(g - g_star), 2)
-            # print(f"Bearing {pair_ij[0]} -> {pair_ij[1]}: {np.linalg.norm(g - g_star)}")
-
+            total_bearing_error += np.round(np.linalg.norm(g - g_star), 4)
+            pair = np.array([shepherd_states[pair_ij[0], :2],
+                             shepherd_states[pair_ij[1], :2]])
+            self._plotting_p_star = np.vstack(
+                (self._plotting_p_star, pair.reshape((1, 4))))
             if start_end[0, idx] in leader_idx:
                 continue
             Pg_ij = self._calc_diagPg(g_star, e_norm_star)
@@ -402,6 +469,8 @@ class BearingFormation(Behavior):
         desired_scale = 130
         dt = 0.2
         for i in range(shepherd_states.shape[0]):
+            if logic_states[i] != BearingFormation.State.MOVE:
+                continue
             if i in leader_idx:
                 # ratio = desired_length / \
                 #     np.linalg.norm(shepherd_states[i, :2] - centroid_p_star)
@@ -418,10 +487,10 @@ class BearingFormation(Behavior):
                 # u[i] = alpha * np.round(ratio, 1) * (
                 #     shepherd_states[i, :2] - centroid_p_star)
 
-                # target = np.array([150, 350])
-                target = np.array(pygame.mouse.get_pos())
-                vc = -2 * utils.unit_vector(centroid_p_star - target)
-                u[i] = u[i] + vc
+                # # target = np.array([150, 350])
+                # target = np.array(pygame.mouse.get_pos())
+                # vc = -2 * utils.unit_vector(centroid_p_star - target)
+                # u[i] = u[i] + vc
                 continue
 
             ui = np.zeros((2, 1))
