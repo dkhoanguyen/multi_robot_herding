@@ -5,6 +5,7 @@ import numpy as np
 from abc import abstractmethod
 from multi_robot_herding.entity.entity import Entity
 
+
 class Obstacle(Entity):
 
     def __init__(self, display_func=None):
@@ -77,3 +78,10 @@ class Sphere(Obstacle):
         qik = mu * qi + (1 - mu) * self._yk
         pik = mu * P @ pi
         return np.hstack((qik.transpose(), pik.transpose())).reshape(4,)
+
+
+class LineSegment(Obstacle):
+    def __init__(self, start: np.ndarray,
+                 end: np.ndarray):
+        self._start = start
+        self._end = end

@@ -128,6 +128,9 @@ class BearingFormation(Behavior):
         self._error_pose_ij = None
         self._init_error_pose = False
 
+        self._total_bearing_error = 0
+        self._shrink = False
+
         # Stuff to display
         self._plot_enforced_agent = False
         self._herd_mean = np.zeros(2)
@@ -181,9 +184,9 @@ class BearingFormation(Behavior):
         p = self._herd_surrounding(herd_states=herd_states,
                                    shepherd_states=shepherd_states)
 
-        formation_stable = self._formation_stable()
+        # formation_stable = self._formation_stable()
 
-        if formation_stable:
+        if self._trigger_formation and self._shrink:
             if not self._formation_generated:
                 ret, p_star = self._generate_formation(shepherd_states[:, :2])
                 if ret:
@@ -238,6 +241,9 @@ class BearingFormation(Behavior):
             shepherd_states,
             r=self._default_agent_spacing)
 
+        if not self._shrink:
+            self._shrink = self._formation_stable()
+
         total_ps = 0
 
         for idx in range(shepherd_states.shape[0]):
@@ -255,9 +261,11 @@ class BearingFormation(Behavior):
                 sj = herd_states[neighbor_herd_idxs, :2]
 
                 stabilised_range = self._sensing_range
+                if self._shrink:
+                    stabilised_range = 110
 
                 ps = self._edge_following(
-                    si=di, sj=sj, k=0.125,
+                    si=di, sj=sj, k=0.095,
                     stabilised_range=stabilised_range,
                     encircle_gain=self._cs)
 
@@ -273,7 +281,7 @@ class BearingFormation(Behavior):
                 dj = shepherd_states[neighbor_shepherd_idxs, :2]
 
                 po = self._collision_avoidance_term(
-                    gain=MathematicalFlock.C2_alpha,
+                    gain=0.8 * MathematicalFlock.C2_alpha,
                     qi=di, qj=dj,
                     r=agent_spacing)
 
@@ -339,6 +347,7 @@ class BearingFormation(Behavior):
     def _maneuver_formation(self, shepherd_states: np.ndarray):
         u = np.zeros((shepherd_states.shape[0], 2))
         p_star = self._p_star
+        p = shepherd_states[:, :2]
 
         start_end = self._calc_start_end(
             np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
@@ -347,9 +356,10 @@ class BearingFormation(Behavior):
         if not self._init_error_pose:
             self._error_pose_ij = np.zeros(
                 (1, 2, start_end.shape[1], start_end.shape[1]))
+            self._init_error_pose = True
 
         # Decentralise control
-        leader_idx = [0, 1, 2]
+        leader_idx = [0, 1, 2, 3, 4]
         all_total_Pg_ij = np.zeros(
             (2, 2, shepherd_states.shape[0]))
         all_Pg_ij = np.zeros((2, 2, start_end.shape[1], start_end.shape[1]))
@@ -367,31 +377,50 @@ class BearingFormation(Behavior):
                 shepherd_states[idx, :2] - centroid_p_star) ** 2
         scale = np.sqrt(scale / shepherd_states.shape[0])
 
+        total_bearing_error = 0
         for idx in range(start_end.shape[1]):
+            pair_ij = start_end[:, idx]
+            g_star, e_norm_star = self._calc_g(
+                p_star, [pair_ij[0]], [pair_ij[1]])
+            g, _ = self._calc_g(p, [pair_ij[0]], [pair_ij[1]])
+            total_bearing_error += np.round(np.linalg.norm(g - g_star), 2)
+            # print(f"Bearing {pair_ij[0]} -> {pair_ij[1]}: {np.linalg.norm(g - g_star)}")
+
             if start_end[0, idx] in leader_idx:
                 continue
-            pair_ij = start_end[:, idx]
-            g, e_norm = self._calc_g(p_star, [pair_ij[0]], [pair_ij[1]])
-            Pg_ij = self._calc_diagPg(g, e_norm)
+            Pg_ij = self._calc_diagPg(g_star, e_norm_star)
             all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
+        # print(total_bearing_error)
 
-        kp = 4
-        kv = 0.9
-        ki = 1
-        alpha = -0.1
-        desired_length = 130
-        dt = 0.1
+        kp = 6.5
+        kd = 0.0
+        kv = 1
+        ki = 0.82
+        alpha = -0.025
+        desired_length = 150
+        desired_scale = 130
+        dt = 0.2
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
-                u[i] = alpha * (np.linalg.norm(shepherd_states[i, :2] -
-                                centroid_p_star) - desired_length) * utils.unit_vector(shepherd_states[i, :2] - centroid_p_star)
-                if np.linalg.norm(u[i]) < 0.1:
-                    u[i] = np.zeros((1, 2))
+                # ratio = desired_length / \
+                #     np.linalg.norm(shepherd_states[i, :2] - centroid_p_star)
+                # ratio = np.linalg.norm(shepherd_states[i, :2] - centroid_p_star) - desired_length
+                # ratio = desired_scale/scale
+                # # ratio = 0
+                # # for j in range(len(leader_idx)):
+                # #     if i == j:
+                # #         continue
+                # #     ratio += desired_length / \
+                # #         np.linalg.norm(shepherd_states[i, :2] - shepherd_states[j, :2])
+                # u[i] = alpha * np.round(1 - ratio, 3) * (
+                #     shepherd_states[i, :2] - centroid_p_star)
+                # u[i] = alpha * np.round(ratio, 1) * (
+                #     shepherd_states[i, :2] - centroid_p_star)
 
-                # target = np.array(pygame.mouse.get_pos())
-                target = np.array([1100, 350])
-                vc = -3 * utils.unit_vector(centroid_p_star - target)
+                # target = np.array([150, 350])
+                target = np.array(pygame.mouse.get_pos())
+                vc = -2 * utils.unit_vector(centroid_p_star - target)
                 u[i] = u[i] + vc
                 continue
 
@@ -410,15 +439,15 @@ class BearingFormation(Behavior):
                 # Integral term
                 self._error_pose_ij[:, :, i, j] += (pi - pj) * dt
                 integral_term = ki * self._error_pose_ij[:, :, i, j]
+                derivative_term = kd * (pi - pj) / dt
 
                 ui += Pg_ij @ (kp * (pi - pj) + kv *
-                               (vi - vj) - vj_dot + integral_term).reshape((2, 1))
+                               (vi - vj) - vj_dot + integral_term + derivative_term).reshape((2, 1))
             ui = -np.linalg.inv(Ki) @ ui
             u[i] = ui.reshape((1, 2))
         return u
 
     # Inter-robot Interaction Control
-
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):
         n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)
