@@ -415,7 +415,7 @@ class BearingFormation(Behavior):
 
         start_end = self._calc_start_end(
             np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
-        g, e_norm = self._calc_g(p_star, start_end[0, :], start_end[1, :])
+        g, _ = self._calc_g(p_star, start_end[0, :], start_end[1, :])
 
         if not self._init_error_pose:
             self._error_pose_ij = np.zeros(
@@ -488,9 +488,9 @@ class BearingFormation(Behavior):
                 #     shepherd_states[i, :2] - centroid_p_star)
 
                 # # target = np.array([150, 350])
-                # target = np.array(pygame.mouse.get_pos())
-                # vc = -2 * utils.unit_vector(centroid_p_star - target)
-                # u[i] = u[i] + vc
+                target = np.array(pygame.mouse.get_pos())
+                vc = -5 * utils.unit_vector(centroid_p_star - target)
+                u[i] = u[i] + vc
                 continue
 
             ui = np.zeros((2, 1))

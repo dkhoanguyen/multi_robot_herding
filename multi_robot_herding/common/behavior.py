@@ -29,8 +29,3 @@ class Behavior(ABC):
                     events.append(element)
 
         return events
-    
-    def _get_mouse_pos(self, *arg):
-        pass
-        
-

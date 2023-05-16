@@ -28,7 +28,6 @@ class Environment(object):
         self._entities.append(entity)
 
     def add_behaviour(self, behavior: Behavior):
-        behavior._set_screen(self._screen)
         self._behaviors.append(behavior)
 
     def update(self):

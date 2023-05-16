@@ -29,15 +29,3 @@ class Behavior(ABC):
                     events.append(element)
 
         return events
-    
-    def _get_mouse_pos(self, *arg):
-        pass
-
-    # Use with caution, for testing purposes
-    def _set_screen(self, screen):
-        self._screen = screen
-
-    def set_vis_entity(self,vis_entity):
-        self._vis_entity = vis_entity
-        
-
