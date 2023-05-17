@@ -461,7 +461,7 @@ class BearingFormation(Behavior):
         # print(total_bearing_error)
 
         kp = 6.5
-        kd = 0.0
+        kd = 0.05
         kv = 1
         ki = 0.82
         alpha = -0.025
