@@ -12,94 +12,6 @@ from multi_robot_herding.behavior.mathematical_flock import MathUtils
 from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
 
-
-class Formation():
-    def __init__(self, p_star):
-        self._p_star = p_star
-
-        self._start_end = None
-
-    # Private
-    def _calc_start_end(self, adj_matrix: np.ndarray,
-                        global_rigid: bool = True):
-        start = []
-        end = []
-
-        # Fully connected graph
-        if global_rigid:
-            adj_matrix = np.ones_like(adj_matrix)
-            np.fill_diagonal(adj_matrix, 0)
-
-        for i in range(len(adj_matrix)):
-            start_i = []
-            end_i = []
-            for j in range(len(adj_matrix[i, :])):
-                if adj_matrix[i, j] == 0:
-                    continue
-                start_i.append(i)
-                if adj_matrix[i, j] and j not in end_i:
-                    end_i.append(j)
-            start = start + start_i
-            end = end + end_i
-        return np.array([start, end])
-
-    def _calc_H(self, start: np.ndarray, end: np.ndarray):
-        n = max(start) + 1
-        m = len(start)
-        H = np.zeros((m, n))
-        for i in range(m):
-            H[i, start[i]] = -1
-            H[i, end[i]] = 1
-        return H
-
-    def _calc_H_bar(self, start: np.ndarray, end: np.ndarray):
-        n = max(start) + 1
-        m = len(start)
-        H = np.zeros((m, n))
-        for i in range(m):
-            H[i, start[i]] = -1
-            H[i, end[i]] = 1
-        H_bar = np.kron(H, np.eye(2))
-        return H_bar
-
-    def _calc_g(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
-        g_vec = np.empty((0, p.shape[1]))
-        g_norm_vec = []
-        for i in range(len(start)):
-            g = utils.unit_vector(p[end[i]] - p[start[i]])
-            g_vec = np.vstack((g_vec, g))
-            g_norm_vec.append(np.linalg.norm(p[end[i]] - p[start[i]]))
-        return g_vec, np.array(g_norm_vec)
-
-    def _calc_diagPg(self, g: np.ndarray, e_norm: np.ndarray):
-        Pg = np.empty((0, g.shape[1]))
-        for i in range(g.shape[0]):
-            gk = g[i, :]
-            Pgk = utils.MathUtils.orthogonal_projection_matrix(gk) / e_norm[i]
-            Pg = np.vstack((Pg, Pgk))
-        n = Pg.shape[0]
-        total = Pg.shape[0] / Pg.shape[1]
-        diagPg = np.eye(n)
-        for element in range(int(total)):
-            m = Pg.shape[1]
-            diagPg[m*element:m*element+2, m*element:m*element +
-                   2] = Pg[m*element:m*element+2, :]
-        return diagPg
-
-    def _calc_Rd(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
-        g, e_norm = self._calc_g(p, start, end)
-        diagPg = self._calc_diagPg(g, e_norm)
-        H_bar = self._calc_H_bar(start, end)
-        Rd = diagPg @ H_bar
-        return Rd
-
-    def _calc_BL(self, p: np.ndarray, start: np.ndarray, end: np.ndarray):
-        g, e_norm = self._calc_g(p, start, end)
-        diagPg = self._calc_diagPg(g, e_norm)
-        H_bar = self._calc_H_bar(start, end)
-        return H_bar.transpose() @ diagPg @ H_bar
-
-
 class BearingFormation(Behavior):
     class State(IntEnum):
         IDLE = 0
@@ -377,12 +289,12 @@ class BearingFormation(Behavior):
     def _generate_formation(self, states: np.ndarray):
         p_star = states
         start_end = self._calc_start_end(
-            np.ones((len(self._shepherds), len(self._shepherds))), global_rigid=True)
+            np.ones((states.shape[0], states.shape[0])), global_rigid=True)
         H_bar = self._calc_H_bar(start=start_end[0, :], end=start_end[1, :])
         g_star, e_norm = self._calc_g(p_star, start_end[0, :], start_end[1, :])
         diagP = self._calc_diagPg(g_star, e_norm)
         Rd = diagP @ H_bar
-        n = len(self._shepherds)
+        n = states.shape[0]
         if np.linalg.matrix_rank(Rd) != (2*n - 3):
             return False, np.empty((0, 2))
         self._p_star = p_star

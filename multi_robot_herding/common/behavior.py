@@ -5,11 +5,7 @@ from abc import ABC, abstractmethod
 
 
 class Behavior(ABC):
-
-    def __init__(self):
-        self._screen = None
-        self._vis_entity = None
-
+    
     @abstractmethod
     def update(self, *args, **kwargs):
         '''

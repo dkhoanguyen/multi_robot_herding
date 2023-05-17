@@ -4,3 +4,4 @@ networkx
 scipy
 matplotlib
 spatialmath-python
+py_trees
