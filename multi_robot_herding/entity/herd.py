@@ -1,7 +1,6 @@
 # !/usr/bin/python3
 
 import numpy as np
-
 from multi_robot_herding.entity.entity import Autonomous
 
 
@@ -26,6 +25,9 @@ class Herd(Autonomous):
         self._local_perception = local_perception
         self._local_boundary = local_boundary
         self._personal_space = personal_space
+
+    def __str__(self) -> str:
+        return "herd"
 
     @property
     def local_perception(self):

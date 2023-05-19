@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import numpy as np
-from multi_robot_herding.utils import params
 
 from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
@@ -73,3 +72,7 @@ class Spawner(object):
                 obstacles.append(Spawner.manual_spawn(
                     entity=Hyperplane, config=hyperplane))
         return obstacles
+
+    @staticmethod
+    def auto_spawn_behaviors(behav_config):
+        behaviors = []

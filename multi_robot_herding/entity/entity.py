@@ -27,7 +27,7 @@ class Entity(pygame.sprite.Sprite, ABC):
                  image_path: str,
                  mass: float,
                  type: EntityType = EntityType.OBSTACLE):
-        super().__init__()
+        super(pygame.sprite.Sprite,self).__init__()
         if pose is None:
             pose = np.zeros(2)
         if velocity is None:
@@ -37,8 +37,9 @@ class Entity(pygame.sprite.Sprite, ABC):
         self.rect = self.base_image.get_rect()
         self.image = self.base_image
 
-        self._pose = pose
+        self.pose = pose
         self._velocity = velocity
+        self.velocity = velocity
         self._pre_velocity = velocity
         self._acceleration = np.zeros(2)
 
@@ -71,6 +72,14 @@ class Entity(pygame.sprite.Sprite, ABC):
     def acceleration(self):
         return self._acceleration
 
+    @property
+    def state(self):
+        return np.hstack((self.pose, self.velocity, self.acceleration))
+
+    # Behaviors
+    def add_behavior(self, behavior: dict):
+        self._behaviors.update(behavior)
+
     @abstractmethod
     def update(self, *args, **kwargs):
         pass
@@ -84,10 +93,6 @@ class Entity(pygame.sprite.Sprite, ABC):
 
     def display(self, screen: pygame.Surface):
         screen.blit(self.image, self.rect)
-
-    # Behaviors
-    def add_behavior(self, behavior: dict):
-        self._behaviors.update(behavior)
 
 
 class Autonomous(Entity):

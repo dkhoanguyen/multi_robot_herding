@@ -1,10 +1,21 @@
 # !/usr/bin/python3
 
 import pygame
-import py_trees as pt
 import numpy as np
 from spatialmath.base import *
-from multi_robot_herding.entity.entity import Autonomous, Entity
+from collections import deque
+from enum import Enum
+
+from multi_robot_herding.entity.entity import Autonomous, Entity, DynamicType
+from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
+
+
+class State(Enum):
+    IDLE = 0
+    APPROACH = 1
+    SURROUND = 2
+    APPREHEND = 3
+    MOVE = 4
 
 
 class Shepherd(Autonomous):
@@ -29,14 +40,50 @@ class Shepherd(Autonomous):
 
         self._r = 40
         self._consensus_r = 200
-        self._sensing_range = 0
+        self._sensing_range = 200
+
+        self._behavior_state = State.IDLE
+
+    def __str__(self):
+        return "shepherd"
 
     def update(self, *args, **kwargs):
-        pass
+        all_states = args[1]
+        all_herd_states = all_states["herd"]
+        all_shepherd_states = all_states["shepherd"]
+
+        # Check which shepherd is within vision
+        shepherd_in_range = np.empty((0, 6))
+        for idx in range(all_shepherd_states.shape[0]):
+            d = np.linalg.norm(self.state[:2] - all_shepherd_states[idx, :2])
+            if d <= self._sensing_range and d > 0.0:
+                shepherd_in_range = np.vstack(
+                    (shepherd_in_range, all_shepherd_states[idx, :]))
+
+        self._update_agent_state(shepherd_states=shepherd_in_range,
+                                 herd_states=all_herd_states)
+
+        if self._behavior_state == State.IDLE:
+            self._behavior_state = State.APPROACH
+        elif self._behavior_state == State.APPROACH and self._surround_herd(all_herd_states):
+            self._behavior_state = State.SURROUND
+        elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
+            self._behavior_state = State.APPROACH
+
+        u = np.zeros(2)
+        if self._behavior_state == State.APPROACH:
+            u = self._behaviors["dec_approach"].update(*args, **kwargs)
+        if self._behavior_state == State.SURROUND:
+            u = self._behaviors["dec_surround"].update(*args, **kwargs)
+
+        if self._type == DynamicType.SingleIntegrator:
+            qdot = u.reshape((u.size,))
+            self.velocity = qdot
+            self.pose = self.pose + self.velocity * 0.15
+
+        self._rotate_image(self.velocity)
 
     def display(self, screen: pygame.Surface, debug=False):
-        pygame.draw.circle(screen, pygame.Color(
-            'white'), center=self._pose, radius=self._sensing_range, width=1)
         return super().display(screen, debug)
 
     def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:
@@ -75,3 +122,24 @@ class Shepherd(Autonomous):
         # Save this value for visualisation purpose only
         self._consensus_point = consensus_point[0:2, 2]
         return self._consensus_point
+
+    # Decentralised behavior
+    def _update_agent_state(self, shepherd_states: np.ndarray,
+                            herd_states: np.ndarray):
+        behavior: DecentralisedBehavior
+        for behavior in self._behaviors.values():
+            behavior.set_shepherd_state(self.state)
+            behavior.set_other_shepherd_states(shepherd_states)
+            behavior.set_herd_states(herd_states)
+
+    def _surround_herd(self, herd_states):
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+
+        d_to_herd_mean = np.linalg.norm(
+            herd_states[:, :2] - herd_mean, axis=1)
+        herd_radius = np.max(d_to_herd_mean)
+
+        if np.linalg.norm(self.pose - herd_mean) <= (self._sensing_range + herd_radius):
+            return True
+        return False

@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 
+import pygame
 import numpy as np
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
@@ -17,6 +18,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._edge_k = edge_k
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
+
+    def __str__(self):
+        return "dec_surround"
 
     def update(self, *args, **kwargs):
         # Control signal
@@ -55,12 +59,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 gain=self._co,
                 qi=di, qj=dj,
                 r=self._interagent_spacing)
-
+            
         u = ps + po
         if np.linalg.norm(u) > 15:
             u = 15 * utils.unit_vector(u)
 
         return u
+    
+    def display(self, screen: pygame.Surface):
+        return super().display(screen)
 
     # Inter-robot Interaction Control
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
@@ -101,7 +108,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def _get_delta_adjacency_vector(self, herd_states: np.ndarray,
                                     shepherd_state: np.ndarray, r: float) -> np.ndarray:
         adj_vector = []
-        for i in herd_states.shape[0]:
+        for i in range(herd_states.shape[0]):
             adj_vector.append(np.linalg.norm(
                 shepherd_state[:2] - herd_states[i, :2]) <= r)
         return np.array(adj_vector, dtype=np.bool8)

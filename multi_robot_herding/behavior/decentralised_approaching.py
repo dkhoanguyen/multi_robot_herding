@@ -1,6 +1,7 @@
 # !/usr/bin/python3
 
 import numpy as np
+import pygame
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
 
@@ -22,6 +23,9 @@ class DecentralisedApproaching(DecentralisedBehavior):
         # States of herds
         self._herd_states = None
 
+    def __str__(self):
+        return "dec_approach"
+
     def update(self, *args, **kwargs):
         u = np.zeros((1, 2))
         all_shepherd_states = np.vstack((self._state, self._other_states))
@@ -33,7 +37,7 @@ class DecentralisedApproaching(DecentralisedBehavior):
         herd_mean = np.sum(
             self._herd_states[:, :2], axis=0) / self._herd_states.shape[0]
 
-        di = self._state
+        di = self._state[:2]
         d_dot_i = self._state[2:4]
 
         po = np.zeros((1, 2))
@@ -55,6 +59,9 @@ class DecentralisedApproaching(DecentralisedBehavior):
 
         u = po + p_gamma
         return u
+    
+    def display(self, screen: pygame.Surface):
+        return super().display(screen)
 
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):

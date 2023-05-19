@@ -19,23 +19,23 @@ entity:
     max_v: 3.0
     configuration:
       - pose: [1100, 200]
-        angle: 1.57
+        angle: 3.14
       - pose: [1150, 240]
-        angle: 1.57
+        angle: 3.14
       - pose: [1150, 280]
-        angle: 1.57
+        angle: 3.14
       - pose: [1100, 320]
-        angle: 1.57
+        angle: 3.14
       - pose: [1100, 380]
-        angle: 1.57
+        angle: 3.14
       - pose: [1100, 420]
-        angle: 1.57
+        angle: 3.14
       - pose: [1150, 460]
-        angle: 1.57
+        angle: 3.14
       - pose: [1150, 500]
-        angle: 1.57
+        angle: 3.14
       - pose: [1100, 540]
-        angle: 1.57
+        angle: 3.14
 
   obstacle:
     sphere:

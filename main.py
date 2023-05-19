@@ -1,11 +1,12 @@
 #!/usr/bin/python3
 
 import yaml
-import argparse
 
-from multi_robot_herding.behavior.behavior import Behavior
+from multi_robot_herding.entity.shepherd import Shepherd
+
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
-from multi_robot_herding.behavior.bearing_formation import BearingFormation
+from multi_robot_herding.behavior.decentralised_approaching import DecentralisedApproaching
+from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
 
 from multi_robot_herding.environment.environment import Environment
 from multi_robot_herding.environment.spawner import Spawner
@@ -31,6 +32,19 @@ def main():
     # Create shepherds
     shepherd_config = entity_config['shepherd']
     shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
+
+    # Shepherd behavior
+    shepherd_behaviors = {}
+    dec_approach = DecentralisedApproaching()
+    shepherd_behaviors["dec_approach"] = dec_approach
+    dec_surround = DecentralisedSurrounding()
+    shepherd_behaviors["dec_surround"] = dec_surround
+
+    shepherd: Shepherd
+    for shepherd in shepherds:
+        shepherd.add_behavior(shepherd_behaviors)
+
+    # Update entities list
     entities = entities + shepherds
 
     # Behavior related configuration
@@ -50,36 +64,12 @@ def main():
     for shepherd in shepherds:
         math_flock.add_shepherd(shepherd)
 
-    math_formation_config = behavior_config['math_formation']
-    math_formation = BearingFormation(**math_formation_config['params'])
-
-    # Add herds
-    for herd in herds:
-        math_formation.add_herd(herd)
-
-    # # Add shepherd
-    for shepherd in shepherds:
-        math_formation.add_shepherd(shepherd)
-
-    # Behaviours
-    behaviors = []
-    behaviors.append(math_flock)
-    behaviors.append(math_formation)
-
     # Environment
     env = Environment()
+    for entity in entities:
+        env.add_entity(entity)
 
-    # Add entities
-    for cow in herds:
-        env.add_entity(cow)
-    for shepherd in shepherds:
-        env.add_entity(shepherd)
-    for obstacle in obstacles:
-        env.add_entity(obstacle)
-
-    behavior: Behavior
-    for behavior in behaviors:
-        env.add_behaviour(behavior)
+    env.add_behaviour(math_flock)
 
     while env.ok:
         env.run_once()

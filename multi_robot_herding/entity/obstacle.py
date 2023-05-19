@@ -10,6 +10,12 @@ class Obstacle(Entity):
 
     def __init__(self, display_func=None):
         self._display_func = display_func
+        self._pose = np.zeros((1, 2))
+        self._velocity = np.zeros((1, 2))
+        self._acceleration = np.zeros((1, 2))
+
+    def __str__(self):
+        return "obstacle"
 
     def update(self, *args, **kwargs):
         pass
