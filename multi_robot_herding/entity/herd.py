@@ -4,6 +4,7 @@ import numpy as np
 
 from multi_robot_herding.entity.entity import Autonomous
 
+
 class Herd(Autonomous):
     def __init__(self,
                  pose: np.ndarray,
@@ -37,3 +38,6 @@ class Herd(Autonomous):
     @property
     def personal_space(self):
         return self._personal_space
+
+    def update(self, *args, **kwargs):
+        pass

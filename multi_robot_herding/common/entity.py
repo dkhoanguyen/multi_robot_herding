@@ -43,8 +43,6 @@ class Entity(pygame.sprite.Sprite):
 
         angle = -np.rad2deg(np.angle(velocity[0] + 1j * velocity[1]))
         self._heading = np.deg2rad(angle)
-
-        self._pymunk_addables = {}
         
     @property
     def pose(self):
@@ -66,17 +64,6 @@ class Entity(pygame.sprite.Sprite):
     @property
     def heading(self):
         return self._heading
-
-    @property
-    def state(self):
-        return self._state
-
-    @state.setter
-    def state(self, state):
-        self._state = state
-
-    def get_pymunk_addables(self):
-        return self._pymunk_addables
 
     def _rotate_image(self, vector: np.ndarray):
         """Rotate base image using the velocity and assign to image."""

@@ -1,8 +1,6 @@
 # !/usr/bin/python3
 
-import pygame
 import numpy as np
-
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
 
@@ -20,22 +18,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
 
-        # State of this shepherd
-        self._state = None
-        # States of other shepherds
-        self._other_states = None
-        # States of herds
-        self._herd_states = None
-
-    def set_shepherd_state(self, state: np.ndarray):
-        self._state = state
-
-    def set_other_shepherd_states(self, other_states: np.ndarray):
-        self._other_states = other_states
-
-    def set_herd_states(self, herd_states: np.ndarray):
-        self._herd_states = herd_states
-
     def update(self, *args, **kwargs):
         # Control signal
         u = np.zeros((1, 2))
@@ -51,7 +33,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r=self._interagent_spacing)
 
         total_ps = 0
-        di = self._state
+        di = self._state[:2]
 
         neighbor_herd_idxs = delta_adjacency_vector
         ps = np.zeros(2)
@@ -88,16 +70,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             utils.MathUtils.sigma_norm(qj-qi),
             r=r,
             d=r)*n_ij, axis=0)
-
-    def _velocity_consensus_term(self, gain: float, qi: np.ndarray, qj: np.ndarray,
-                                 pi: np.ndarray, pj: np.ndarray, r: float):
-        def calc_a_ij(q_i, q_js, range):
-            r_alpha = utils.MathUtils.sigma_norm([range])
-            return utils.MathUtils.bump_function(
-                utils.MathUtils.sigma_norm(q_js-q_i)/r_alpha)
-
-        a_ij = calc_a_ij(qi, qj, r)
-        return gain * np.sum(a_ij*(pj-pi), axis=0)
 
     def _get_alpha_adjacency_matrix(self, agent_states: np.ndarray,
                                     r: float) -> np.ndarray:

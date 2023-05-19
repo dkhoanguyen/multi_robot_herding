@@ -11,6 +11,9 @@ class Obstacle(Entity):
     def __init__(self, display_func=None):
         self._display_func = display_func
 
+    def update(self, *args, **kwargs):
+        pass
+
     def display(self, screen: pygame.Surface):
         if self._display_func is not None:
             self._display_func(screen)

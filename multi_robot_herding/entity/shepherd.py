@@ -1,9 +1,9 @@
 # !/usr/bin/python3
 
 import pygame
+import py_trees as pt
 import numpy as np
 from spatialmath.base import *
-
 from multi_robot_herding.entity.entity import Autonomous, Entity
 
 
@@ -31,17 +31,12 @@ class Shepherd(Autonomous):
         self._consensus_r = 200
         self._sensing_range = 0
 
-        self._consensus_point = np.zeros((2,))
-
-    def follow_mouse(self):
-        mouse_pose = pygame.mouse.get_pos()
-        self.move_to_pose(np.array(mouse_pose))
+    def update(self, *args, **kwargs):
+        pass
 
     def display(self, screen: pygame.Surface, debug=False):
         pygame.draw.circle(screen, pygame.Color(
             'white'), center=self._pose, radius=self._sensing_range, width=1)
-        # pygame.draw.circle(screen, pygame.Color(
-        #     'white'), center=self._consensus_point, radius=10, width=3)
         return super().display(screen, debug)
 
     def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:

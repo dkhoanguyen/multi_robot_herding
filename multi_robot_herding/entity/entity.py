@@ -1,11 +1,11 @@
 # !/usr/bin/python3
-import math
 import pygame
+import numpy as np
 from enum import Enum
-from multi_robot_herding.utils import params, utils
+from abc import ABC, abstractmethod
 from spatialmath.base import *
 
-import numpy as np
+from multi_robot_herding.utils import utils
 
 
 class EntityType(Enum):
@@ -14,8 +14,13 @@ class EntityType(Enum):
     OBSTACLE = 3
 
 
-class Entity(pygame.sprite.Sprite):
+class DynamicType(Enum):
+    Static = "static"
+    SingleIntegrator = "single_integrator"
+    DoubleIntegrator = "double_integrator"
 
+
+class Entity(pygame.sprite.Sprite, ABC):
     def __init__(self,
                  pose: np.ndarray,
                  velocity: np.ndarray,
@@ -32,18 +37,16 @@ class Entity(pygame.sprite.Sprite):
         self.rect = self.base_image.get_rect()
         self.image = self.base_image
 
-        self.type = type
-        self.mass = mass
         self._pose = pose
         self._velocity = velocity
         self._pre_velocity = velocity
         self._acceleration = np.zeros(2)
-        self._state = np.hstack((pose, velocity))
 
         angle = -np.rad2deg(np.angle(velocity[0] + 1j * velocity[1]))
         self._heading = np.deg2rad(angle)
 
-        self._pymunk_addables = {}
+        # Behavior
+        self._behaviors = {}
 
     @property
     def pose(self):
@@ -68,6 +71,10 @@ class Entity(pygame.sprite.Sprite):
     def acceleration(self):
         return self._acceleration
 
+    @abstractmethod
+    def update(self, *args, **kwargs):
+        pass
+
     def _rotate_image(self, vector: np.ndarray):
         """Rotate base image using the velocity and assign to image."""
         angle = -np.rad2deg(np.angle(vector[0] + 1j * vector[1]))
@@ -77,6 +84,10 @@ class Entity(pygame.sprite.Sprite):
 
     def display(self, screen: pygame.Surface):
         screen.blit(self.image, self.rect)
+
+    # Behaviors
+    def add_behavior(self, behavior: dict):
+        self._behaviors.update(behavior)
 
 
 class Autonomous(Entity):
@@ -112,8 +123,7 @@ class Autonomous(Entity):
         self._plot_force = False
         self._plot_force_mag = False
 
-    def update(self):
-        pass
+        self._type = DynamicType.SingleIntegrator
 
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)

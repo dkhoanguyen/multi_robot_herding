@@ -54,6 +54,10 @@ class Environment(object):
         for behavior in self._behaviors:
             behavior.update(events)
 
+        entity: Entity
+        for entity in self._entities:
+            entity.update(events)
+
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)
         self.display()
