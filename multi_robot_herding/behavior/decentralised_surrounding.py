@@ -9,8 +9,8 @@ from multi_robot_herding.utils import utils
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 100.0,
                  co: float = 2.78,
-                 edge_k: float = 0.095,
-                 distance_to_target: float = 240.0,
+                 edge_k: float = 0.1075,
+                 distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0):
         super().__init__()
         self._cs = cs
@@ -19,17 +19,16 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
 
-    def __str__(self):
-        return "dec_surround"
-
-    def update(self, *args, **kwargs):
+    def update(self, state: np.ndarray,
+               other_states: np.ndarray,
+               herd_states: np.ndarray):
         # Control signal
         u = np.zeros((1, 2))
-        all_shepherd_states = np.vstack((self._state, self._other_states))
+        all_shepherd_states = np.vstack((state, other_states))
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
-            self._herd_states,
-            self._state,
+            herd_states,
+            state,
             r=self._distance_to_target)
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
@@ -37,14 +36,16 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r=self._interagent_spacing)
 
         total_ps = 0
-        di = self._state[:2]
+        di = state[:2]
 
         neighbor_herd_idxs = delta_adjacency_vector
         ps = np.zeros(2)
         if sum(neighbor_herd_idxs) > 0:
-            sj = self._herd_states[neighbor_herd_idxs, :2]
+            sj = herd_states[neighbor_herd_idxs, :2]
+            closest_herd = np.argmin(np.linalg.norm(di - sj, axis=1))
+
             ps = self._edge_following(
-                si=di, sj=sj, k=self._edge_k,
+                si=di, sj=sj[closest_herd, :2].reshape((1, 2)), k=self._edge_k,
                 stabilised_range=self._distance_to_target,
                 encircle_gain=self._cs)
 
@@ -59,13 +60,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 gain=self._co,
                 qi=di, qj=dj,
                 r=self._interagent_spacing)
-            
+
         u = ps + po
         if np.linalg.norm(u) > 15:
             u = 15 * utils.unit_vector(u)
-
         return u
-    
+
     def display(self, screen: pygame.Surface):
         return super().display(screen)
 

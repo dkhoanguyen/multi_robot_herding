@@ -11,11 +11,14 @@ from multi_robot_herding.common.decentralised_behavior import DecentralisedBehav
 
 
 class State(Enum):
-    IDLE = 0
-    APPROACH = 1
-    SURROUND = 2
-    APPREHEND = 3
-    MOVE = 4
+    IDLE = "dec_idle"
+    APPROACH = "dec_approach"
+    SURROUND = "dec_surround"
+    APPREHEND = "dec_apprend"
+    MOVE = "dec_move"
+
+    def __str__(self):
+        return f"{self.value}"
 
 
 class Shepherd(Autonomous):
@@ -40,7 +43,7 @@ class Shepherd(Autonomous):
 
         self._r = 40
         self._consensus_r = 200
-        self._sensing_range = 200
+        self._sensing_range = 200.0
 
         self._behavior_state = State.IDLE
 
@@ -48,7 +51,9 @@ class Shepherd(Autonomous):
         return "shepherd"
 
     def update(self, *args, **kwargs):
-        all_states = args[1]
+        # Behavior tree should be here
+        events = kwargs["events"]
+        all_states = kwargs["entity_states"]
         all_herd_states = all_states["herd"]
         all_shepherd_states = all_states["shepherd"]
 
@@ -60,9 +65,6 @@ class Shepherd(Autonomous):
                 shepherd_in_range = np.vstack(
                     (shepherd_in_range, all_shepherd_states[idx, :]))
 
-        self._update_agent_state(shepherd_states=shepherd_in_range,
-                                 herd_states=all_herd_states)
-
         if self._behavior_state == State.IDLE:
             self._behavior_state = State.APPROACH
         elif self._behavior_state == State.APPROACH and self._surround_herd(all_herd_states):
@@ -71,10 +73,11 @@ class Shepherd(Autonomous):
             self._behavior_state = State.APPROACH
 
         u = np.zeros(2)
-        if self._behavior_state == State.APPROACH:
-            u = self._behaviors["dec_approach"].update(*args, **kwargs)
-        if self._behavior_state == State.SURROUND:
-            u = self._behaviors["dec_surround"].update(*args, **kwargs)
+        if self._behaviors[str(self._behavior_state)]:
+            u = self._behaviors[str(self._behavior_state)].update(
+                state=self.state,
+                other_states=shepherd_in_range,
+                herd_states=all_herd_states)
 
         if self._type == DynamicType.SingleIntegrator:
             qdot = u.reshape((u.size,))
@@ -122,15 +125,6 @@ class Shepherd(Autonomous):
         # Save this value for visualisation purpose only
         self._consensus_point = consensus_point[0:2, 2]
         return self._consensus_point
-
-    # Decentralised behavior
-    def _update_agent_state(self, shepherd_states: np.ndarray,
-                            herd_states: np.ndarray):
-        behavior: DecentralisedBehavior
-        for behavior in self._behaviors.values():
-            behavior.set_shepherd_state(self.state)
-            behavior.set_other_shepherd_states(shepherd_states)
-            behavior.set_herd_states(herd_states)
 
     def _surround_herd(self, herd_states):
         herd_mean = np.sum(

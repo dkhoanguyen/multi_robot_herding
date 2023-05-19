@@ -16,29 +16,21 @@ class DecentralisedApproaching(DecentralisedBehavior):
         self._c1 = 5
         self._c2 = 0.2 * np.sqrt(self._c1)
 
-        # State of this shepherd
-        self._state = None
-        # States of other shepherds
-        self._other_states = None
-        # States of herds
-        self._herd_states = None
-
-    def __str__(self):
-        return "dec_approach"
-
-    def update(self, *args, **kwargs):
+    def update(self, state: np.ndarray,
+                     other_states: np.ndarray,
+                     herd_states: np.ndarray):
         u = np.zeros((1, 2))
-        all_shepherd_states = np.vstack((self._state, self._other_states))
+        all_shepherd_states = np.vstack((state, other_states))
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
             r=self._interagent_spacing)
 
         herd_mean = np.sum(
-            self._herd_states[:, :2], axis=0) / self._herd_states.shape[0]
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
 
-        di = self._state[:2]
-        d_dot_i = self._state[2:4]
+        di = state[:2]
+        d_dot_i = state[2:4]
 
         po = np.zeros((1, 2))
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]

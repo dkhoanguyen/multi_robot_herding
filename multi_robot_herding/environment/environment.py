@@ -74,7 +74,8 @@ class Environment(object):
 
         entity: Entity
         for entity in self._entities["shepherd"]:
-            entity.update(events,all_states)
+            entity.update(events=events,
+                          entity_states=all_states)
 
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)
