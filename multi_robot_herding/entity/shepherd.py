@@ -33,7 +33,7 @@ class Shepherd(Autonomous):
         super().__init__(
             pose=pose,
             velocity=velocity,
-            image_path='leader-boid.png',
+            image_path='robot.png',
             mass=mass,
             min_v=min_v,
             max_v=max_v)
@@ -71,6 +71,7 @@ class Shepherd(Autonomous):
             self._behavior_state = State.SURROUND
         elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
             self._behavior_state = State.APPROACH
+
 
         u = np.zeros(2)
         if self._behaviors[str(self._behavior_state)]:
@@ -134,6 +135,6 @@ class Shepherd(Autonomous):
             herd_states[:, :2] - herd_mean, axis=1)
         herd_radius = np.max(d_to_herd_mean)
 
-        if np.linalg.norm(self.pose - herd_mean) <= (self._sensing_range + herd_radius):
+        if np.linalg.norm(self.pose - herd_mean) <= 0.975 * (self._sensing_range + herd_radius):
             return True
         return False

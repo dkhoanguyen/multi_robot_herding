@@ -9,7 +9,7 @@ from multi_robot_herding.utils import utils
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 100.0,
                  co: float = 2.78,
-                 edge_k: float = 0.1075,
+                 edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0):
         super().__init__()
@@ -42,10 +42,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         ps = np.zeros(2)
         if sum(neighbor_herd_idxs) > 0:
             sj = herd_states[neighbor_herd_idxs, :2]
-            closest_herd = np.argmin(np.linalg.norm(di - sj, axis=1))
 
             ps = self._edge_following(
-                si=di, sj=sj[closest_herd, :2].reshape((1, 2)), k=self._edge_k,
+                si=di, sj=sj, k=self._edge_k,
                 stabilised_range=self._distance_to_target,
                 encircle_gain=self._cs)
 

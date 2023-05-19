@@ -17,7 +17,7 @@ class Herd(Autonomous):
         super().__init__(
             pose=pose,
             velocity=velocity,
-            image_path='normal-boid.png',
+            image_path='cow.png',
             mass=mass,
             min_v=min_v,
             max_v=max_v)
