@@ -18,7 +18,8 @@ class DecentralisedApproaching(DecentralisedBehavior):
 
     def update(self, state: np.ndarray,
                      other_states: np.ndarray,
-                     herd_states: np.ndarray):
+                     herd_states: np.ndarray,
+                     consensus_states: dict):
         u = np.zeros((1, 2))
         all_shepherd_states = np.vstack((state, other_states))
 

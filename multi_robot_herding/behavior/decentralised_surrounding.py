@@ -13,41 +13,58 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  co: float = 70.0,
                  edge_k: float = 0.2,
                  distance_to_target: float = 200.0,
-                 interagent_spacing: float = 200.0):
+                 interagent_spacing: float = 200.0,
+                 skrink_distance: float = 100.0,
+                 skrink_spacing: float = 100.0,
+                 sensing_range: float = 240.0):
         super().__init__()
         self._cs = cs
         self._co = co
         self._edge_k = edge_k
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
+        self._skrink_distance = skrink_distance
+        self._skrink_spacing = skrink_spacing
+        self._sensing_range = sensing_range
 
         self._pose = np.zeros(2)
         self._force = np.zeros(2)
 
-    def set_distance_to_target(self, value: float):
-        self._distance_to_target = value
-
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
-               herd_states: np.ndarray):
+               herd_states: np.ndarray,
+               consensus_states: dict):
         # Control signal
         self._pose = state[:2]
-        u = np.zeros((1, 2))
+        u = np.zeros(2)
         all_shepherd_states = np.vstack((state, other_states))
 
-        herd_density = self._herd_density(herd_states=herd_states)
+        herd_density = self._herd_density(herd_states=herd_states,
+                                          shepherd_states=all_shepherd_states)
         filtered_herd_density_idx = np.where(
             np.linalg.norm(herd_density, axis=1) >= 0.0)
         filter_herd_states = herd_states[filtered_herd_density_idx[0], :]
 
+        formation_stable_consensus = True
+        for consensus in consensus_states:
+            if not consensus["formation_stable"]:
+                formation_stable_consensus = False
+                break
+
+        d_to_target = self._distance_to_target
+        spacing = self._interagent_spacing
+        if formation_stable_consensus:
+            d_to_target = self._skrink_distance
+            spacing = self._skrink_spacing
+
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             filter_herd_states,
             state,
-            r=250)
+            r=self._sensing_range)
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
-            r=self._interagent_spacing)
+            r=spacing)
 
         total_ps = 0
         di = state[:2]
@@ -59,7 +76,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
             ps = self._edge_following(
                 si=di, sj=sj, k=self._edge_k,
-                stabilised_range=self._distance_to_target,
+                stabilised_range=d_to_target,
                 encircle_gain=self._cs)
 
             total_ps += np.linalg.norm(ps)
@@ -72,7 +89,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             po = self._collision_avoidance_term(
                 gain=self._co,
                 qi=di, qj=dj,
-                r=self._interagent_spacing)
+                r=spacing)
 
         u = ps + po
         if np.linalg.norm(u) > 15:
@@ -151,7 +168,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             density = self._density(si=qi, sj=qj, k=0.375)
         return density
 
-    def _herd_density(self, herd_states: np.ndarray):
+    def _herd_density(self, herd_states: np.ndarray,
+                            shepherd_states: np.ndarray):
         herd_densities = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=40)
@@ -191,4 +209,3 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         polyder = np.polyder(poly)
         cond = np.abs(np.round(float(polyder.coef[0]), 2))
         return not bool(cond)
-    
