@@ -181,8 +181,9 @@ class MathematicalFlock(Behavior):
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
         
-        # # Density
-        # herd_density = self._herd_density(herd_states=herd_states)
+        # Density
+        herd_density = self._herd_density(herd_states=herd_states,
+                                          shepherd_states=shepherd_states)
         # density_mag = np.linalg.norm(herd_density,axis=1)
         # density_mag = density_mag[density_mag > 0.09]
         # print(density_mag)
@@ -205,8 +206,8 @@ class MathematicalFlock(Behavior):
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
-            # herd._force = 2 * herd_density[idx,:]
-            # herd._plot_force = True
+            herd._force = 2 * herd_density[idx,:]
+            herd._plot_force = True
 
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
@@ -253,7 +254,8 @@ class MathematicalFlock(Behavior):
             u[idx] = u_alpha + u_beta + u_delta
         return u
 
-    def _herd_density(self, herd_states: np.ndarray):
+    def _herd_density(self, herd_states: np.ndarray,
+                            shepherd_states: np.ndarray):
         herd_densities = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
@@ -579,7 +581,7 @@ class MathematicalFlock(Behavior):
         w_sum = np.zeros(2).astype(np.float64)
         for i in range(sj.shape[0]):
             sij = si - sj[i, :]
-            w = (1/(1 + k * np.linalg.norm(sij))) * (sij / np.linalg.norm(sij))
+            w = (1/(1 + k * np.linalg.norm(sij))) * utils.unit_vector(sij)
             w_sum += w
         return w_sum
 

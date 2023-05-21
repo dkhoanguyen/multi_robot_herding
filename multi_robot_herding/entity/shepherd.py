@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 
+import math
 import pygame
 import numpy as np
 from spatialmath.base import *
@@ -14,8 +15,7 @@ class State(Enum):
     IDLE = "dec_idle"
     APPROACH = "dec_approach"
     SURROUND = "dec_surround"
-    APPREHEND = "dec_apprend"
-    MOVE = "dec_move"
+    FORMATION = "dec_formation"
 
     def __str__(self):
         return f"{self.value}"
@@ -81,13 +81,6 @@ class Shepherd(Autonomous):
                 total_vel_norm += np.linalg.norm(all_shepherd_states[idx, 2:4])
         self._total_velocity_norm.append(total_vel_norm)
 
-        if self._behavior_state == State.IDLE:
-            self._behavior_state = State.APPROACH
-        elif self._behavior_state == State.APPROACH and self._surround_herd(all_herd_states):
-            self._behavior_state = State.SURROUND
-        elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
-            self._behavior_state = State.APPROACH
-
         # Update consensus
         self._consensus_state["formation_stable"] = self._formation_stable()
 
@@ -96,11 +89,20 @@ class Shepherd(Autonomous):
             if not consensus["formation_stable"]:
                 formation_stable_consensus = False
                 break
+        # if formation_stable_consensus:
+        #     print(formation_stable_consensus)
         
-        if formation_stable_consensus:
-            print(formation_stable_consensus)
+        if self._behavior_state == State.IDLE:
+            self._behavior_state = State.APPROACH
+        elif self._behavior_state == State.APPROACH and self._surround_herd(all_herd_states):
+            self._behavior_state = State.SURROUND
+        elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
+            self._behavior_state = State.APPROACH
 
         u = np.zeros(2)
+        if formation_stable_consensus:
+            self._behaviors["dec_surround"].set_distance_to_target(80)
+
         if self._behaviors[str(self._behavior_state)]:
             u = self._behaviors[str(self._behavior_state)].update(
                 state=self.state,
@@ -110,7 +112,7 @@ class Shepherd(Autonomous):
         if self._type == DynamicType.SingleIntegrator:
             qdot = u.reshape((u.size,))
             self.velocity = qdot
-            self.pose = self.pose + self.velocity * 0.15
+            self.pose = self.pose + self.velocity * 0.2
 
         self._rotate_image(self.velocity)
 
@@ -164,8 +166,13 @@ class Shepherd(Autonomous):
             herd_states[:, :2] - herd_mean, axis=1)
         herd_radius = np.max(d_to_herd_mean)
 
-        if np.linalg.norm(self.pose - herd_mean) <= 1.0 * (self._sensing_range + herd_radius):
+        if np.linalg.norm(self.pose - herd_mean) <= (self._sensing_range + herd_radius):
             return True
+        
+        # for i in range(herd_states.shape[0]):
+        #     d = np.linalg.norm(self.pose - herd_states[i,:2])
+        #     if d <= self._sensing_range:
+        #         return True
         return False
 
     def _formation_stable(self):
@@ -175,7 +182,7 @@ class Shepherd(Autonomous):
         x = np.linspace(0, self._time_horizon,
                         self._time_horizon, endpoint=False)
         coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
-        if np.sqrt(err) >= 20:
+        if math.sqrt(err) >= 20:
             return False
         poly = np.poly1d(coeff)
         polyder = np.polyder(poly)

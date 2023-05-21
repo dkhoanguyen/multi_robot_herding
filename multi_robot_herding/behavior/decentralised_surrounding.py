@@ -2,14 +2,16 @@
 import math
 import pygame
 import numpy as np
+from collections import deque
+
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
 
 
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 100.0,
-                 co: float = 75.0,
-                 edge_k: float = 0.375,
+                 co: float = 70.0,
+                 edge_k: float = 0.2,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0):
         super().__init__()
@@ -22,6 +24,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._pose = np.zeros(2)
         self._force = np.zeros(2)
 
+    def set_distance_to_target(self, value: float):
+        self._distance_to_target = value
+
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray):
@@ -32,13 +37,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         herd_density = self._herd_density(herd_states=herd_states)
         filtered_herd_density_idx = np.where(
-            np.linalg.norm(herd_density, axis=1) >= 0.05)
+            np.linalg.norm(herd_density, axis=1) >= 0.0)
         filter_herd_states = herd_states[filtered_herd_density_idx[0], :]
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             filter_herd_states,
             state,
-            r=self._distance_to_target)
+            r=250)
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
@@ -83,11 +88,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     # Inter-robot Interaction Control
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):
-        # n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)
-        # return gain * np.sum(utils.MathUtils.phi_alpha(
-        #     utils.MathUtils.sigma_norm(qj-qi),
-        #     r=r,
-        #     d=r)*n_ij, axis=0)
         w = self._agent_spacing_term(qi=qi, qj=qj, r_star=r, delta_r=0.1*r)
         return gain * utils.unit_vector(w)
 
@@ -175,5 +175,20 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             s_in = 1 - (1/1 + math.exp(alpha * (r - (r_star - delta_r))))
             s_out = 1 - (1/1 + math.exp(-alpha * (r - (r_star + delta_r))))
             w = (s_in + s_out) * utils.unit_vector(qij)
-            w_sum += 10. * w
+            w_sum += w
         return w_sum
+
+    def _formation_stable(self):
+        if len(self._total_velocity_norm) != self._time_horizon:
+            return False
+        y = np.array(self._total_velocity_norm)
+        x = np.linspace(0, self._time_horizon,
+                        self._time_horizon, endpoint=False)
+        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
+        if np.sqrt(err) >= 20:
+            return False
+        poly = np.poly1d(coeff)
+        polyder = np.polyder(poly)
+        cond = np.abs(np.round(float(polyder.coef[0]), 2))
+        return not bool(cond)
+    

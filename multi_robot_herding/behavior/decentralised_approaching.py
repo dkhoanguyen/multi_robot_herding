@@ -8,7 +8,7 @@ from multi_robot_herding.utils import utils
 
 class DecentralisedApproaching(DecentralisedBehavior):
     def __init__(self, co: float = 2.78,
-                 interagent_spacing: float = 100.0):
+                 interagent_spacing: float = 40.0):
         self._co = co
         self._interagent_spacing = interagent_spacing
 
