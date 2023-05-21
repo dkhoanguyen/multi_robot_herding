@@ -71,11 +71,18 @@ class Environment(object):
             all_states[entity_type] = np.empty((0, 6))
             for entity in self._entities[entity_type]:
                 all_states[entity_type] = np.vstack((all_states[entity_type],entity.state))
+        
+        # Consensus state
+        all_consensus_states = []
+        for entity in self._entities["shepherd"]:
+            all_consensus_states.append(entity.consensus_state)
 
+        # Thread for each entity
         entity: Entity
         for entity in self._entities["shepherd"]:
             entity.update(events=events,
-                          entity_states=all_states)
+                          entity_states=all_states,
+                          consensus_states=all_consensus_states)
 
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)

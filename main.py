@@ -34,14 +34,14 @@ def main():
     shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
 
     # Shepherd behavior
-    shepherd_behaviors = {}
-    dec_approach = DecentralisedApproaching()
-    shepherd_behaviors["dec_approach"] = dec_approach
-    dec_surround = DecentralisedSurrounding()
-    shepherd_behaviors["dec_surround"] = dec_surround
 
     shepherd: Shepherd
     for shepherd in shepherds:
+        shepherd_behaviors = {}
+        dec_approach = DecentralisedApproaching()
+        shepherd_behaviors["dec_approach"] = dec_approach
+        dec_surround = DecentralisedSurrounding()
+        shepherd_behaviors["dec_surround"] = dec_surround
         shepherd.add_behavior(shepherd_behaviors)
 
     # Update entities list

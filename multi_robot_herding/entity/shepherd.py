@@ -33,7 +33,7 @@ class Shepherd(Autonomous):
         super().__init__(
             pose=pose,
             velocity=velocity,
-            image_path='robot.png',
+            image_path='leader-boid.png',
             mass=mass,
             min_v=min_v,
             max_v=max_v)
@@ -42,13 +42,22 @@ class Shepherd(Autonomous):
         self._local_boundary = local_boundary
 
         self._r = 40
-        self._consensus_r = 200
+        self._consensus_r = 200.0
         self._sensing_range = 200.0
 
         self._behavior_state = State.IDLE
 
+        # Consensus for state transition
+        self._consensus_state = {}
+        self._time_horizon = 300
+        self._total_velocity_norm = deque(maxlen=self._time_horizon)
+
     def __str__(self):
         return "shepherd"
+    
+    @property
+    def consensus_state(self):
+        return self._consensus_state
 
     def update(self, *args, **kwargs):
         # Behavior tree should be here
@@ -57,13 +66,20 @@ class Shepherd(Autonomous):
         all_herd_states = all_states["herd"]
         all_shepherd_states = all_states["shepherd"]
 
+        # Consensus state
+        all_consensus_states = kwargs["consensus_states"]
+
         # Check which shepherd is within vision
         shepherd_in_range = np.empty((0, 6))
+        total_vel_norm = np.linalg.norm(self.state[2:4])
+
         for idx in range(all_shepherd_states.shape[0]):
             d = np.linalg.norm(self.state[:2] - all_shepherd_states[idx, :2])
-            if d <= self._sensing_range and d > 0.0:
+            if d > 0.0:
                 shepherd_in_range = np.vstack(
                     (shepherd_in_range, all_shepherd_states[idx, :]))
+                total_vel_norm += np.linalg.norm(all_shepherd_states[idx, 2:4])
+        self._total_velocity_norm.append(total_vel_norm)
 
         if self._behavior_state == State.IDLE:
             self._behavior_state = State.APPROACH
@@ -72,6 +88,17 @@ class Shepherd(Autonomous):
         elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
             self._behavior_state = State.APPROACH
 
+        # Update consensus
+        self._consensus_state["formation_stable"] = self._formation_stable()
+
+        formation_stable_consensus = True
+        for consensus in all_consensus_states:
+            if not consensus["formation_stable"]:
+                formation_stable_consensus = False
+                break
+        
+        if formation_stable_consensus:
+            print(formation_stable_consensus)
 
         u = np.zeros(2)
         if self._behaviors[str(self._behavior_state)]:
@@ -88,6 +115,8 @@ class Shepherd(Autonomous):
         self._rotate_image(self.velocity)
 
     def display(self, screen: pygame.Surface, debug=False):
+        if self._behaviors[str(self._behavior_state)]:
+            self._behaviors[str(self._behavior_state)].display(screen)
         return super().display(screen, debug)
 
     def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:
@@ -135,6 +164,20 @@ class Shepherd(Autonomous):
             herd_states[:, :2] - herd_mean, axis=1)
         herd_radius = np.max(d_to_herd_mean)
 
-        if np.linalg.norm(self.pose - herd_mean) <= 0.975 * (self._sensing_range + herd_radius):
+        if np.linalg.norm(self.pose - herd_mean) <= 1.0 * (self._sensing_range + herd_radius):
             return True
         return False
+
+    def _formation_stable(self):
+        if len(self._total_velocity_norm) != self._time_horizon:
+            return False
+        y = np.array(self._total_velocity_norm)
+        x = np.linspace(0, self._time_horizon,
+                        self._time_horizon, endpoint=False)
+        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
+        if np.sqrt(err) >= 20:
+            return False
+        poly = np.poly1d(coeff)
+        polyder = np.polyder(poly)
+        cond = np.abs(np.round(float(polyder.coef[0]), 2))
+        return not bool(cond)

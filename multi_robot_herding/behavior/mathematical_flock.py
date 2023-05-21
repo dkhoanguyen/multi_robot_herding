@@ -153,7 +153,7 @@ class MathematicalFlock(Behavior):
             self._flocking_condition = 1
         else:
             self._flocking_condition = 0
-        
+
         # self._flocking_condition = 1
 
         herd: Herd
@@ -180,6 +180,12 @@ class MathematicalFlock(Behavior):
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
+        
+        # # Density
+        # herd_density = self._herd_density(herd_states=herd_states)
+        # density_mag = np.linalg.norm(herd_density,axis=1)
+        # density_mag = density_mag[density_mag > 0.09]
+        # print(density_mag)
 
         qdot = (1 - self._flocking_condition) * local_clustering + \
             flocking + self._flocking_condition * global_clustering + \
@@ -198,6 +204,9 @@ class MathematicalFlock(Behavior):
             herd.velocity = herd_states[idx, 2:4]
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
+
+            # herd._force = 2 * herd_density[idx,:]
+            # herd._plot_force = True
 
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
@@ -243,6 +252,19 @@ class MathematicalFlock(Behavior):
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_delta
         return u
+
+    def _herd_density(self, herd_states: np.ndarray):
+        herd_densities = np.zeros((herd_states.shape[0], 2))
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
+                                                                  r=self._sensing_range)
+        for idx in range(herd_states.shape[0]):
+            # Density
+            neighbor_idxs = alpha_adjacency_matrix[idx]
+            density = self._calc_density(
+                idx=idx, neighbors_idxs=neighbor_idxs,
+                herd_states=herd_states)
+            herd_densities[idx] = density
+        return herd_densities
 
     def _global_clustering(self, herd_states: np.ndarray,
                            shepherd_states: np.ndarray) -> np.ndarray:
@@ -368,6 +390,16 @@ class MathematicalFlock(Behavior):
                 r=MathematicalFlock.ALPHA_RANGE)
             u_alpha = alpha_grad + alpha_consensus
         return u_alpha
+
+    def _calc_density(self, idx: int,
+                      neighbors_idxs: np.ndarray,
+                      herd_states: np.ndarray):
+        qi = herd_states[idx, :2]
+        density = np.zeros(2)
+        if sum(neighbors_idxs) > 0:
+            qj = herd_states[neighbors_idxs, :2]
+            density = self._density(si=qi, sj=qj, k=0.375)
+        return density
 
     def _calc_obstacle_avoidance_control(self, idx: int,
                                          obstacle_idxs: np.ndarray,
