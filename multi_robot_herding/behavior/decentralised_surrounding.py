@@ -207,7 +207,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             delta_adj_vec = self._get_delta_adjacency_vector(
                 shepherd_state=herd_states[idx, :2],
                 herd_states=shepherd_states,
-                r=240)
+                r=r_shepherd)
 
             qi = herd_states[idx, :2]
             qj = shepherd_states[delta_adj_vec, :2]
