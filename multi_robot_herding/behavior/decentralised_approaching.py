@@ -8,18 +8,35 @@ from multi_robot_herding.utils import utils
 
 class DecentralisedApproaching(DecentralisedBehavior):
     def __init__(self, co: float = 2.78,
-                 interagent_spacing: float = 40.0):
+                 interagent_spacing: float = 60.0,
+                 sensing_range: float = 200.0):
         self._co = co
         self._interagent_spacing = interagent_spacing
+        self._sensing_range = sensing_range
 
         # Const parameters
         self._c1 = 5
         self._c2 = 0.2 * np.sqrt(self._c1)
 
+    def transition(self, state: np.ndarray,
+                   other_states: np.ndarray,
+                   herd_states: np.ndarray,
+                   consensus_states: dict):
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+
+        d_to_herd_mean = np.linalg.norm(
+            herd_states[:, :2] - herd_mean, axis=1)
+        herd_radius = np.max(d_to_herd_mean)
+
+        if np.linalg.norm(state[:2] - herd_mean) <= (self._sensing_range + herd_radius):
+            return False
+        return True
+
     def update(self, state: np.ndarray,
-                     other_states: np.ndarray,
-                     herd_states: np.ndarray,
-                     consensus_states: dict):
+               other_states: np.ndarray,
+               herd_states: np.ndarray,
+               consensus_states: dict):
         u = np.zeros((1, 2))
         all_shepherd_states = np.vstack((state, other_states))
 
@@ -52,7 +69,7 @@ class DecentralisedApproaching(DecentralisedBehavior):
 
         u = po + p_gamma
         return u
-    
+
     def display(self, screen: pygame.Surface):
         return super().display(screen)
 

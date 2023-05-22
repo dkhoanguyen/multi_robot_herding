@@ -139,7 +139,7 @@ class Autonomous(Entity):
         if self._plot_force:
             pygame.draw.line(
                 screen, pygame.Color("white"),
-                tuple(self.pose), tuple(self.pose + 75 * self._force))
+                tuple(self.pose), tuple(self.pose + 10 * self._force))
         if self._plot_force_mag:
             pygame.draw.circle(screen, pygame.Color(
                 'white'), center=self._pose, radius=5, width=3)

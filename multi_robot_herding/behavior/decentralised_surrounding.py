@@ -9,14 +9,14 @@ from multi_robot_herding.utils import utils
 
 
 class DecentralisedSurrounding(DecentralisedBehavior):
-    def __init__(self, cs: float = 100.0,
-                 co: float = 70.0,
-                 edge_k: float = 0.2,
-                 distance_to_target: float = 200.0,
-                 interagent_spacing: float = 200.0,
-                 skrink_distance: float = 100.0,
+    def __init__(self, cs: float = 120.0,
+                 co: float = 65.0,
+                 edge_k: float = 0.125,
+                 distance_to_target: float = 180.0,
+                 interagent_spacing: float = 180.0,
+                 skrink_distance: float = 80.0,
                  skrink_spacing: float = 100.0,
-                 sensing_range: float = 240.0):
+                 sensing_range: float = 210.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -29,6 +29,24 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         self._pose = np.zeros(2)
         self._force = np.zeros(2)
+
+        # Plotting
+        self._herd_density_to_plot = None
+
+    def transition(self, state: np.ndarray,
+                   other_states: np.ndarray,
+                   herd_states: np.ndarray,
+                   consensus_states: dict):
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+
+        d_to_herd_mean = np.linalg.norm(
+            herd_states[:, :2] - herd_mean, axis=1)
+        herd_radius = np.max(d_to_herd_mean)
+
+        if np.linalg.norm(state[:2] - herd_mean) <= (self._sensing_range + herd_radius):
+            return True
+        return False
 
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
@@ -44,6 +62,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         filtered_herd_density_idx = np.where(
             np.linalg.norm(herd_density, axis=1) >= 0.0)
         filter_herd_states = herd_states[filtered_herd_density_idx[0], :]
+        self._herd_density_to_plot = filter_herd_states
 
         formation_stable_consensus = True
         for consensus in consensus_states:
@@ -91,6 +110,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 qi=di, qj=dj,
                 r=spacing)
 
+        # herd_mean = np.sum(
+        #     herd_states[:, :2], axis=0) / herd_states.shape[0]
+        # d_dot_i = state[2:4]
+        # p_gamma = self._calc_group_objective_control(
+        #     target=herd_mean,
+        #     c1=5,
+        #     c2=0.2 * np.sqrt(5),
+        #     qi=di, pi=d_dot_i)
+
         u = ps + po
         if np.linalg.norm(u) > 15:
             u = 15 * utils.unit_vector(u)
@@ -100,6 +128,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         pygame.draw.line(
             screen, pygame.Color("white"),
             tuple(self._pose), tuple(self._pose + 75 * self._force))
+
+        for i in range(self._herd_density_to_plot.shape[0]):
+            pygame.draw.circle(screen, pygame.Color("white"),
+                               tuple(self._herd_density_to_plot[i, :2]), 10, 2)
         return super().display(screen)
 
     # Inter-robot Interaction Control
@@ -169,17 +201,28 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         return density
 
     def _herd_density(self, herd_states: np.ndarray,
-                            shepherd_states: np.ndarray):
+                      shepherd_states: np.ndarray):
         herd_densities = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=40)
         for idx in range(herd_states.shape[0]):
-            # Density
+            # Herd internal density
             neighbor_idxs = alpha_adjacency_matrix[idx]
             density = self._calc_density(
                 idx=idx, neighbors_idxs=neighbor_idxs,
                 herd_states=herd_states)
-            herd_densities[idx] = density
+            herd_densities[idx] += density
+
+            # Herd shepherd density
+            delta_adj_vec = self._get_delta_adjacency_vector(
+                shepherd_state=herd_states[idx, :2],
+                herd_states=shepherd_states,
+                r=200)
+
+            qi = herd_states[idx, :2]
+            qj = shepherd_states[delta_adj_vec, :2]
+            density = self._density(si=qi, sj=qj, k=0.375)
+            herd_densities[idx] += density
         return herd_densities
 
     def _agent_spacing_term(self, qi: np.ndarray,
@@ -196,16 +239,17 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             w_sum += w
         return w_sum
 
-    def _formation_stable(self):
-        if len(self._total_velocity_norm) != self._time_horizon:
-            return False
-        y = np.array(self._total_velocity_norm)
-        x = np.linspace(0, self._time_horizon,
-                        self._time_horizon, endpoint=False)
-        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
-        if np.sqrt(err) >= 20:
-            return False
-        poly = np.poly1d(coeff)
-        polyder = np.polyder(poly)
-        cond = np.abs(np.round(float(polyder.coef[0]), 2))
-        return not bool(cond)
+    def _calc_group_objective_control(self, target: np.ndarray,
+                                      c1: float, c2: float,
+                                      qi: np.ndarray, pi: np.ndarray):
+        def calc_group_objective_term(
+                c1: float, c2: float,
+                pos: np.ndarray, qi: np.ndarray, pi: np.ndarray):
+            return -c1 * utils.MathUtils.sigma_1(qi - pos) - c2 * (pi)
+        u_gamma = calc_group_objective_term(
+            c1=c1,
+            c2=c2,
+            pos=target,
+            qi=qi,
+            pi=pi)
+        return u_gamma

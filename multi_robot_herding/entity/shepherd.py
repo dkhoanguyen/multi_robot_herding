@@ -86,10 +86,24 @@ class Shepherd(Autonomous):
 
         if self._behavior_state == State.IDLE:
             self._behavior_state = State.APPROACH
-        elif self._behavior_state == State.APPROACH and self._surround_herd(all_herd_states):
-            self._behavior_state = State.SURROUND
-        elif self._behavior_state == State.SURROUND and not self._surround_herd(all_herd_states):
-            self._behavior_state = State.APPROACH
+        
+        elif self._behavior_state == State.APPROACH:
+            if self._behaviors[str(State.SURROUND)]:
+                if self._behaviors[str(State.SURROUND)].transition(
+                        state=self.state,
+                        other_states=shepherd_in_range,
+                        herd_states=all_herd_states,
+                        consensus_states=all_consensus_states):
+                    self._behavior_state = State.SURROUND
+        
+        elif self._behavior_state == State.SURROUND:
+            if self._behaviors[str(State.APPROACH)]:
+                if self._behaviors[str(State.APPROACH)].transition(
+                        state=self.state,
+                        other_states=shepherd_in_range,
+                        herd_states=all_herd_states,
+                        consensus_states=all_consensus_states):
+                    self._behavior_state = State.APPROACH
 
         u = np.zeros(2)
 
@@ -160,10 +174,6 @@ class Shepherd(Autonomous):
         if np.linalg.norm(self.pose - herd_mean) <= (self._sensing_range + herd_radius):
             return True
 
-        # for i in range(herd_states.shape[0]):
-        #     d = np.linalg.norm(self.pose - herd_states[i,:2])
-        #     if d <= self._sensing_range:
-        #         return True
         return False
 
     def _formation_stable(self):

@@ -6,12 +6,20 @@ from abc import ABC, abstractmethod
 
 
 class Behavior(ABC):
-    
+
+    @abstractmethod
+    def transition(self, state: np.ndarray,
+                   other_states: np.ndarray,
+                   herd_states: np.ndarray,
+                   consensus_states: dict):
+        '''
+        '''
+
     @abstractmethod
     def update(self, state: np.ndarray,
-                     other_states: np.ndarray,
-                     herd_states: np.ndarray,
-                     consensus_states: dict):
+               other_states: np.ndarray,
+               herd_states: np.ndarray,
+               consensus_states: dict):
         '''
         '''
     @abstractmethod
