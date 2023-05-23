@@ -34,8 +34,6 @@ entity:
         angle: 3.14
       - pose: [1150, 500]
         angle: 3.14
-      - pose: [1100, 540]
-        angle: 3.14
 
   obstacle:
     sphere:

@@ -14,8 +14,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0,
-                 skrink_distance: float = 80.0,
-                 skrink_spacing: float = 100.0,
+                 skrink_distance: float = 130.0,
+                 skrink_spacing: float = 150.0,
                  sensing_range: float = 300.0):
         super().__init__()
         self._cs = cs
@@ -32,6 +32,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         # Plotting
         self._herd_density_to_plot = np.empty((0, 2))
+
+        self._time_horizon = 300
+        self._total_energy = deque(maxlen=self._time_horizon)
+
+        self._triggered = False
 
     def transition(self, state: np.ndarray,
                    other_states: np.ndarray,
@@ -62,22 +67,26 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             if not consensus["formation_stable"]:
                 formation_stable_consensus = False
                 break
-
+        
+        formation_stable = self._formation_stable()
         d_to_target = self._distance_to_target
         spacing = self._interagent_spacing
-        if formation_stable_consensus:
-            d_to_target = self._skrink_distance
-            spacing = self._skrink_spacing
+        if formation_stable and not self._triggered:
+            self._distance_to_target = self._skrink_distance
+            self._interagent_spacing = self._skrink_spacing
+            self._triggered = True
+        
 
         herd_density = self._herd_density(herd_states=herd_states,
                                           shepherd_states=all_shepherd_states,
                                           r_shepherd=d_to_target)
- 
+
         total_density = np.sum(np.linalg.norm(herd_density, axis=1))
+        self._total_energy.append(total_density)
+
         filtered_herd_density_idx = np.where(
-            np.linalg.norm(herd_density, axis=1) >= 35)
+            np.linalg.norm(herd_density, axis=1) >= 0.0)
         filter_herd_states = herd_states[filtered_herd_density_idx[0], :]
-        self._herd_density_to_plot = filter_herd_states[:,:2]
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             filter_herd_states,
@@ -88,7 +97,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             all_shepherd_states,
             r=d_to_target)
 
-        total_ps = 0
         di = state[:2]
 
         neighbor_herd_idxs = delta_adjacency_vector
@@ -99,15 +107,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             ps = self._sigmoid_edge_following(
                 qi=di,
                 qj=sj,
-                d=spacing,
+                d=d_to_target,
                 bound=20
             )
-            total_ps = np.linalg.norm(ps)
         po = np.zeros(2)
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
         if sum(neighbor_shepherd_idxs) > 0:
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
-
             po = self._collision_avoidance_term(
                 gain=self._co,
                 qi=di, qj=dj,
@@ -176,13 +182,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         np.fill_diagonal(adj_matrix, False)
         return adj_matrix
 
-    def _density(self, si: np.ndarray, sj: np.ndarray, k: float):
+    def _density(self, si: np.ndarray, sj: np.ndarray, k: float, d: float):
         w_sum = np.zeros(2).astype(np.float64)
         for i in range(sj.shape[0]):
             sij = si - sj[i, :]
-            w = (1/(1 + k * (np.linalg.norm(sij)))) * \
-                utils.unit_vector(sij)
-            w = sij
+            w = np.abs(np.linalg.norm(sij) - d) * utils.unit_vector(sij)
             w_sum += w
         return w_sum
 
@@ -193,7 +197,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         density = np.zeros(2)
         if sum(neighbors_idxs) > 0:
             qj = herd_states[neighbors_idxs, :2]
-            density = self._density(si=qi, sj=qj, k=0.175)
+            density = self._density(si=qi, sj=qj, k=0.375, d=0)
         return density
 
     def _herd_density(self, herd_states: np.ndarray,
@@ -203,23 +207,23 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=40)
         for idx in range(herd_states.shape[0]):
-            # Herd internal density
-            neighbor_idxs = alpha_adjacency_matrix[idx]
-            density = self._calc_density(
-                idx=idx, neighbors_idxs=neighbor_idxs,
-                herd_states=herd_states)
-            herd_densities[idx] += density
-
-            # # Herd shepherd density
-            # delta_adj_vec = self._get_delta_adjacency_vector(
-            #     shepherd_state=herd_states[idx, :2],
-            #     herd_states=shepherd_states,
-            #     r=r_shepherd)
-
-            # qi = herd_states[idx, :2]
-            # qj = shepherd_states[delta_adj_vec, :2]
-            # density = self._density(si=qi, sj=qj, k=0.375)
+            # # Herd internal density
+            # neighbor_idxs = alpha_adjacency_matrix[idx]
+            # density = self._calc_density(
+            #     idx=idx, neighbors_idxs=neighbor_idxs,
+            #     herd_states=herd_states)
             # herd_densities[idx] += density
+
+            # Herd shepherd density
+            delta_adj_vec = self._get_delta_adjacency_vector(
+                shepherd_state=herd_states[idx, :2],
+                herd_states=shepherd_states,
+                r=300)
+
+            qi = herd_states[idx, :2]
+            qj = shepherd_states[delta_adj_vec, :2]
+            density = self._density(si=qi, sj=qj, k=0.375, d=r_shepherd)
+            herd_densities[idx] += density
         return herd_densities
 
     def _calc_group_objective_control(self, target: np.ndarray,
@@ -252,7 +256,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         def local_crowd_horizon(qi: np.ndarray, qj: np.ndarray,
                                 r: float,
-                                k: float = 0.375):
+                                k: float = 0.5):
             qij = qi - qj
             return (1/(1 + k * np.linalg.norm(qij)))
 
@@ -263,3 +267,17 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             sigma = custom_sigmoid(qi=qi, qj=qj[i, :], d=d, bound=bound)
             u_sum += gain * sigma * uij * 12
         return u_sum
+    
+    def _formation_stable(self):
+        if len(self._total_energy) != self._time_horizon:
+            return False
+        y = np.array(self._total_energy)
+        x = np.linspace(0, self._time_horizon,
+                        self._time_horizon, endpoint=False)
+        coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
+        if math.sqrt(err) >= 110:
+            return False
+        poly = np.poly1d(coeff)
+        polyder = np.polyder(poly)
+        cond = np.abs(np.round(float(polyder.coef[0]), 1))
+        return not bool(cond)
