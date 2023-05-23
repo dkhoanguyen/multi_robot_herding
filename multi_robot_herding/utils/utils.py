@@ -146,7 +146,3 @@ class MathUtils():
     @staticmethod
     def sigma(x):
         return (1/(1 + math.exp(-x)))
-
-    @staticmethod
-    def sigma_grad(x):
-        return MathUtils.sigma(x) * (1 - MathUtils.sigma(x))

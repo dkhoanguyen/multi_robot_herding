@@ -86,7 +86,7 @@ class Shepherd(Autonomous):
 
         if self._behavior_state == State.IDLE:
             self._behavior_state = State.APPROACH
-        
+
         elif self._behavior_state == State.APPROACH:
             if self._behaviors[str(State.SURROUND)]:
                 if self._behaviors[str(State.SURROUND)].transition(
@@ -95,7 +95,7 @@ class Shepherd(Autonomous):
                         herd_states=all_herd_states,
                         consensus_states=all_consensus_states):
                     self._behavior_state = State.SURROUND
-        
+
         elif self._behavior_state == State.SURROUND:
             if self._behaviors[str(State.APPROACH)]:
                 if self._behaviors[str(State.APPROACH)].transition(
@@ -115,6 +115,9 @@ class Shepherd(Autonomous):
                 consensus_states=all_consensus_states)
 
         if self._type == DynamicType.SingleIntegrator:
+            if np.linalg.norm(u) > 20:
+                u = 20 * utils.unit_vector(u)
+
             qdot = u.reshape((u.size,))
             self.velocity = qdot
             self.pose = self.pose + self.velocity * 0.2
