@@ -223,8 +223,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r = np.linalg.norm(qij)
             e = 0.01
             alpha = (1/delta_r) * math.log((1 - e)/e)
-            s_in = 1 - (1/1 + math.exp(alpha * (r - (r_star - delta_r))))
-            s_out = 1 - (1/1 + math.exp(-alpha * (r - (r_star + delta_r))))
+            s_in = 1 - (1/(1 + math.exp(alpha * (r - (r_star - delta_r)))))
+            s_out = 1 - (1/(1 + math.exp(-alpha * (r - (r_star + delta_r)))))
             w = (s_in + s_out) * utils.unit_vector(qij)
             w_sum += w
         return w_sum
@@ -242,4 +242,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             pos=target,
             qi=qi,
             pi=pi)
-        return u_gamma
+        return u_gamma 
+
+    def _sigmoid_density(si: np.ndarray, sj: np.ndarray,
+                        k: float, d: float,
+                        gain: float):
+        pass
