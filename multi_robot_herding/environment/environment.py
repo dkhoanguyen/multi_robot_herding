@@ -71,7 +71,12 @@ class Environment(object):
             all_states[entity_type] = np.empty((0, 6))
             for entity in self._entities[entity_type]:
                 all_states[entity_type] = np.vstack((all_states[entity_type],entity.state))
-        
+
+        shepherds_id = []
+        for entity in self._entities["shepherd"]:
+            shepherds_id.append(entity.id)
+        shepherds_id = np.array(shepherds_id)
+
         # Consensus state
         all_consensus_states = []
         for entity in self._entities["shepherd"]:
@@ -81,6 +86,7 @@ class Environment(object):
         entity: Entity
         for entity in self._entities["shepherd"]:
             entity.update(events=events,
+                          ids=shepherds_id,
                           entity_states=all_states,
                           consensus_states=all_consensus_states)
 

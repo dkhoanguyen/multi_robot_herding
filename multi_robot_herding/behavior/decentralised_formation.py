@@ -9,8 +9,12 @@ from multi_robot_herding.utils import utils
 
 
 class DecentralisedFormation(DecentralisedBehavior):
-    def __init__(self):
+    def __init__(self,
+                 id: int):
         super().__init__()
+
+        # Params
+        self._id = id
 
         self._time_horizon = 200
         self._total_energy = deque(maxlen=self._time_horizon)
@@ -47,19 +51,29 @@ class DecentralisedFormation(DecentralisedBehavior):
         if len(self._stablised_energy) == self._stablised_energy.maxlen:
             return True
         return False
+        # events = pygame.event.get()
+        # for event in events:
+        #     if event.type == pygame.KEYDOWN:
+        #         if event.key == pygame.K_DOWN:
+        #             return True
+
 
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
-               consensus_states: dict):
+               consensus_states: dict,
+               raw_states: np.ndarray):
         u = np.zeros(2)
         all_shepherd_states = np.vstack((state, other_states))
 
         if not self._formation_generated:
-            ret, p_star = self._generate_formation(all_shepherd_states[:, :2])
+            ret, p_star = self._generate_formation(raw_states[:, :2])
             if ret:
                 self._g_star = p_star
                 self._formation_generated = True
+
+        u = self._maneuver_formation(
+            shepherd_states=raw_states, formation=self._g_star)
         return u
 
     def display(self, screen: pygame.Surface):
@@ -213,11 +227,6 @@ class DecentralisedFormation(DecentralisedBehavior):
             g_star, e_norm_star = self._calc_g(
                 p_star, [pair_ij[0]], [pair_ij[1]])
             g, _ = self._calc_g(p, [pair_ij[0]], [pair_ij[1]])
-            total_bearing_error += np.round(np.linalg.norm(g - g_star), 4)
-            pair = np.array([shepherd_states[pair_ij[0], :2],
-                             shepherd_states[pair_ij[1], :2]])
-            self._plotting_p_star = np.vstack(
-                (self._plotting_p_star, pair.reshape((1, 4))))
             if start_end[0, idx] in leader_idx:
                 continue
             Pg_ij = self._calc_diagPg(g_star, e_norm_star)
@@ -225,42 +234,29 @@ class DecentralisedFormation(DecentralisedBehavior):
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
         # print(total_bearing_error)
 
-        kp = 6.5
-        kd = 0.05
-        kv = 1
-        ki = 0.82
+        kp = 0.075
+        kd = 0.0
+        kv = 0.08
+        ki = 0.45
         alpha = -0.025
         desired_length = 150
         desired_scale = 130
         dt = 0.2
+        test_list = [0,1,2,3,4]
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
-                # ratio = desired_length / \
-                #     np.linalg.norm(shepherd_states[i, :2] - centroid_p_star)
-                # ratio = np.linalg.norm(shepherd_states[i, :2] - centroid_p_star) - desired_length
-                # ratio = desired_scale/scale
-                # # ratio = 0
-                # # for j in range(len(leader_idx)):
-                # #     if i == j:
-                # #         continue
-                # #     ratio += desired_length / \
-                # #         np.linalg.norm(shepherd_states[i, :2] - shepherd_states[j, :2])
-                # u[i] = alpha * np.round(1 - ratio, 3) * (
-                #     shepherd_states[i, :2] - centroid_p_star)
-                # u[i] = alpha * np.round(ratio, 1) * (
-                #     shepherd_states[i, :2] - centroid_p_star)
-
-                # # target = np.array([150, 350])
-                target = np.array(pygame.mouse.get_pos())
-                vc = -5 * utils.unit_vector(centroid_p_star - target)
+                target = np.array([1150,350])
+                vc = -2 * utils.unit_vector(centroid_p_star - target)
                 u[i] = u[i] + vc
                 continue
 
             ui = np.zeros((2, 1))
             Ki = all_total_Pg_ij[:, :, i]
-            for j in range(start_end.shape[0]):
+            # for j in range(shepherd_states.shape[0]):
+            for j in test_list:
                 if i == j:
                     continue
+
                 Pg_ij = all_Pg_ij[:, :, i, j]
                 pi = shepherd_states[i, :2]
                 pj = shepherd_states[j, :2]
@@ -277,7 +273,7 @@ class DecentralisedFormation(DecentralisedBehavior):
                                (vi - vj) - vj_dot + integral_term + derivative_term).reshape((2, 1))
             ui = -np.linalg.inv(Ki) @ ui
             u[i] = ui.reshape((1, 2))
-        return u
+        return u[self._id]
 
     # Private
     def _calc_start_end(self, adj_matrix: np.ndarray,

@@ -142,12 +142,12 @@ class MathematicalFlock(Behavior):
     def update(self, *args, **kwargs):
         events = self._get_events(args)
 
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN and self._enable_flocking:
-                    self._enable_flocking = False
-                if event.key == pygame.K_UP and not self._enable_flocking:
-                    self._enable_flocking = True
+        # for event in events:
+        #     if event.type == pygame.KEYDOWN:
+        #         if event.key == pygame.K_DOWN and self._enable_flocking:
+        #             self._enable_flocking = False
+        #         if event.key == pygame.K_UP and not self._enable_flocking:
+        #             self._enable_flocking = True
 
         if self._enable_flocking:
             self._flocking_condition = 1

@@ -57,7 +57,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
-               consensus_states: dict):
+               consensus_states: dict,
+               raw_states: np.ndarray):
         # Control signal
         self._pose = state[:2]
         u = np.zeros(2)

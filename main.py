@@ -43,7 +43,7 @@ def main():
         shepherd_behaviors["dec_approach"] = dec_approach
         dec_surround = DecentralisedSurrounding()
         shepherd_behaviors["dec_surround"] = dec_surround
-        dec_formation = DecentralisedFormation()
+        dec_formation = DecentralisedFormation(id=shepherd.id)
         shepherd_behaviors["dec_formation"] = dec_formation
         shepherd.add_behavior(shepherd_behaviors)
 

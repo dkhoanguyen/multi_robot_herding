@@ -19,7 +19,8 @@ class Behavior(ABC):
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
-               consensus_states: dict):
+               consensus_states: dict,
+               raw_states: np.ndarray):
         '''
         '''
     @abstractmethod

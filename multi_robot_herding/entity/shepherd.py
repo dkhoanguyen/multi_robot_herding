@@ -73,6 +73,8 @@ class Shepherd(Autonomous):
     def update(self, *args, **kwargs):
         # Behavior tree should be here
         events = kwargs["events"]
+        ids = kwargs["ids"]
+
         all_states = kwargs["entity_states"]
         all_herd_states = all_states["herd"]
         all_shepherd_states = all_states["shepherd"]
@@ -130,7 +132,8 @@ class Shepherd(Autonomous):
                 state=self.state,
                 other_states=shepherd_in_range,
                 herd_states=all_herd_states,
-                consensus_states=all_consensus_states)
+                consensus_states=all_consensus_states,
+                raw_states=all_shepherd_states)
 
         if self._type == DynamicType.SingleIntegrator:
             if np.linalg.norm(u) > 20:
