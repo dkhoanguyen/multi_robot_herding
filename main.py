@@ -7,6 +7,7 @@ from multi_robot_herding.entity.shepherd import Shepherd
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 from multi_robot_herding.behavior.decentralised_approaching import DecentralisedApproaching
 from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
+from multi_robot_herding.behavior.decentralised_formation import DecentralisedFormation
 
 from multi_robot_herding.environment.environment import Environment
 from multi_robot_herding.environment.spawner import Spawner
@@ -42,6 +43,8 @@ def main():
         shepherd_behaviors["dec_approach"] = dec_approach
         dec_surround = DecentralisedSurrounding()
         shepherd_behaviors["dec_surround"] = dec_surround
+        dec_formation = DecentralisedFormation()
+        shepherd_behaviors["dec_formation"] = dec_formation
         shepherd.add_behavior(shepherd_behaviors)
 
     # Update entities list

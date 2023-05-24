@@ -23,6 +23,7 @@ class State(Enum):
 
 class Shepherd(Autonomous):
     def __init__(self,
+                 id: int,
                  pose: np.ndarray,
                  velocity: np.ndarray,
                  local_perception: float,
@@ -38,6 +39,8 @@ class Shepherd(Autonomous):
             min_v=min_v,
             max_v=max_v)
 
+        # ID for leader follower assignment
+        self._id = id
         self._local_perception = local_perception
         self._local_boundary = local_boundary
 
@@ -52,8 +55,16 @@ class Shepherd(Autonomous):
         self._time_horizon = 300
         self._total_velocity_norm = deque(maxlen=self._time_horizon)
 
+        # Display
+        self._font = pygame.font.SysFont("comicsans", 16)
+        self._text = None
+
     def __str__(self):
         return "shepherd"
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def consensus_state(self):
@@ -105,6 +116,13 @@ class Shepherd(Autonomous):
                         consensus_states=all_consensus_states):
                     self._behavior_state = State.APPROACH
 
+            if self._behaviors[str(State.FORMATION)]:
+                if self._behaviors[str(State.FORMATION)].transition(
+                        state=self.state,
+                        other_states=shepherd_in_range,
+                        herd_states=all_herd_states,
+                        consensus_states=all_consensus_states):
+                    self._behavior_state = State.FORMATION
         u = np.zeros(2)
 
         if self._behaviors[str(self._behavior_state)]:
@@ -123,10 +141,15 @@ class Shepherd(Autonomous):
             self.pose = self.pose + self.velocity * 0.2
 
         self._rotate_image(self.velocity)
+        self._text = self._font.render(str(self._id), 1, pygame.Color("white"))
 
     def display(self, screen: pygame.Surface, debug=False):
         if self._behaviors[str(self._behavior_state)]:
             self._behaviors[str(self._behavior_state)].display(screen)
+
+        if self._text:
+            screen.blit(self._text, tuple(self.pose - np.array([20, 20])))
+
         return super().display(screen, debug)
 
     def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:

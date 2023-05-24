@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 20
+    num: 15
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -33,6 +33,8 @@ entity:
       - pose: [1150, 460]
         angle: 3.14
       - pose: [1150, 500]
+        angle: 3.14
+      - pose: [1154, 500]
         angle: 3.14
 
   obstacle:
