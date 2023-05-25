@@ -57,7 +57,6 @@ class DecentralisedFormation(DecentralisedBehavior):
         #         if event.key == pygame.K_DOWN:
         #             return True
 
-
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
@@ -227,26 +226,29 @@ class DecentralisedFormation(DecentralisedBehavior):
             g_star, e_norm_star = self._calc_g(
                 p_star, [pair_ij[0]], [pair_ij[1]])
             g, _ = self._calc_g(p, [pair_ij[0]], [pair_ij[1]])
+            total_bearing_error += np.round(np.linalg.norm(g - g_star), 3)
             if start_end[0, idx] in leader_idx:
                 continue
             Pg_ij = self._calc_diagPg(g_star, e_norm_star)
             all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
-        # print(total_bearing_error)
 
-        kp = 0.075
+        kp = 0.05
         kd = 0.0
-        kv = 0.08
-        ki = 0.45
+        kv = 0.07
+        ki = 0.07
         alpha = -0.025
         desired_length = 150
         desired_scale = 130
         dt = 0.2
-        test_list = [0,1,2,3,4]
+        test_list = [0, 1, 2, 3, 4, 5]
+        target = np.array(pygame.mouse.get_pos())
+        target = np.array([700,350])
+        vc = -0.5 * utils.unit_vector(centroid_p_star - target)
+
         for i in range(shepherd_states.shape[0]):
             if i in leader_idx:
-                target = np.array([1150,350])
-                vc = -2 * utils.unit_vector(centroid_p_star - target)
+                v = np.array([1,0])
                 u[i] = u[i] + vc
                 continue
 
