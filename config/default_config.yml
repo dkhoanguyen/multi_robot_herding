@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 15
+    num: 20
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -20,27 +20,35 @@ entity:
     configuration:
       - pose: [1100, 200]
         angle: 3.14
+      - pose: [1100, 240]
+        angle: 3.14
+      - pose: [1150, 200]
+        angle: 3.14
       - pose: [1150, 240]
+        angle: 3.14
+      - pose: [1100, 280]
         angle: 3.14
       - pose: [1150, 280]
         angle: 3.14
       - pose: [1100, 320]
         angle: 3.14
-      - pose: [1100, 380]
-        angle: 3.14
-      - pose: [1100, 420]
-        angle: 3.14
-      - pose: [1150, 460]
-        angle: 3.14
-      - pose: [1150, 500]
-        angle: 3.14
-      - pose: [1154, 500]
-        angle: 3.14
+      # - pose: [1100, 380]
+      #   angle: 3.14
+      # - pose: [1100, 420]
+      #   angle: 3.14
+      # - pose: [1150, 500]
+      #   angle: 3.14
+      # - pose: [1100, 500]
+      #   angle: 3.14
+      # - pose: [1100, 540]
+      #   angle: 3.14
+      # - pose: [1150, 540]
+      #   angle: 3.14
 
   obstacle:
     sphere:
-    # - yk: [1000, 100]
-    #   Rk: 100
+    # - yk: [570, 350]
+    #   Rk: 75
     # - yk: [1000, 510]
     #   Rk: 100
     # - yk: [1000, 240]

@@ -68,6 +68,8 @@ class Environment(object):
         # Grab all states
         all_states = {}
         for entity_type in self._entities.keys():
+            if entity_type == "obstacle":
+                continue
             all_states[entity_type] = np.empty((0, 6))
             for entity in self._entities[entity_type]:
                 all_states[entity_type] = np.vstack((all_states[entity_type],entity.state))

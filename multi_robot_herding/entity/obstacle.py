@@ -7,7 +7,6 @@ from multi_robot_herding.entity.entity import Entity
 
 
 class Obstacle(Entity):
-
     def __init__(self, display_func=None):
         self._display_func = display_func
         self._pose = np.zeros((1, 2))

@@ -233,13 +233,11 @@ class DecentralisedFormation(DecentralisedBehavior):
             all_total_Pg_ij[:, :, pair_ij[0]] += Pg_ij
             all_Pg_ij[:, :, pair_ij[0], pair_ij[1]] = Pg_ij
 
-        kp = 0.05
+        kp = 0.04
         kd = 0.0
         kv = 0.07
-        ki = 0.07
-        alpha = -0.025
-        desired_length = 150
-        desired_scale = 130
+        ki = 0.085
+
         dt = 0.2
         test_list = [0, 1, 2, 3, 4, 5]
         target = np.array(pygame.mouse.get_pos())
@@ -254,7 +252,7 @@ class DecentralisedFormation(DecentralisedBehavior):
 
             ui = np.zeros((2, 1))
             Ki = all_total_Pg_ij[:, :, i]
-            # for j in range(shepherd_states.shape[0]):
+
             for j in test_list:
                 if i == j:
                     continue

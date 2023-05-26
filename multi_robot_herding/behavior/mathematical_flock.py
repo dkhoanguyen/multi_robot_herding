@@ -154,7 +154,7 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
 
-        # self._flocking_condition = 1
+        self._flocking_condition = 1
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -184,9 +184,6 @@ class MathematicalFlock(Behavior):
         # Density
         herd_density = self._herd_density(herd_states=herd_states,
                                           shepherd_states=shepherd_states)
-        # density_mag = np.linalg.norm(herd_density,axis=1)
-        # density_mag = density_mag[density_mag > 0.09]
-        # print(density_mag)
 
         qdot = (1 - self._flocking_condition) * local_clustering + \
             flocking + self._flocking_condition * global_clustering + \

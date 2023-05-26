@@ -22,15 +22,9 @@ class DecentralisedApproaching(DecentralisedBehavior):
                    other_states: np.ndarray,
                    herd_states: np.ndarray,
                    consensus_states: dict):
-        herd_mean = np.sum(
-            herd_states[:, :2], axis=0) / herd_states.shape[0]
-
-        d_to_herd_mean = np.linalg.norm(
-            herd_states[:, :2] - herd_mean, axis=1)
-        herd_radius = np.max(d_to_herd_mean)
-
-        if np.linalg.norm(state[:2] - herd_mean) <= (self._sensing_range + herd_radius):
-            return False
+        for idx in range(herd_states.shape[0]):
+            if np.linalg.norm(state[:2] - herd_states[idx, :2]) <= self._sensing_range:
+                return False
         return True
 
     def update(self, state: np.ndarray,
