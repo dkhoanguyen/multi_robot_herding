@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 20
+    num: 1
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -63,11 +63,11 @@ entity:
       - ak: [1, 0]
         yk: [0, 0]
         boundary: [[0, 0], [10, 720]]
-      - ak: [-1, 0]
-        yk: [1270, 0]
+      - ak: [1, 0]
+        yk: [1279, 0]
         boundary: [[1270, 0], [1280, 720]]
-      - ak: [0, -1]
-        yk: [0, 710]
+      - ak: [0, 1]
+        yk: [0, 719]
         boundary: [[0, 710], [1280, 720]]
 
   plotting:
@@ -86,7 +86,7 @@ behavior:
         - obstacle
       behavior:
     params:
-      follow_cursor: false
+      follow_cursor: true
       sensing_range: 40
       danger_range: 90
       initial_consensus: [600, 350]

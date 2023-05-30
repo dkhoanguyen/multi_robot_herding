@@ -50,6 +50,7 @@ class Hyperplane(Obstacle):
     def in_entity_radius(self, qi: np.ndarray, r: float):
         # Project entity position onto the plane
         projected_q = self._P @ qi + (np.eye(2) - self._P) @ self._yk
+        projected_q = np.array([projected_q[0,0],projected_q[1,1]])
         return np.linalg.norm(projected_q - qi) <= r
 
     def induce_beta_agent(self, alpha_agent: Entity) -> np.ndarray:

@@ -72,7 +72,8 @@ class Environment(object):
                 continue
             all_states[entity_type] = np.empty((0, 6))
             for entity in self._entities[entity_type]:
-                all_states[entity_type] = np.vstack((all_states[entity_type],entity.state))
+                all_states[entity_type] = np.vstack(
+                    (all_states[entity_type], entity.state))
 
         shepherds_id = []
         for entity in self._entities["shepherd"]:

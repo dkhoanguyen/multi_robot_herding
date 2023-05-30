@@ -9,7 +9,7 @@ from multi_robot_herding.utils import utils
 class DecentralisedApproaching(DecentralisedBehavior):
     def __init__(self, co: float = 2.78,
                  interagent_spacing: float = 60.0,
-                 sensing_range: float = 200.0):
+                 sensing_range: float = 300.0):
         self._co = co
         self._interagent_spacing = interagent_spacing
         self._sensing_range = sensing_range

@@ -1,13 +1,12 @@
 # !/usr/bin/python3
+
+import time
 import math
 import pygame
 import numpy as np
 from collections import deque
 
-from scipy.spatial import ConvexHull
-
 import alphashape
-from descartes import PolygonPatch
 
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
@@ -18,10 +17,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  co: float = 30.78 * 0.03,
                  edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
-                 interagent_spacing: float = 450.0,
+                 interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 200.0):
+                 sensing_range: float = 230.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -45,6 +44,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._stablised_energy = deque(maxlen=10)
 
         self._triggered = False
+        self._voronoi = None
 
     def transition(self, state: np.ndarray,
                    other_states: np.ndarray,
@@ -86,21 +86,22 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             self._stablised_energy.append(
                 sum(self._total_energy)/len(self._total_energy))
 
-        hull = alphashape.alphashape(herd_states[:, :2], 0.01)
-        x,_ = hull.exterior.coords.xy
-        indices = np.where(np.in1d(herd_states[:, :1], np.array(x)))[0]
+        # hull = alphashape.alphashape(herd_states[:, :2], 0.005)
+        # x, _ = hull.exterior.coords.xy
+        # indices = np.where(np.in1d(herd_states[:, :1], np.array(x)))[0]
 
-        filter_herd_states = herd_states[indices, :]
+        # filter_herd_states = herd_states[indices, :]
+        filter_herd_states = herd_states[:, :]
         self._herd_density_to_plot = filter_herd_states
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             filter_herd_states,
             state,
-            r=d_to_target)
+            r=self._sensing_range)
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
-            r=spacing)
+            r=self._sensing_range)
 
         di = state[:2]
 
@@ -113,12 +114,14 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 qi=di,
                 qj=sj,
                 d=d_to_target,
-                bound=20
+                bound=20,
+                k=0.5
             )
         self._force_ps = ps
 
         po = np.zeros(2)
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
+        
         if sum(neighbor_shepherd_idxs) > 0:
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
             po = self._collision_avoidance_term(
@@ -127,9 +130,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 r=spacing)
         self._force_po = po
 
-        u = ps + po
-        # self._force_u = u
-
+        u = (0.25 * herd_states.shape[0]) * ps + po
         return u
 
     def display(self, screen: pygame.Surface):
@@ -144,7 +145,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
 
         # pygame.draw.circle(screen, pygame.Color("white"),
-        #                    tuple(self._pose), self._sensing_range, 1)
+        #                    tuple(self._pose), self._distance_to_target, 1)
+        # pygame.draw.circle(screen, pygame.Color("yellow"),
+        #                    tuple(self._pose), self._interagent_spacing, 1)
 
         for i in range(self._herd_density_to_plot.shape[0]):
             pygame.draw.circle(screen, pygame.Color("white"),
@@ -163,9 +166,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qi=qi,
             qj=qj,
             d=r,
-            bound=20)
+            bound=20,
+            k=0.375)
 
-        return 1.0 * soft_u + 0.5 * hard_u
+        return 0.5 * soft_u + 1.0 * hard_u
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
@@ -236,7 +240,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             delta_adj_vec = self._get_delta_adjacency_vector(
                 shepherd_state=herd_states[idx, :2],
                 herd_states=shepherd_states,
-                r=300)
+                r=self._sensing_range)
 
             qi = herd_states[idx, :2]
             qj = shepherd_states[delta_adj_vec, :2]
@@ -260,16 +264,16 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         return u_gamma
 
     def _sigmoid_edge_following(self, qi: np.ndarray, qj: np.ndarray, d: float,
-                                bound: float):
+                                bound: float, k: float):
         def custom_sigmoid(qi: np.ndarray, qj: np.ndarray, d: float,
                            bound: float):
-            k = 0.01
+            k = 0.075
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            sigma = (bound/(1 + np.exp(-smoothed_rij_d - k*d))) - \
-                (bound/(1 + np.exp(smoothed_rij_d - k*d)))
-            sigma = np.round(sigma, 3)
+            sigma = (bound/(1 + np.exp(-2*smoothed_rij_d))) - \
+                (2 * bound/(1 + np.exp(smoothed_rij_d - k*d)))
+            sigma = np.round(sigma, 2)
             return sigma
 
         def local_crowd_horizon(qi: np.ndarray, qj: np.ndarray,
@@ -281,9 +285,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
             uij = qj[i, :] - qi
-            gain = local_crowd_horizon(qi=qi, qj=qj[i, :], r=d)
+            gain = local_crowd_horizon(qi=qi, qj=qj[i, :], r=d, k=k)
             sigma = custom_sigmoid(qi=qi, qj=qj[i, :], d=d, bound=bound)
-            u_sum += gain * sigma * utils.unit_vector(uij) * 17.5
+            u_sum += gain * sigma * utils.unit_vector(uij) * 15
         return u_sum
 
     def _formation_stable(self):

@@ -2,6 +2,8 @@
 import math
 import networkx as nx
 
+from scipy.spatial import Voronoi
+
 import pygame
 import numpy as np
 from multi_robot_herding.utils import params, utils
@@ -115,6 +117,8 @@ class MathematicalFlock(Behavior):
         self._clusters = []
         self._plot_cluster = False
 
+        self._states = np.empty((0, 2))
+
     # Herd
     def add_herd(self, herd: Herd):
         self._herds.append(herd)
@@ -180,7 +184,7 @@ class MathematicalFlock(Behavior):
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
-        
+
         # Density
         herd_density = self._herd_density(herd_states=herd_states,
                                           shepherd_states=shepherd_states)
@@ -203,8 +207,11 @@ class MathematicalFlock(Behavior):
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
-            herd._force = 2 * herd_density[idx,:]
+            herd._force = 2 * herd_density[idx, :]
             herd._plot_force = True
+
+        # self._states = np.vstack((herd_states[:, :2], shepherd_states[:, :2]))
+        self._states = herd_states[:, :2]
 
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
@@ -212,6 +219,39 @@ class MathematicalFlock(Behavior):
                 for edge in cluster:
                     pygame.draw.line(screen, pygame.Color("white"), tuple(edge[0, :2]),
                                      tuple(edge[1, :2]))
+
+        # # Plot voronoi
+        # vor = Voronoi(self._states)
+        # for indx_pair in vor.ridge_vertices:
+        #     if -1 not in indx_pair:
+
+        #         start_pos = vor.vertices[indx_pair[0]]
+        #         end_pos = vor.vertices[indx_pair[1]]
+
+        #         pygame.draw.line(screen, pygame.Color(
+        #             "white"), start_pos, end_pos)
+
+        # ptp_bound = vor.points.ptp(axis=0)
+        # center = vor.points.mean(axis=0)
+        # for pointidx, simplex in zip(vor.ridge_points, vor.ridge_vertices):
+        #     simplex = np.asarray(simplex)
+        #     if np.any(simplex < 0):
+        #         i = simplex[simplex >= 0][0]  # finite end Voronoi vertex
+
+        #         t = vor.points[pointidx[1]] - \
+        #             vor.points[pointidx[0]]  # tangent
+        #         t /= np.linalg.norm(t)
+        #         n = np.array([-t[1], t[0]])  # normal
+
+        #         midpoint = vor.points[pointidx].mean(axis=0)
+        #         direction = np.sign(np.dot(midpoint - center, n)) * n
+        #         far_point = vor.vertices[i] + direction * 100000
+
+        #         start_pos = (vor.vertices[i, 0], vor.vertices[i, 1])
+        #         end_pos = (far_point[0], far_point[1])
+
+        #         pygame.draw.line(screen, pygame.Color(
+        #             "white"), start_pos, end_pos)
 
     # Mathematical model of flocking
     def _flocking(self, herd_states: np.ndarray,
@@ -249,10 +289,11 @@ class MathematicalFlock(Behavior):
 
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_delta
+        print("==========")
         return u
 
     def _herd_density(self, herd_states: np.ndarray,
-                            shepherd_states: np.ndarray):
+                      shepherd_states: np.ndarray):
         herd_densities = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=self._sensing_range)
