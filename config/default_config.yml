@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 1
+    num: 20
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -32,8 +32,8 @@ entity:
         angle: 3.14
       - pose: [1100, 320]
         angle: 3.14
-      # - pose: [1100, 380]
-      #   angle: 3.14
+      - pose: [1100, 380]
+        angle: 3.14
       # - pose: [1100, 420]
       #   angle: 3.14
       # - pose: [1150, 500]
@@ -86,7 +86,7 @@ behavior:
         - obstacle
       behavior:
     params:
-      follow_cursor: true
+      follow_cursor: false
       sensing_range: 40
       danger_range: 90
       initial_consensus: [600, 350]

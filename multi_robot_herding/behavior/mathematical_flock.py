@@ -210,8 +210,8 @@ class MathematicalFlock(Behavior):
             herd._force = 2 * herd_density[idx, :]
             herd._plot_force = True
 
-        # self._states = np.vstack((herd_states[:, :2], shepherd_states[:, :2]))
-        self._states = herd_states[:, :2]
+        self._states = np.vstack((herd_states[:, :2], shepherd_states[:, :2]))
+        # self._states = herd_states[:, :2]
 
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
@@ -289,7 +289,6 @@ class MathematicalFlock(Behavior):
 
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_delta
-        print("==========")
         return u
 
     def _herd_density(self, herd_states: np.ndarray,

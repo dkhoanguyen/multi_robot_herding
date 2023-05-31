@@ -14,13 +14,13 @@ from multi_robot_herding.utils import utils
 
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
-                 co: float = 30.78 * 0.03,
+                 co: float = 30.78 * 0.06,
                  edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 230.0):
+                 sensing_range: float = 300.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -121,7 +121,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         po = np.zeros(2)
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
-        
+
         if sum(neighbor_shepherd_idxs) > 0:
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
             po = self._collision_avoidance_term(
@@ -130,8 +130,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 r=spacing)
         self._force_po = po
 
-        u = (0.25 * herd_states.shape[0]) * ps + po
-        return u
+        u = ps + po
+        return 2 * u
 
     def display(self, screen: pygame.Surface):
         # pygame.draw.line(
@@ -144,10 +144,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         #     screen, pygame.Color("grey"),
         #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
 
-        # pygame.draw.circle(screen, pygame.Color("white"),
-        #                    tuple(self._pose), self._distance_to_target, 1)
+        pygame.draw.circle(screen, pygame.Color("white"),
+                           tuple(self._pose), self._distance_to_target, 1)
         # pygame.draw.circle(screen, pygame.Color("yellow"),
-        #                    tuple(self._pose), self._interagent_spacing, 1)
+        #                    tuple(self._pose), self._sensing_range, 1)
 
         for i in range(self._herd_density_to_plot.shape[0]):
             pygame.draw.circle(screen, pygame.Color("white"),
@@ -169,7 +169,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             bound=20,
             k=0.375)
 
-        return 0.5 * soft_u + 1.0 * hard_u
+        return 1.5 * soft_u + 0.5 * hard_u
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
@@ -267,12 +267,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                 bound: float, k: float):
         def custom_sigmoid(qi: np.ndarray, qj: np.ndarray, d: float,
                            bound: float):
-            k = 0.075
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            sigma = (bound/(1 + np.exp(-2*smoothed_rij_d))) - \
-                (2 * bound/(1 + np.exp(smoothed_rij_d - k*d)))
+            sigma = (bound/(1 + np.exp(-smoothed_rij_d))) - \
+                (bound/(0.1 + np.exp(smoothed_rij_d)))
             sigma = np.round(sigma, 2)
             return sigma
 
@@ -280,14 +279,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                 r: float,
                                 k: float = 0.5):
             qij = qi - qj
-            return (1/(1 + k * np.linalg.norm(qij)))
+            return (1/(1 + k * (np.linalg.norm(qij))))
 
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
             uij = qj[i, :] - qi
             gain = local_crowd_horizon(qi=qi, qj=qj[i, :], r=d, k=k)
+            # gain = 1
             sigma = custom_sigmoid(qi=qi, qj=qj[i, :], d=d, bound=bound)
-            u_sum += gain * sigma * utils.unit_vector(uij) * 15
+            u_sum += gain * sigma * utils.unit_vector(uij) * 3
         return u_sum
 
     def _formation_stable(self):
