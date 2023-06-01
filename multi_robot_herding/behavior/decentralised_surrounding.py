@@ -14,13 +14,13 @@ from multi_robot_herding.utils import utils
 
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
-                 co: float = 30.78 * 0.06,
+                 co: float = 30.78 * 0.1,
                  edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 300.0):
+                 sensing_range: float = 230.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -101,7 +101,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
-            r=self._sensing_range)
+            r=spacing)
 
         di = state[:2]
 
@@ -110,13 +110,18 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         if sum(neighbor_herd_idxs) > 0:
             sj = filter_herd_states[:, :2]
 
-            ps = self._sigmoid_edge_following(
-                qi=di,
-                qj=sj,
-                d=d_to_target,
-                bound=20,
-                k=0.5
-            )
+            # ps = self._sigmoid_edge_following(
+            #     qi=di,
+            #     qj=sj,
+            #     d=d_to_target,
+            #     bound=50,
+            #     k=0.5
+            # )
+            ps = self._potential_edge_following(qi=di,
+                                                qj=sj,
+                                                d=d_to_target,
+                                                d_dead=10,
+                                                gain=1)
         self._force_ps = ps
 
         po = np.zeros(2)
@@ -131,15 +136,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._force_po = po
 
         u = ps + po
-        return 2 * u
+        return u
 
     def display(self, screen: pygame.Surface):
-        # pygame.draw.line(
-        #     screen, pygame.Color("white"),
-        #     tuple(self._pose), tuple(self._pose + 10 * (self._force_po)))
-        # pygame.draw.line(
-        #     screen, pygame.Color("yellow"),
-        #     tuple(self._pose), tuple(self._pose + 10 * (self._force_ps)))
+        pygame.draw.line(
+            screen, pygame.Color("white"),
+            tuple(self._pose), tuple(self._pose + 2 * (self._force_po)))
+        pygame.draw.line(
+            screen, pygame.Color("yellow"),
+            tuple(self._pose), tuple(self._pose + 2 * (self._force_ps)))
         # pygame.draw.line(
         #     screen, pygame.Color("grey"),
         #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
@@ -162,14 +167,14 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r=r,
             d=r)*n_ij, axis=0)
 
-        hard_u = self._sigmoid_edge_following(
-            qi=qi,
-            qj=qj,
-            d=r,
-            bound=20,
-            k=0.375)
+        # hard_u = self._sigmoid_edge_following(
+        #     qi=qi,
+        #     qj=qj,
+        #     d=r,
+        #     bound=20,
+        #     k=0.375)
 
-        return 1.5 * soft_u + 0.5 * hard_u
+        return soft_u
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
@@ -272,14 +277,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             smoothed_rij_d = rij - d
             sigma = (bound/(1 + np.exp(-smoothed_rij_d))) - \
                 (bound/(0.1 + np.exp(smoothed_rij_d)))
-            sigma = np.round(sigma, 2)
+            # sigma = np.round(sigma, 3)
             return sigma
 
         def local_crowd_horizon(qi: np.ndarray, qj: np.ndarray,
                                 r: float,
                                 k: float = 0.5):
             qij = qi - qj
-            return (1/(1 + k * (np.linalg.norm(qij))))
+            return (1/(1 + k * ((np.linalg.norm(qij)))))
+            # return np.linalg.norm(qij)
 
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
@@ -287,7 +293,41 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             gain = local_crowd_horizon(qi=qi, qj=qj[i, :], r=d, k=k)
             # gain = 1
             sigma = custom_sigmoid(qi=qi, qj=qj[i, :], d=d, bound=bound)
+            # sigma = custom_exponential(qi=qi, qj=qj[i, :], d=d, bound=bound)
+            # print(f"sigma = {sigma}")
             u_sum += gain * sigma * utils.unit_vector(uij) * 3
+        return u_sum
+
+    def _potential_edge_following(self, qi: np.ndarray, qj: np.ndarray,
+                                  d: float,
+                                  d_dead: float,
+                                  gain: float):
+        def custom_potential(qi: np.ndarray, qj: np.ndarray,
+                             d: float,
+                             d_dead: float,
+                             gain: float):
+            qij = qi - qj
+            rij = np.linalg.norm(qij)
+            smoothed_rij_d = rij - d
+            c = 4
+
+            attraction = 1/(1+np.exp(-smoothed_rij_d**2))
+            repulsion = 1/(1+np.exp(smoothed_rij_d**2))
+
+            fx = attraction - repulsion
+            # gx = gain/(d_dead + smoothed_rij_d)
+            gx = gain + np.exp(-smoothed_rij_d/c)
+
+            # Potential function
+            px = np.sign(smoothed_rij_d) * gx * fx 
+            return px
+
+        u_sum = np.zeros(2).astype(np.float64)
+        for i in range(qj.shape[0]):
+            uij = qj[i, :] - qi
+            p = custom_potential(
+                qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
+            u_sum += p * utils.unit_vector(uij)
         return u_sum
 
     def _formation_stable(self):
