@@ -14,13 +14,13 @@ from multi_robot_herding.utils import utils
 
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
-                 co: float = 30.78 * 0.1,
+                 co: float = 30.78 * 0.075,
                  edge_k: float = 0.125,
                  distance_to_target: float = 200.0,
                  interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 230.0):
+                 sensing_range: float = 500.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -121,7 +121,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                 qj=sj,
                                                 d=d_to_target,
                                                 d_dead=10,
-                                                gain=1)
+                                                gain=1.2)
         self._force_ps = ps
 
         po = np.zeros(2)
@@ -135,7 +135,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 r=spacing)
         self._force_po = po
 
-        u = ps + po
+        u = ps +  po
         return u
 
     def display(self, screen: pygame.Surface):
@@ -167,14 +167,14 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r=r,
             d=r)*n_ij, axis=0)
 
-        # hard_u = self._sigmoid_edge_following(
-        #     qi=qi,
-        #     qj=qj,
-        #     d=r,
-        #     bound=20,
-        #     k=0.375)
+        hard_u = self._sigmoid_edge_following(
+            qi=qi,
+            qj=qj,
+            d=r,
+            bound=20,
+            k=0.5)
 
-        return soft_u
+        return 1.25 * hard_u
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
