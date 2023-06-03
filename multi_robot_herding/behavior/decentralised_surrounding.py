@@ -20,7 +20,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 500.0):
+                 sensing_range: float = 300.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -121,7 +121,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                 qj=sj,
                                                 d=d_to_target,
                                                 d_dead=10,
-                                                gain=1.2)
+                                                gain=1.25)
         self._force_ps = ps
 
         po = np.zeros(2)
@@ -135,22 +135,22 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 r=spacing)
         self._force_po = po
 
-        u = ps +  po
+        u = ps + po
         return u
 
     def display(self, screen: pygame.Surface):
-        pygame.draw.line(
-            screen, pygame.Color("white"),
-            tuple(self._pose), tuple(self._pose + 2 * (self._force_po)))
-        pygame.draw.line(
-            screen, pygame.Color("yellow"),
-            tuple(self._pose), tuple(self._pose + 2 * (self._force_ps)))
+        # pygame.draw.line(
+        #     screen, pygame.Color("white"),
+        #     tuple(self._pose), tuple(self._pose + 2 * (self._force_po)))
+        # pygame.draw.line(
+        #     screen, pygame.Color("yellow"),
+        #     tuple(self._pose), tuple(self._pose + 2 * (self._force_ps)))
         # pygame.draw.line(
         #     screen, pygame.Color("grey"),
         #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
 
-        pygame.draw.circle(screen, pygame.Color("white"),
-                           tuple(self._pose), self._distance_to_target, 1)
+        # pygame.draw.circle(screen, pygame.Color("white"),
+        #                    tuple(self._pose), self._distance_to_target, 1)
         # pygame.draw.circle(screen, pygame.Color("yellow"),
         #                    tuple(self._pose), self._sensing_range, 1)
 
@@ -161,20 +161,36 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):
-        n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)
-        soft_u = gain * np.sum(utils.MathUtils.phi_alpha(
-            utils.MathUtils.sigma_norm(qj-qi),
-            r=r,
-            d=r)*n_ij, axis=0)
+        # # n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)
+        # # soft_u = gain * np.sum(utils.MathUtils.phi_alpha(
+        # #     utils.MathUtils.sigma_norm(qj-qi),
+        # #     r=r,
+        # #     d=r)*n_ij, axis=0)
 
-        hard_u = self._sigmoid_edge_following(
-            qi=qi,
-            qj=qj,
-            d=r,
-            bound=20,
-            k=0.5)
+        # hard_u = self._sigmoid_edge_following(
+        #     qi=qi,
+        #     qj=qj,
+        #     d=r,
+        #     bound=20,
+        #     k=0.5)
+        # # return 2*soft_u
 
-        return 1.25 * hard_u
+        def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
+                                      d: float):
+            qij = qi - qj
+            rij = np.linalg.norm(qij)
+            smoothed_rij_d = rij - d
+            fx = (np.exp(smoothed_rij_d)-1)/(np.exp(smoothed_rij_d)+1)  # tanh
+            return fx*1/(1+rij) * 1600
+            # return (fx**3)*10
+
+        u_sum = np.zeros(2).astype(np.float64)
+        for i in range(qj.shape[0]):
+            uij = qj[i, :] - qi
+            p = custom_potential_function(
+                qi=qi, qj=qj[i, :], d=r)
+            u_sum += p * utils.unit_vector(uij)
+        return u_sum
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
@@ -309,17 +325,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            c = 4
+            c = 6
 
-            attraction = 1/(1+np.exp(-smoothed_rij_d**2))
-            repulsion = 1/(1+np.exp(smoothed_rij_d**2))
-
-            fx = attraction - repulsion
-            # gx = gain/(d_dead + smoothed_rij_d)
-            gx = gain + np.exp(-smoothed_rij_d/c)
+            fx = (gain + np.exp(-smoothed_rij_d/c)) * smoothed_rij_d * \
+                (np.exp(smoothed_rij_d) - 1) / (np.exp(smoothed_rij_d) + 1)
 
             # Potential function
-            px = np.sign(smoothed_rij_d) * gx * fx 
+            px = np.sign(smoothed_rij_d) * fx * 0.01
             return px
 
         u_sum = np.zeros(2).astype(np.float64)

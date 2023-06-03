@@ -111,6 +111,7 @@ class MathematicalFlock(Behavior):
 
         # For visualization
         self._contour_agents = []
+        self._plot_voronoi = False
 
         # Clusters
         self._total_clusters = 0
@@ -210,7 +211,9 @@ class MathematicalFlock(Behavior):
             herd._force = 2 * herd_density[idx, :]
             herd._plot_force = True
 
-        self._states = np.vstack((herd_states[:, :2], shepherd_states[:, :2]))
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+        self._states = np.vstack((herd_mean, shepherd_states[:, :2]))
         # self._states = herd_states[:, :2]
 
     def display(self, screen: pygame.Surface):
@@ -220,38 +223,39 @@ class MathematicalFlock(Behavior):
                     pygame.draw.line(screen, pygame.Color("white"), tuple(edge[0, :2]),
                                      tuple(edge[1, :2]))
 
-        # # Plot voronoi
-        # vor = Voronoi(self._states)
-        # for indx_pair in vor.ridge_vertices:
-        #     if -1 not in indx_pair:
+        # Plot voronoi
+        if self._plot_voronoi:
+            vor = Voronoi(self._states)
+            for indx_pair in vor.ridge_vertices:
+                if -1 not in indx_pair:
 
-        #         start_pos = vor.vertices[indx_pair[0]]
-        #         end_pos = vor.vertices[indx_pair[1]]
+                    start_pos = vor.vertices[indx_pair[0]]
+                    end_pos = vor.vertices[indx_pair[1]]
 
-        #         pygame.draw.line(screen, pygame.Color(
-        #             "white"), start_pos, end_pos)
+                    pygame.draw.line(screen, pygame.Color(
+                        "white"), start_pos, end_pos)
 
-        # ptp_bound = vor.points.ptp(axis=0)
-        # center = vor.points.mean(axis=0)
-        # for pointidx, simplex in zip(vor.ridge_points, vor.ridge_vertices):
-        #     simplex = np.asarray(simplex)
-        #     if np.any(simplex < 0):
-        #         i = simplex[simplex >= 0][0]  # finite end Voronoi vertex
+            ptp_bound = vor.points.ptp(axis=0)
+            center = vor.points.mean(axis=0)
+            for pointidx, simplex in zip(vor.ridge_points, vor.ridge_vertices):
+                simplex = np.asarray(simplex)
+                if np.any(simplex < 0):
+                    i = simplex[simplex >= 0][0]  # finite end Voronoi vertex
 
-        #         t = vor.points[pointidx[1]] - \
-        #             vor.points[pointidx[0]]  # tangent
-        #         t /= np.linalg.norm(t)
-        #         n = np.array([-t[1], t[0]])  # normal
+                    t = vor.points[pointidx[1]] - \
+                        vor.points[pointidx[0]]  # tangent
+                    t /= np.linalg.norm(t)
+                    n = np.array([-t[1], t[0]])  # normal
 
-        #         midpoint = vor.points[pointidx].mean(axis=0)
-        #         direction = np.sign(np.dot(midpoint - center, n)) * n
-        #         far_point = vor.vertices[i] + direction * 100000
+                    midpoint = vor.points[pointidx].mean(axis=0)
+                    direction = np.sign(np.dot(midpoint - center, n)) * n
+                    far_point = vor.vertices[i] + direction * 100000
 
-        #         start_pos = (vor.vertices[i, 0], vor.vertices[i, 1])
-        #         end_pos = (far_point[0], far_point[1])
+                    start_pos = (vor.vertices[i, 0], vor.vertices[i, 1])
+                    end_pos = (far_point[0], far_point[1])
 
-        #         pygame.draw.line(screen, pygame.Color(
-        #             "white"), start_pos, end_pos)
+                    pygame.draw.line(screen, pygame.Color(
+                        "white"), start_pos, end_pos)
 
     # Mathematical model of flocking
     def _flocking(self, herd_states: np.ndarray,
