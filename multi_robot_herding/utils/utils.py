@@ -79,7 +79,7 @@ def truncate(vector, max_length):
 
 
 def unit_vector(vector):
-    return np.array(vector) / np.linalg.norm(vector)
+    return np.array(vector) / (1+np.linalg.norm(vector))
 
 
 class MathUtils():

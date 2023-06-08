@@ -20,7 +20,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  interagent_spacing: float = 200.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 300.0):
+                 sensing_range: float = 400.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -104,12 +104,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             r=spacing)
 
         di = state[:2]
+        d_dot_i = state[2:4]
 
         neighbor_herd_idxs = delta_adjacency_vector
         ps = np.zeros(2)
         if sum(neighbor_herd_idxs) > 0:
-            sj = filter_herd_states[:, :2]
-
+            sj = filter_herd_states[neighbor_herd_idxs, :2]
+            s_dot_j = filter_herd_states[neighbor_herd_idxs, :2]
             # ps = self._sigmoid_edge_following(
             #     qi=di,
             #     qj=sj,
@@ -119,9 +120,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             # )
             ps = self._potential_edge_following(qi=di,
                                                 qj=sj,
+                                                pi=d_dot_i,
+                                                pj=s_dot_j,
                                                 d=d_to_target,
                                                 d_dead=10,
-                                                gain=1.25)
+                                                gain=2)
         self._force_ps = ps
 
         po = np.zeros(2)
@@ -130,7 +133,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         if sum(neighbor_shepherd_idxs) > 0:
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
             po = self._collision_avoidance_term(
-                gain=self._co,
+                gain=0.7,
                 qi=di, qj=dj,
                 r=spacing)
         self._force_po = po
@@ -149,14 +152,14 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         #     screen, pygame.Color("grey"),
         #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
 
-        # pygame.draw.circle(screen, pygame.Color("white"),
-        #                    tuple(self._pose), self._distance_to_target, 1)
+        pygame.draw.circle(screen, pygame.Color("white"),
+                           tuple(self._pose), self._distance_to_target, 1)
         # pygame.draw.circle(screen, pygame.Color("yellow"),
         #                    tuple(self._pose), self._sensing_range, 1)
 
-        for i in range(self._herd_density_to_plot.shape[0]):
-            pygame.draw.circle(screen, pygame.Color("white"),
-                               tuple(self._herd_density_to_plot[i, :2]), 10, 2)
+        # for i in range(self._herd_density_to_plot.shape[0]):
+        #     pygame.draw.circle(screen, pygame.Color("white"),
+        #                        tuple(self._herd_density_to_plot[i, :2]), 10, 2)
         return super().display(screen)
 
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
@@ -180,13 +183,21 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            fx = (np.exp(smoothed_rij_d)-1)/(np.exp(smoothed_rij_d)+1)  # tanh
-            return fx*1/(1+rij) * 1600
-            # return (fx**3)*10
+            c = 12
+            m = 10
+
+            fx = gain*(1 - np.exp(-smoothed_rij_d/c))
+            gx = np.tanh(smoothed_rij_d/m)
+            # gx = np.tanh(smoothed_rij_d**2)
+            # print(gx)
+
+            # Potential function
+            px = -fx*(gx**2)
+            return px
 
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
-            uij = qj[i, :] - qi
+            uij = qi - qj[i, :]
             p = custom_potential_function(
                 qi=qi, qj=qj[i, :], d=r)
             u_sum += p * utils.unit_vector(uij)
@@ -315,6 +326,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         return u_sum
 
     def _potential_edge_following(self, qi: np.ndarray, qj: np.ndarray,
+                                  pi: np.ndarray, pj: np.ndarray,
                                   d: float,
                                   d_dead: float,
                                   gain: float):
@@ -325,18 +337,23 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            c = 6
+            c = 10
+            m = 20
 
-            fx = (gain + np.exp(-smoothed_rij_d/c)) * smoothed_rij_d * \
-                (np.exp(smoothed_rij_d) - 1) / (np.exp(smoothed_rij_d) + 1)
+            fx = gain*(1 - np.exp(-smoothed_rij_d/c))
+            gx = np.tanh(smoothed_rij_d/m)
+            # gx = np.tanh(smoothed_rij_d**2)
+            # print(gx)
 
             # Potential function
-            px = np.sign(smoothed_rij_d) * fx * 0.01
+            px = -fx*(gx**2)
             return px
 
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
-            uij = qj[i, :] - qi
+            uij = qi - qj[i, :]
+            pij = pi - pj[i, :]
+            # print(pij.shape)
             p = custom_potential(
                 qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
             u_sum += p * utils.unit_vector(uij)
