@@ -16,11 +16,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
                  co: float = 30.78 * 0.075,
                  edge_k: float = 0.125,
-                 distance_to_target: float = 200.0,
-                 interagent_spacing: float = 200.0,
+                 distance_to_target: float = 150.0,
+                 interagent_spacing: float = 210.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 400.0):
+                 sensing_range: float = 6000.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -101,7 +101,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
-            r=spacing)
+            r=self._sensing_range)
 
         di = state[:2]
         d_dot_i = state[2:4]
@@ -110,7 +110,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         ps = np.zeros(2)
         if sum(neighbor_herd_idxs) > 0:
             sj = filter_herd_states[neighbor_herd_idxs, :2]
-            s_dot_j = filter_herd_states[neighbor_herd_idxs, :2]
+            s_dot_j = filter_herd_states[neighbor_herd_idxs, 2:4]
             # ps = self._sigmoid_edge_following(
             #     qi=di,
             #     qj=sj,
@@ -132,9 +132,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         if sum(neighbor_shepherd_idxs) > 0:
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
+            d_dot_j = all_shepherd_states[neighbor_shepherd_idxs, 2:4]
             po = self._collision_avoidance_term(
                 gain=0.7,
                 qi=di, qj=dj,
+                pi=d_dot_i,
+                pj=d_dot_j,
                 r=spacing)
         self._force_po = po
 
@@ -162,28 +165,17 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         #                        tuple(self._herd_density_to_plot[i, :2]), 10, 2)
         return super().display(screen)
 
-    def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
-                                  qj: np.ndarray, r: float):
-        # # n_ij = utils.MathUtils.sigma_norm_grad(qj - qi)
-        # # soft_u = gain * np.sum(utils.MathUtils.phi_alpha(
-        # #     utils.MathUtils.sigma_norm(qj-qi),
-        # #     r=r,
-        # #     d=r)*n_ij, axis=0)
-
-        # hard_u = self._sigmoid_edge_following(
-        #     qi=qi,
-        #     qj=qj,
-        #     d=r,
-        #     bound=20,
-        #     k=0.5)
-        # # return 2*soft_u
+    def _collision_avoidance_term(self, gain: float,
+                                  qi: np.ndarray, qj: np.ndarray,
+                                  pi: np.ndarray, pj: np.ndarray,
+                                  r: float):
 
         def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
                                       d: float):
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            c = 12
+            c = 15
             m = 10
 
             fx = gain*(1 - np.exp(-smoothed_rij_d/c))
@@ -200,7 +192,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             p = custom_potential_function(
                 qi=qi, qj=qj[i, :], d=r)
-            u_sum += p * utils.unit_vector(uij)
+            u_sum += p * utils.unit_vector(uij) + 0.08 * pj[i, :]
         return u_sum
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
@@ -353,10 +345,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         for i in range(qj.shape[0]):
             uij = qi - qj[i, :]
             pij = pi - pj[i, :]
-            # print(pij.shape)
+            # print(pij)
             p = custom_potential(
                 qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
-            u_sum += p * utils.unit_vector(uij)
+            u_sum += (p * utils.unit_vector(uij) + 0.065 * (pj[i, :]))
         return u_sum
 
     def _formation_stable(self):

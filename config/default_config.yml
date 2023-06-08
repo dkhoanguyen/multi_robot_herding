@@ -88,7 +88,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 90
+      danger_range: 220
       initial_consensus: [600, 350]
     constants:
       c1_alpha: 3

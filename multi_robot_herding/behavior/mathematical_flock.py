@@ -159,7 +159,7 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
 
-        self._flocking_condition = 1
+        self._flocking_condition = 0
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
