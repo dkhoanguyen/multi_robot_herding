@@ -28,7 +28,7 @@ class Obstacle(Entity):
         pass
 
     @abstractmethod
-    def induce_beta_agent(self, alpha_agent: Entity):
+    def induce_beta_agent(self, qi: np.ndarray, pi: np.ndarray):
         pass
 
 
@@ -53,9 +53,9 @@ class Hyperplane(Obstacle):
         projected_q = np.array([projected_q[0,0],projected_q[1,1]])
         return np.linalg.norm(projected_q - qi) <= r
 
-    def induce_beta_agent(self, alpha_agent: Entity) -> np.ndarray:
-        qi = alpha_agent.pose.reshape((2, 1))
-        pi = alpha_agent.velocity.reshape((2, 1))
+    def induce_beta_agent(self, qi: np.ndarray, pi: np.ndarray) -> np.ndarray:
+        qi = qi.reshape((2, 1))
+        pi = pi.reshape((2, 1))
 
         qik = self._P @ qi + (np.eye(2) - self._P) @ self._yk
         pik = self._P @ pi
@@ -76,9 +76,9 @@ class Sphere(Obstacle):
         # Project entity posit
         return np.linalg.norm(self._yk - qi.reshape((2, 1))) <= r + self._Rk
 
-    def induce_beta_agent(self, alpha_agent: Entity) -> np.ndarray:
-        qi = alpha_agent.pose.reshape((2, 1))
-        pi = alpha_agent.velocity.reshape((2, 1))
+    def induce_beta_agent(self, qi: np.ndarray, pi: np.ndarray) -> np.ndarray:
+        qi = qi.reshape((2, 1))
+        pi = pi.reshape((2, 1))
 
         mu = self._Rk / np.linalg.norm(qi - self._yk)
         ak = (qi - self._yk)/np.linalg.norm(qi - self._yk)

@@ -60,6 +60,7 @@ class DecentralisedFormation(DecentralisedBehavior):
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
+               obstacles: list,
                consensus_states: dict,
                raw_states: np.ndarray):
         u = np.zeros(2)

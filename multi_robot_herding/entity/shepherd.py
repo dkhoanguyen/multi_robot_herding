@@ -9,6 +9,7 @@ from enum import Enum
 
 from multi_robot_herding.utils import utils
 from multi_robot_herding.entity.entity import Autonomous, Entity, DynamicType
+from multi_robot_herding.entity.obstacle import Obstacle
 
 
 class State(Enum):
@@ -131,12 +132,13 @@ class Shepherd(Autonomous):
                 state=self.state,
                 other_states=shepherd_in_range,
                 herd_states=all_herd_states,
+                obstacles=self._static_obstacles,
                 consensus_states=all_consensus_states,
                 raw_states=all_shepherd_states)
 
         if self._type == DynamicType.SingleIntegrator:
-            if np.linalg.norm(u) > 20:
-                u = 20 * utils.unit_vector(u)
+            if np.linalg.norm(u) > 25:
+                u = 25 * utils.unit_vector(u)
 
             qdot = u.reshape((u.size,))
             self.velocity = qdot
@@ -154,10 +156,10 @@ class Shepherd(Autonomous):
 
         if self._plot_influence:
             pygame.draw.circle(screen, pygame.Color("white"),
-                            tuple(self.pose), 200, 1)
+                               tuple(self.pose), 200, 1)
 
         return super().display(screen, debug)
-    
+
     def in_entity_radius(self, qi: np.ndarray, r: float) -> bool:
         # Project entity posit
         return np.linalg.norm(self._pose - qi) <= (r + self._r)

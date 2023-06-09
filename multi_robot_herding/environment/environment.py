@@ -30,6 +30,8 @@ class Environment(object):
         for entity_name in entities_name:
             self._entities[entity_name] = []
 
+        self._set_static_entities = False
+
     @property
     def ok(self):
         return self._running
@@ -64,6 +66,13 @@ class Environment(object):
         # motion_event, click_event = None, None
         for behavior in self._behaviors:
             behavior.update(events)
+
+        # Set static entities
+        if not self._set_static_entities:
+            for shepherd in self._entities["shepherd"]:
+                for obstacle in self._entities["obstacle"]:
+                    shepherd.add_static_obstacle(obstacle)
+            self._set_static_entities = True
 
         # Grab all states
         all_states = {}

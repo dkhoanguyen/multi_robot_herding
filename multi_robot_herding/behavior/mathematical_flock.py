@@ -457,7 +457,7 @@ class MathematicalFlock(Behavior):
             beta_agents = np.array([]).reshape((0, 4))
             for obs_idx in obs_in_radius[0]:
                 beta_agent = self._obstacles[obs_idx].induce_beta_agent(
-                    self._herds[idx])
+                    qi, pi)
                 beta_agents = np.vstack((beta_agents, beta_agent))
 
             qik = beta_agents[:, :2]
@@ -515,7 +515,7 @@ class MathematicalFlock(Behavior):
             u_delta = delta_grad + delta_consensus
 
         u_delta += self._predator_avoidance_term(
-            si=qi, r=self._danger_range, k=200000)
+            si=qi, r=self._danger_range, k=550000)
 
         return u_delta
 

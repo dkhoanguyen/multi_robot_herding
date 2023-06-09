@@ -5,6 +5,7 @@ from multi_robot_herding.common.behavior import Behavior
 
 from multi_robot_herding.entity.entity import Autonomous
 from multi_robot_herding.entity.herd import Herd
+from multi_robot_herding.entity.obstacle import Obstacle
 
 
 class DecentralisedBehavior(Behavior):

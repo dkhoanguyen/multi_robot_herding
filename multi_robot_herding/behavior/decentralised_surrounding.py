@@ -1,12 +1,9 @@
 # !/usr/bin/python3
 
-import time
 import math
 import pygame
 import numpy as np
 from collections import deque
-
-import alphashape
 
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
@@ -16,11 +13,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
                  co: float = 30.78 * 0.075,
                  edge_k: float = 0.125,
-                 distance_to_target: float = 150.0,
-                 interagent_spacing: float = 210.0,
+                 distance_to_target: float = 120.0,
+                 interagent_spacing: float = 170.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 6000.0):
+                 sensing_range: float = 400.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -59,6 +56,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def update(self, state: np.ndarray,
                other_states: np.ndarray,
                herd_states: np.ndarray,
+               obstacles: list,
                consensus_states: dict,
                raw_states: np.ndarray):
         # Control signal
@@ -86,11 +84,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             self._stablised_energy.append(
                 sum(self._total_energy)/len(self._total_energy))
 
-        # hull = alphashape.alphashape(herd_states[:, :2], 0.005)
-        # x, _ = hull.exterior.coords.xy
-        # indices = np.where(np.in1d(herd_states[:, :1], np.array(x)))[0]
-
-        # filter_herd_states = herd_states[indices, :]
         filter_herd_states = herd_states[:, :]
         self._herd_density_to_plot = filter_herd_states
 
@@ -111,13 +104,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         if sum(neighbor_herd_idxs) > 0:
             sj = filter_herd_states[neighbor_herd_idxs, :2]
             s_dot_j = filter_herd_states[neighbor_herd_idxs, 2:4]
-            # ps = self._sigmoid_edge_following(
-            #     qi=di,
-            #     qj=sj,
-            #     d=d_to_target,
-            #     bound=50,
-            #     k=0.5
-            # )
             ps = self._potential_edge_following(qi=di,
                                                 qj=sj,
                                                 pi=d_dot_i,
@@ -141,7 +127,18 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 r=spacing)
         self._force_po = po
 
-        u = ps + po
+        # Obstacle avoidance term
+        beta_adj_vec = self._get_beta_adjacency_vector(state=state,
+                                                       obstacles=obstacles,
+                                                       r=self._sensing_range)
+        p_avoid = np.zeros((2,))
+        if sum(beta_adj_vec) > 0:
+            p_avoid = self._obstacle_avoidance(qi=di, pi=d_dot_i,
+                                               beta_adj_vec=beta_adj_vec,
+                                               obstacle_list=obstacles,
+                                               r=30,
+                                               gain=1)
+        u = ps + po + p_avoid
         return u
 
     def display(self, screen: pygame.Surface):
@@ -180,8 +177,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
             fx = gain*(1 - np.exp(-smoothed_rij_d/c))
             gx = np.tanh(smoothed_rij_d/m)
-            # gx = np.tanh(smoothed_rij_d**2)
-            # print(gx)
 
             # Potential function
             px = -fx*(gx**2)
@@ -334,8 +329,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
             fx = gain*(1 - np.exp(-smoothed_rij_d/c))
             gx = np.tanh(smoothed_rij_d/m)
-            # gx = np.tanh(smoothed_rij_d**2)
-            # print(gx)
 
             # Potential function
             px = -fx*(gx**2)
@@ -344,11 +337,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
             uij = qi - qj[i, :]
-            pij = pi - pj[i, :]
-            # print(pij)
             p = custom_potential(
                 qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
-            u_sum += (p * utils.unit_vector(uij) + 0.065 * (pj[i, :]))
+            u_sum += (p * utils.unit_vector(uij) + 0.05 * (pj[i, :]))
         return u_sum
 
     def _formation_stable(self):
@@ -364,3 +355,45 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         polyder = np.polyder(poly)
         cond = np.abs(np.round(float(polyder.coef[0]), 1))
         return not bool(cond)
+
+    def _get_beta_adjacency_vector(self, state: np.ndarray,
+                                   obstacles: list, r: float) -> np.ndarray:
+        adj_vec = []
+        for obstacle in obstacles:
+            adj_vec.append(obstacle.in_entity_radius(state[:2], r=r))
+        return np.array(adj_vec)
+
+    def _obstacle_avoidance(self, qi: np.ndarray,
+                            pi: np.ndarray,
+                            beta_adj_vec: np.ndarray,
+                            obstacle_list: list,
+                            r: float,
+                            gain: float):
+        def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
+                                      d: float):
+            qij = qi - qj
+            rij = np.linalg.norm(qij)
+            smoothed_rij_d = rij - d
+            c = 6
+            m = 10
+
+            fx = gain*(- np.exp(-smoothed_rij_d/c))
+            gx = np.tanh(smoothed_rij_d/m)
+
+            # Potential function
+            px = -fx*(gx**2)
+            return px
+
+        obs_in_radius = np.where(beta_adj_vec)
+        beta_agents = np.array([]).reshape((0, 4))
+
+        u_sum = np.zeros(2).astype(np.float64)
+        for obs_idx in obs_in_radius[0]:
+            beta_agent = obstacle_list[obs_idx].induce_beta_agent(
+                qi, pi)
+            qj = beta_agent[:2]
+            qij = qi - qj
+            p = custom_potential_function(
+                qi=qi, qj=qj, d=r)
+            u_sum += p * utils.unit_vector(qij) * 10
+        return u_sum

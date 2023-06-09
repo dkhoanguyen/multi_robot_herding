@@ -130,6 +130,12 @@ class Autonomous(Entity):
 
         self._type = DynamicType.SingleIntegrator
 
+        # Static obstacles
+        self._static_obstacles = []
+
+    def add_static_obstacle(self,obstacle):
+        self._static_obstacles.append(obstacle)
+
     def display(self, screen: pygame.Surface, debug=False):
         super().display(screen)
         if self._plot_velocity:
