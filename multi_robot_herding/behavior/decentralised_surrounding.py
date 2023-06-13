@@ -13,11 +13,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self, cs: float = 10.0,
                  co: float = 30.78 * 0.075,
                  edge_k: float = 0.125,
-                 distance_to_target: float = 120.0,
-                 interagent_spacing: float = 170.0,
+                 distance_to_target: float = 125.0,
+                 interagent_spacing: float = 150.0,
                  skrink_distance: float = 140.0,
                  skrink_spacing: float = 160.0,
-                 sensing_range: float = 400.0):
+                 sensing_range: float = 700.0):
         super().__init__()
         self._cs = cs
         self._co = co
@@ -33,6 +33,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._force_po = np.zeros(2)
         self._force_u = np.zeros(2)
 
+        self._stopped = False
+
         # Plotting
         self._herd_density_to_plot = np.empty((0, 2))
 
@@ -42,6 +44,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         self._triggered = False
         self._voronoi = None
+
+        self._plot_force = True
+        self._plot_range = False
 
     def transition(self, state: np.ndarray,
                    other_states: np.ndarray,
@@ -64,8 +69,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         u = np.zeros(2)
         all_shepherd_states = np.vstack((state, other_states))
 
-        formation_stable = self._formation_stable()
-
         d_to_target = self._distance_to_target
         spacing = self._interagent_spacing
         # if formation_stable and not self._triggered:
@@ -80,9 +83,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         total_density = np.sum(np.linalg.norm(herd_density, axis=1))
         self._total_energy.append(total_density)
 
-        if formation_stable:
-            self._stablised_energy.append(
-                sum(self._total_energy)/len(self._total_energy))
+        formation_stable = self._formation_stable()
+        # if self._stopped or formation_stable:
+        #     self._stopped = True
+        #     return u
 
         filter_herd_states = herd_states[:, :]
         self._herd_density_to_plot = filter_herd_states
@@ -138,28 +142,33 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                obstacle_list=obstacles,
                                                r=30,
                                                gain=1)
-        u = ps + po + p_avoid
+        p_target = np.zeros((2,))
+        if self._stopped or formation_stable:
+            self._stopped = True
+            p_target = -(10/total_density)*(di - np.array([1200,350]))
+
+        self._force_u = p_target
+        u = 15 * ps + 6 * po + p_avoid + p_target
         return u
 
     def display(self, screen: pygame.Surface):
-        # pygame.draw.line(
-        #     screen, pygame.Color("white"),
-        #     tuple(self._pose), tuple(self._pose + 2 * (self._force_po)))
-        # pygame.draw.line(
-        #     screen, pygame.Color("yellow"),
-        #     tuple(self._pose), tuple(self._pose + 2 * (self._force_ps)))
-        # pygame.draw.line(
-        #     screen, pygame.Color("grey"),
-        #     tuple(self._pose), tuple(self._pose + 10 * (self._force_u)))
+        if self._plot_force:
+            pygame.draw.line(
+                screen, pygame.Color("white"),
+                tuple(self._pose), tuple(self._pose + 5 * (self._force_po)))
+            pygame.draw.line(
+                screen, pygame.Color("yellow"),
+                tuple(self._pose), tuple(self._pose + 5 * (self._force_ps)))
+            pygame.draw.line(
+                screen, pygame.Color("grey"),
+                tuple(self._pose), tuple(self._pose + 5 * (self._force_u)))
 
-        pygame.draw.circle(screen, pygame.Color("white"),
-                           tuple(self._pose), self._distance_to_target, 1)
-        # pygame.draw.circle(screen, pygame.Color("yellow"),
-        #                    tuple(self._pose), self._sensing_range, 1)
+        if self._plot_range:
+            pygame.draw.circle(screen, pygame.Color("white"),
+                            tuple(self._pose), self._distance_to_target, 1)
+            # pygame.draw.circle(screen, pygame.Color("yellow"),
+            #                    tuple(self._pose), self._sensing_range, 1)
 
-        # for i in range(self._herd_density_to_plot.shape[0]):
-        #     pygame.draw.circle(screen, pygame.Color("white"),
-        #                        tuple(self._herd_density_to_plot[i, :2]), 10, 2)
         return super().display(screen)
 
     def _collision_avoidance_term(self, gain: float,
@@ -172,7 +181,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             rij = np.linalg.norm(qij)
             smoothed_rij_d = rij - d
-            c = 15
+            c = 12
             m = 10
 
             fx = gain*(1 - np.exp(-smoothed_rij_d/c))
@@ -187,8 +196,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             p = custom_potential_function(
                 qi=qi, qj=qj[i, :], d=r)
-            u_sum += p * utils.unit_vector(uij) + 0.08 * pj[i, :]
-        return u_sum
+            u_sum += p * utils.unit_vector(uij) + 0.0 * pj[i, :]
+        return u_sum / qj.shape[0]
 
     def _local_crowd_horizon(self, si: np.ndarray, sj: np.ndarray, k: float, r: float):
         w_sum = np.zeros(2).astype(np.float64)
@@ -248,12 +257,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
                                                                   r=40)
         for idx in range(herd_states.shape[0]):
-            # # Herd internal density
-            # neighbor_idxs = alpha_adjacency_matrix[idx]
-            # density = self._calc_density(
-            #     idx=idx, neighbors_idxs=neighbor_idxs,
-            #     herd_states=herd_states)
-            # herd_densities[idx] += density
+            # Herd internal density
+            neighbor_idxs = alpha_adjacency_matrix[idx]
+            density = self._calc_density(
+                idx=idx, neighbors_idxs=neighbor_idxs,
+                herd_states=herd_states)
+            herd_densities[idx] += density
 
             # Herd shepherd density
             delta_adj_vec = self._get_delta_adjacency_vector(
@@ -339,8 +348,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             p = custom_potential(
                 qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
-            u_sum += (p * utils.unit_vector(uij) + 0.05 * (pj[i, :]))
-        return u_sum
+            u_sum += (p * utils.unit_vector(uij) + 0.08 * (pj[i, :]))
+        return u_sum / qj.shape[0]
 
     def _formation_stable(self):
         if len(self._total_energy) != self._time_horizon:
@@ -349,7 +358,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         x = np.linspace(0, self._time_horizon,
                         self._time_horizon, endpoint=False)
         coeff, err, _, _, _ = np.polyfit(x, y, deg=1, full=True)
-        if math.sqrt(err) >= 110:
+        if math.sqrt(err) >= 1200:
             return False
         poly = np.poly1d(coeff)
         polyder = np.polyder(poly)
@@ -395,5 +404,5 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             p = custom_potential_function(
                 qi=qi, qj=qj, d=r)
-            u_sum += p * utils.unit_vector(qij) * 10
+            u_sum += p * utils.unit_vector(qij) * 5
         return u_sum

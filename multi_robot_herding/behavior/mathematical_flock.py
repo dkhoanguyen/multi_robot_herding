@@ -515,7 +515,7 @@ class MathematicalFlock(Behavior):
             u_delta = delta_grad + delta_consensus
 
         u_delta += self._predator_avoidance_term(
-            si=qi, r=self._danger_range, k=550000)
+            si=qi, r=self._danger_range, k=650000)
 
         return u_delta
 
