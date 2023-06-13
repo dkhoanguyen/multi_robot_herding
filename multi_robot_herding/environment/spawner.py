@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import numpy as np
-from multi_robot_herding.utils import params
 
 from multi_robot_herding.entity.herd import Herd
 from multi_robot_herding.entity.shepherd import Shepherd
 from multi_robot_herding.entity.obstacle import Hyperplane, Sphere
+
 
 class Spawner(object):
     def __init__(self):
@@ -46,12 +46,13 @@ class Spawner(object):
         else:
             shepherd_config.pop('num')
             initial_configurations = shepherd_config.pop('configuration')
-            for configuration in initial_configurations:
+            for idx, configuration in enumerate(initial_configurations):
                 shepherd_config.update(configuration)
                 shepherd_config['pose'] = np.array(shepherd_config['pose'])
                 angle = shepherd_config.pop('angle')
                 shepherd_config['velocity'] = shepherd_config['max_v'] * \
                     np.array([np.cos(angle), np.sin(angle)])
+                shepherd_config['id'] = idx
                 shepherds.append(Spawner.manual_spawn(
                     entity=Shepherd, config=shepherd_config))
         return shepherds
@@ -73,3 +74,7 @@ class Spawner(object):
                 obstacles.append(Spawner.manual_spawn(
                     entity=Hyperplane, config=hyperplane))
         return obstacles
+
+    @staticmethod
+    def auto_spawn_behaviors(behav_config):
+        behaviors = []

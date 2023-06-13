@@ -1,13 +1,26 @@
 # !/usr/bin/python3
 
 import pygame
+import numpy as np
 from abc import ABC, abstractmethod
 
 
 class Behavior(ABC):
-    
+
     @abstractmethod
-    def update(self, *args, **kwargs):
+    def transition(self, state: np.ndarray,
+                   other_states: np.ndarray,
+                   herd_states: np.ndarray,
+                   consensus_states: dict):
+        '''
+        '''
+
+    @abstractmethod
+    def update(self, state: np.ndarray,
+               other_states: np.ndarray,
+               herd_states: np.ndarray,
+               consensus_states: dict,
+               raw_states: np.ndarray):
         '''
         '''
     @abstractmethod
