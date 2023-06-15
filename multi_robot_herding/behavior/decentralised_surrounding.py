@@ -71,22 +71,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
         d_to_target = self._distance_to_target
         spacing = self._interagent_spacing
-        # if formation_stable and not self._triggered:
-        #     self._distance_to_target = self._skrink_distance
-        #     self._interagent_spacing = self._skrink_spacing
-        #     self._triggered = True
 
         herd_density = self._herd_density(herd_states=herd_states,
                                           shepherd_states=all_shepherd_states,
                                           r_shepherd=d_to_target)
-        # density = np.linalg.norm(herd_density, axis=1)
         total_density = np.sum(np.linalg.norm(herd_density, axis=1))
         self._total_energy.append(total_density)
-
-        formation_stable = self._formation_stable()
-        # if self._stopped or formation_stable:
-        #     self._stopped = True
-        #     return u
 
         filter_herd_states = herd_states[:, :]
         self._herd_density_to_plot = filter_herd_states
@@ -124,7 +114,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             dj = all_shepherd_states[neighbor_shepherd_idxs, :2]
             d_dot_j = all_shepherd_states[neighbor_shepherd_idxs, 2:4]
             po = self._collision_avoidance_term(
-                gain=0.7,
+                gain=0.5,
                 qi=di, qj=dj,
                 pi=d_dot_i,
                 pj=d_dot_j,
@@ -143,12 +133,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                r=30,
                                                gain=1)
         p_target = np.zeros((2,))
-        if self._stopped or formation_stable:
-            self._stopped = True
-            p_target = -(10/total_density)*(di - np.array([1200,350]))
+        # if self._stopped or formation_stable:
+        #     self._stopped = True
+        #     p_target = -(50/total_density)*(di - np.array([1200,350]))
 
         self._force_u = p_target
-        u = 15 * ps + 6 * po + p_avoid + p_target
+        u = 8 * ps + 4 * po + p_avoid + p_target
         return u
 
     def display(self, screen: pygame.Surface):
@@ -291,36 +281,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             pi=pi)
         return u_gamma
 
-    def _sigmoid_edge_following(self, qi: np.ndarray, qj: np.ndarray, d: float,
-                                bound: float, k: float):
-        def custom_sigmoid(qi: np.ndarray, qj: np.ndarray, d: float,
-                           bound: float):
-            qij = qi - qj
-            rij = np.linalg.norm(qij)
-            smoothed_rij_d = rij - d
-            sigma = (bound/(1 + np.exp(-smoothed_rij_d))) - \
-                (bound/(0.1 + np.exp(smoothed_rij_d)))
-            # sigma = np.round(sigma, 3)
-            return sigma
-
-        def local_crowd_horizon(qi: np.ndarray, qj: np.ndarray,
-                                r: float,
-                                k: float = 0.5):
-            qij = qi - qj
-            return (1/(1 + k * ((np.linalg.norm(qij)))))
-            # return np.linalg.norm(qij)
-
-        u_sum = np.zeros(2).astype(np.float64)
-        for i in range(qj.shape[0]):
-            uij = qj[i, :] - qi
-            gain = local_crowd_horizon(qi=qi, qj=qj[i, :], r=d, k=k)
-            # gain = 1
-            sigma = custom_sigmoid(qi=qi, qj=qj[i, :], d=d, bound=bound)
-            # sigma = custom_exponential(qi=qi, qj=qj[i, :], d=d, bound=bound)
-            # print(f"sigma = {sigma}")
-            u_sum += gain * sigma * utils.unit_vector(uij) * 3
-        return u_sum
-
     def _potential_edge_following(self, qi: np.ndarray, qj: np.ndarray,
                                   pi: np.ndarray, pj: np.ndarray,
                                   d: float,
@@ -348,7 +308,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             p = custom_potential(
                 qi=qi, qj=qj[i, :], d=d, d_dead=d_dead, gain=gain)
-            u_sum += (p * utils.unit_vector(uij) + 0.08 * (pj[i, :]))
+            u_sum += 2 * (p * utils.unit_vector(uij) + 0.07 * (pj[i, :]))
         return u_sum / qj.shape[0]
 
     def _formation_stable(self):

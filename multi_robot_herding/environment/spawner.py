@@ -21,9 +21,12 @@ class Spawner(object):
         herds = []
         if herd_config.pop('init_random'):
             num = herd_config.pop('num')
-            initial_poses = np.random.randint(
-                100, 650, (num, 2)).astype('float')
-
+            x = np.random.randint(
+                700, 900, (num,1)).astype('float')
+            y = np.random.randint(
+                300, 500, (num,1)).astype('float')
+            initial_poses = np.hstack((x, y))
+            
             for i in range(num):
                 angle = np.pi * (2 * np.random.rand() - 1)
                 vel = herd_config['max_v'] * \

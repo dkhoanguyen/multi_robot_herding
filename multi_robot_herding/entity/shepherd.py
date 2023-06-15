@@ -137,8 +137,8 @@ class Shepherd(Autonomous):
                 raw_states=all_shepherd_states)
 
         if self._type == DynamicType.SingleIntegrator:
-            if np.linalg.norm(u) > 25:
-                u = 25 * utils.unit_vector(u)
+            if np.linalg.norm(u) > 30:
+                u = 30 * utils.unit_vector(u)
 
             qdot = u.reshape((u.size,))
             self.velocity = qdot

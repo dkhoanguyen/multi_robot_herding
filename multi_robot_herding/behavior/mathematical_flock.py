@@ -104,7 +104,7 @@ class MathematicalFlock(Behavior):
 
         self._boundary = {
             'x_min': 300,
-            'x_max': 600,
+            'x_max': 1200,
             'y_min': 300,
             'y_max': 500,
         }
@@ -159,7 +159,7 @@ class MathematicalFlock(Behavior):
         else:
             self._flocking_condition = 0
 
-        self._flocking_condition = 0
+        self._flocking_condition = self._follow_cursor
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -228,7 +228,6 @@ class MathematicalFlock(Behavior):
             vor = Voronoi(self._states)
             for indx_pair in vor.ridge_vertices:
                 if -1 not in indx_pair:
-
                     start_pos = vor.vertices[indx_pair[0]]
                     end_pos = vor.vertices[indx_pair[1]]
 

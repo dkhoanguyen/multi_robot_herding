@@ -7,6 +7,9 @@ from multi_robot_herding.utils import params
 from multi_robot_herding.entity.entity import Entity
 from multi_robot_herding.behavior.behavior import Behavior
 
+class Background(object):
+    def __init__(self):
+        pass
 
 class Environment(object):
 
@@ -16,6 +19,7 @@ class Environment(object):
         # Pygame for visualisation
         pygame.init()
         self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
+        self._rect = self._screen.get_rect()
         self._running = True
         self._clock = pygame.time.Clock()
 
