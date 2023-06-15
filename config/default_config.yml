@@ -7,7 +7,7 @@ entity:
     personal_space: 50
     mass: 20.0
     min_v: 0.0
-    max_v: 10.0
+    max_v: 15.0
 
   shepherd:
     init_random: false
@@ -18,29 +18,37 @@ entity:
     min_v: 0.0
     max_v: 3.0
     configuration:
-      - pose: [1100, 200]
-        angle: 1.57
-      - pose: [1150, 240]
-        angle: 1.57
-      - pose: [1150, 280]
-        angle: 1.57
-      - pose: [1100, 320]
-        angle: 1.57
-      - pose: [1100, 380]
-        angle: 1.57
-      - pose: [1100, 420]
-        angle: 1.57
-      - pose: [1150, 460]
-        angle: 1.57
-      - pose: [1150, 500]
-        angle: 1.57
-      - pose: [1100, 540]
-        angle: 1.57
+      - pose: [1400, 200]
+        angle: 3.14
+      - pose: [1400, 240]
+        angle: 3.14
+      - pose: [1400, 280]
+        angle: 3.14
+      - pose: [1400, 320]
+        angle: 3.14
+      - pose: [1400, 360]
+        angle: 3.14
+      - pose: [1400, 400]
+        angle: 3.14
+      - pose: [1400, 440]
+        angle: 3.14
+      - pose: [1400, 460]
+        angle: 3.14
+      - pose: [1400, 420]
+        angle: 3.14
+      # - pose: [1150, 500]
+      #   angle: 3.14
+      # - pose: [1100, 500]
+      #   angle: 3.14
+      # - pose: [1100, 540]
+      #   angle: 3.14
+      # - pose: [1150, 540]
+      #   angle: 3.14
 
   obstacle:
     sphere:
-    # - yk: [1000, 100]
-    #   Rk: 100
+    # - yk: [570, 350]
+    #   Rk: 75
     # - yk: [1000, 510]
     #   Rk: 100
     # - yk: [1000, 240]
@@ -49,18 +57,18 @@ entity:
     #   Rk: 100
 
     hyperplane:
-      - ak: [0, 1]
-        yk: [0, 0]
-        boundary: [[0, 0], [1280, 10]]
-      - ak: [1, 0]
-        yk: [0, 0]
-        boundary: [[0, 0], [10, 720]]
-      - ak: [-1, 0]
-        yk: [1270, 0]
-        boundary: [[1270, 0], [1280, 720]]
-      - ak: [0, -1]
-        yk: [0, 710]
-        boundary: [[0, 710], [1280, 720]]
+      # - ak: [0, 1]
+      #   yk: [0, 0]
+      #   boundary: [[0, 0], [1280, 10]]
+      # - ak: [1, 0]
+      #   yk: [0, 0]
+      #   boundary: [[0, 0], [10, 720]]
+      # - ak: [1, 0]
+      #   yk: [1279, 0]
+      #   boundary: [[1270, 0], [1280, 720]]
+      # - ak: [0, 1]
+      #   yk: [0, 719]
+      #   boundary: [[0, 710], [1280, 720]]
 
   plotting:
 
@@ -80,8 +88,8 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 90
-      initial_consensus: [600, 350]
+      danger_range: 110
+      initial_consensus: [1000, 350]
     constants:
       c1_alpha: 3
       c1_beta: 20

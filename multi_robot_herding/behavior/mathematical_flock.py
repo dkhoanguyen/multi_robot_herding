@@ -2,6 +2,8 @@
 import math
 import networkx as nx
 
+from scipy.spatial import Voronoi
+
 import pygame
 import numpy as np
 from multi_robot_herding.utils import params, utils
@@ -102,18 +104,21 @@ class MathematicalFlock(Behavior):
 
         self._boundary = {
             'x_min': 300,
-            'x_max': 600,
+            'x_max': 1200,
             'y_min': 300,
             'y_max': 500,
         }
 
         # For visualization
         self._contour_agents = []
+        self._plot_voronoi = False
 
         # Clusters
         self._total_clusters = 0
         self._clusters = []
         self._plot_cluster = False
+
+        self._states = np.empty((0, 2))
 
     # Herd
     def add_herd(self, herd: Herd):
@@ -142,19 +147,19 @@ class MathematicalFlock(Behavior):
     def update(self, *args, **kwargs):
         events = self._get_events(args)
 
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_DOWN and self._enable_flocking:
-                    self._enable_flocking = False
-                if event.key == pygame.K_UP and not self._enable_flocking:
-                    self._enable_flocking = True
+        # for event in events:
+        #     if event.type == pygame.KEYDOWN:
+        #         if event.key == pygame.K_DOWN and self._enable_flocking:
+        #             self._enable_flocking = False
+        #         if event.key == pygame.K_UP and not self._enable_flocking:
+        #             self._enable_flocking = True
 
         if self._enable_flocking:
             self._flocking_condition = 1
         else:
             self._flocking_condition = 0
-        
-        # self._flocking_condition = 1
+
+        self._flocking_condition = self._follow_cursor
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -181,6 +186,10 @@ class MathematicalFlock(Behavior):
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
 
+        # Density
+        herd_density = self._herd_density(herd_states=herd_states,
+                                          shepherd_states=shepherd_states)
+
         qdot = (1 - self._flocking_condition) * local_clustering + \
             flocking + self._flocking_condition * global_clustering + \
             (1 - self._flocking_condition) * remain_in_bound_u
@@ -199,12 +208,53 @@ class MathematicalFlock(Behavior):
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
+            herd._force = 2 * herd_density[idx, :]
+            herd._plot_force = True
+
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+        self._states = np.vstack((herd_mean, shepherd_states[:, :2]))
+        # self._states = herd_states[:, :2]
+
     def display(self, screen: pygame.Surface):
         if self._clusters is not None and len(self._clusters) > 0 and self._plot_cluster:
             for cluster in self._clusters:
                 for edge in cluster:
                     pygame.draw.line(screen, pygame.Color("white"), tuple(edge[0, :2]),
                                      tuple(edge[1, :2]))
+
+        # Plot voronoi
+        if self._plot_voronoi:
+            vor = Voronoi(self._states)
+            for indx_pair in vor.ridge_vertices:
+                if -1 not in indx_pair:
+                    start_pos = vor.vertices[indx_pair[0]]
+                    end_pos = vor.vertices[indx_pair[1]]
+
+                    pygame.draw.line(screen, pygame.Color(
+                        "white"), start_pos, end_pos)
+
+            ptp_bound = vor.points.ptp(axis=0)
+            center = vor.points.mean(axis=0)
+            for pointidx, simplex in zip(vor.ridge_points, vor.ridge_vertices):
+                simplex = np.asarray(simplex)
+                if np.any(simplex < 0):
+                    i = simplex[simplex >= 0][0]  # finite end Voronoi vertex
+
+                    t = vor.points[pointidx[1]] - \
+                        vor.points[pointidx[0]]  # tangent
+                    t /= np.linalg.norm(t)
+                    n = np.array([-t[1], t[0]])  # normal
+
+                    midpoint = vor.points[pointidx].mean(axis=0)
+                    direction = np.sign(np.dot(midpoint - center, n)) * n
+                    far_point = vor.vertices[i] + direction * 100000
+
+                    start_pos = (vor.vertices[i, 0], vor.vertices[i, 1])
+                    end_pos = (far_point[0], far_point[1])
+
+                    pygame.draw.line(screen, pygame.Color(
+                        "white"), start_pos, end_pos)
 
     # Mathematical model of flocking
     def _flocking(self, herd_states: np.ndarray,
@@ -243,6 +293,20 @@ class MathematicalFlock(Behavior):
             # Ultimate flocking model
             u[idx] = u_alpha + u_beta + u_delta
         return u
+
+    def _herd_density(self, herd_states: np.ndarray,
+                      shepherd_states: np.ndarray):
+        herd_densities = np.zeros((herd_states.shape[0], 2))
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
+                                                                  r=self._sensing_range)
+        for idx in range(herd_states.shape[0]):
+            # Density
+            neighbor_idxs = alpha_adjacency_matrix[idx]
+            density = self._calc_density(
+                idx=idx, neighbors_idxs=neighbor_idxs,
+                herd_states=herd_states)
+            herd_densities[idx] = density
+        return herd_densities
 
     def _global_clustering(self, herd_states: np.ndarray,
                            shepherd_states: np.ndarray) -> np.ndarray:
@@ -369,6 +433,16 @@ class MathematicalFlock(Behavior):
             u_alpha = alpha_grad + alpha_consensus
         return u_alpha
 
+    def _calc_density(self, idx: int,
+                      neighbors_idxs: np.ndarray,
+                      herd_states: np.ndarray):
+        qi = herd_states[idx, :2]
+        density = np.zeros(2)
+        if sum(neighbors_idxs) > 0:
+            qj = herd_states[neighbors_idxs, :2]
+            density = self._density(si=qi, sj=qj, k=0.375)
+        return density
+
     def _calc_obstacle_avoidance_control(self, idx: int,
                                          obstacle_idxs: np.ndarray,
                                          beta_adj_matrix: np.ndarray,
@@ -382,7 +456,7 @@ class MathematicalFlock(Behavior):
             beta_agents = np.array([]).reshape((0, 4))
             for obs_idx in obs_in_radius[0]:
                 beta_agent = self._obstacles[obs_idx].induce_beta_agent(
-                    self._herds[idx])
+                    qi, pi)
                 beta_agents = np.vstack((beta_agents, beta_agent))
 
             qik = beta_agents[:, :2]
@@ -440,7 +514,7 @@ class MathematicalFlock(Behavior):
             u_delta = delta_grad + delta_consensus
 
         u_delta += self._predator_avoidance_term(
-            si=qi, r=self._danger_range, k=200000)
+            si=qi, r=self._danger_range, k=650000)
 
         return u_delta
 
@@ -547,7 +621,7 @@ class MathematicalFlock(Behavior):
         w_sum = np.zeros(2).astype(np.float64)
         for i in range(sj.shape[0]):
             sij = si - sj[i, :]
-            w = (1/(1 + k * np.linalg.norm(sij))) * (sij / np.linalg.norm(sij))
+            w = (1/(1 + k * np.linalg.norm(sij))) * utils.unit_vector(sij)
             w_sum += w
         return w_sum
 

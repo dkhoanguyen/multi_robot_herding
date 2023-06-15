@@ -1,40 +1,50 @@
 # !/usr/bin/python3
 
 import numpy as np
+import pygame
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
 
 
 class DecentralisedApproaching(DecentralisedBehavior):
-    def __init__(self, co: float = 2.78,
-                 interagent_spacing: float = 100.0):
+    def __init__(self, co: float = 5.78,
+                 interagent_spacing: float = 40.0,
+                 sensing_range: float = 700.0):
         self._co = co
         self._interagent_spacing = interagent_spacing
+        self._sensing_range = sensing_range
 
         # Const parameters
         self._c1 = 5
         self._c2 = 0.2 * np.sqrt(self._c1)
 
-        # State of this shepherd
-        self._state = None
-        # States of other shepherds
-        self._other_states = None
-        # States of herds
-        self._herd_states = None
+    def transition(self, state: np.ndarray,
+                   other_states: np.ndarray,
+                   herd_states: np.ndarray,
+                   consensus_states: dict):
+        for idx in range(herd_states.shape[0]):
+            if np.linalg.norm(state[:2] - herd_states[idx, :2]) <= self._sensing_range:
+                return False
+        return True
 
-    def update(self, *args, **kwargs):
+    def update(self, state: np.ndarray,
+               other_states: np.ndarray,
+               herd_states: np.ndarray,
+               obstacles: list,
+               consensus_states: dict,
+               raw_states: np.ndarray):
         u = np.zeros((1, 2))
-        all_shepherd_states = np.vstack((self._state, self._other_states))
+        all_shepherd_states = np.vstack((state, other_states))
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
             r=self._interagent_spacing)
 
         herd_mean = np.sum(
-            self._herd_states[:, :2], axis=0) / self._herd_states.shape[0]
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
 
-        di = self._state
-        d_dot_i = self._state[2:4]
+        di = state[:2]
+        d_dot_i = state[2:4]
 
         po = np.zeros((1, 2))
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
@@ -55,6 +65,9 @@ class DecentralisedApproaching(DecentralisedBehavior):
 
         u = po + p_gamma
         return u
+
+    def display(self, screen: pygame.Surface):
+        return super().display(screen)
 
     def _collision_avoidance_term(self, gain: float, qi: np.ndarray,
                                   qj: np.ndarray, r: float):

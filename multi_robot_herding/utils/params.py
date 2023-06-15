@@ -15,7 +15,7 @@ IMG_DIR = os.path.join(BASE_DIR, 'assets', 'img')
 FONTS_DIR = os.path.join(BASE_DIR, 'assets', 'fonts')
 
 # Screen and viewing parameters
-SCREEN_HEIGHT, SCREEN_WIDTH = 720, 1280
+SCREEN_HEIGHT, SCREEN_WIDTH = 720, 1480
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 SCREEN_CENTER = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 COL = SCREEN_WIDTH // 12
@@ -48,7 +48,7 @@ H4_FONT = (FONTS['hallo-sans'], FONT_SIZES['h4'])
 H5_FONT = (FONTS['hallo-sans'], FONT_SIZES['h5'])
 
 # Boid staying inside the screen box
-BOX_MARGIN = 150  # pixels
+BOX_MARGIN = 50  # pixels
 STEER_INSIDE = 6.  # speed impulse when out of margins
 # Boid steering parameters
 BOID_MAX_FORCE = 10.
