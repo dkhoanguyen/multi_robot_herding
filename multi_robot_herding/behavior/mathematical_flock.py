@@ -185,6 +185,7 @@ class MathematicalFlock(Behavior):
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
+        # remain_in_bound_u = np.zeros((2,))
 
         # Density
         herd_density = self._herd_density(herd_states=herd_states,

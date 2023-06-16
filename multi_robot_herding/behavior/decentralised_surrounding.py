@@ -43,6 +43,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                  Cs: float = 30.0,
                  Cr: float = 2.0,
                  Cv: float = 1.2,
+                 Co: float = 1.0,
                  distance_to_target: float = 125.0,
                  interagent_spacing: float = 150.0,
                  obstacle_range: float = 40.0,
@@ -53,6 +54,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._Cs = Cs
         self._Cr = Cr
         self._Cv = Cv
+        self._Co = Co
 
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
@@ -102,11 +104,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         d_to_target = self._distance_to_target
         spacing = self._interagent_spacing
 
-        herd_density = self._herd_density(herd_states=herd_states,
-                                          shepherd_states=all_shepherd_states,
-                                          r_shepherd=d_to_target)
-        total_density = np.sum(np.linalg.norm(herd_density, axis=1))
-        self._total_energy.append(total_density)
+        # herd_density = self._herd_density(herd_states=herd_states,
+        #                                   shepherd_states=all_shepherd_states,
+        #                                   r_shepherd=d_to_target)
+        # total_density = np.sum(np.linalg.norm(herd_density, axis=1))
+        # self._total_energy.append(total_density)
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
@@ -159,8 +161,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             p_avoid = self._obstacle_avoidance(qi=di, pi=d_dot_i,
                                                beta_adj_vec=beta_adj_vec,
                                                obstacle_list=obstacles,
-                                               r=self._obstacle_range,
-                                               gain=1)
+                                               d=self._obstacle_range,
+                                               gain=self._Co)
         u = ps + po + pv + p_avoid
         return u
 
@@ -273,23 +275,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                             obstacle_list: list,
                             d: float,
                             gain: float):
-        def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
-                                      d: float):
-            qij = qi - qj
-            rij = np.linalg.norm(qij)
-            smoothed_rij_d = rij - d
-            c = 6
-            m = 10
-
-            fx = gain*(- np.exp(-smoothed_rij_d/c))
-            gx = np.tanh(smoothed_rij_d/m)
-
-            # Potential function
-            px = -fx*(gx**2)
-            return px
-
         obs_in_radius = np.where(beta_adj_vec)
-
         u_sum = np.zeros(2).astype(np.float64)
         for obs_idx in obs_in_radius[0]:
             beta_agent = obstacle_list[obs_idx].induce_beta_agent(
