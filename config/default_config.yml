@@ -83,13 +83,30 @@ behavior:
       c1_gamma: 5
       c1_delta: 20
 
-  math_formation:
-    interaction:
-      entity:
-        - herd
-        - shepherd
-        - obstacle
+  surround:
     params:
-      sensing_range: 200
-      agent_spacing: 200
-      scaled_agent_spacing: 0.5
+      Cs: 35.0
+      Cr: 6.0
+      Cv: 1.3
+      distance_to_target: 120.0
+      interagent_spacing: 150.0
+      obstacle_range: 40.0
+      sensing_range: 700.0
+
+      potential_func:
+        edge_follow:
+          attract: True
+          repulse: True
+          c: 4
+          m: 20
+        col_avoid:
+          attract: True
+          repulse: True
+          c: 12
+          m: 10
+        obs_avoid:
+          attract: False
+          repulse: True
+          c: 6
+          m: 10
+

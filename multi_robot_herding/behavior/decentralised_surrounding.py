@@ -9,23 +9,54 @@ from multi_robot_herding.common.decentralised_behavior import DecentralisedBehav
 from multi_robot_herding.utils import utils
 
 
+class PotentialFunc(object):
+    @staticmethod
+    def proposed_func(xi: np.ndarray, xj: np.ndarray,
+                      d: float,
+                      attract: bool = True,
+                      repulse: bool = True,
+                      c: float = 10,
+                      m: float = 10):
+        a = int(attract)
+        r = int(repulse)
+
+        xij = xi - xj
+        xij_norm = np.linalg.norm(xij)
+
+        n_xij_d = xij_norm - d
+        fx = a - r * np.exp(-n_xij_d/c)
+        gx = np.tanh(n_xij_d/m)
+
+        # Potential function
+        px = -fx*(gx**2)
+        return px
+
+    @staticmethod
+    def density_func(xi: np.ndarray, xj: np.ndarray,
+                     k: float):
+        pass
+
+
 class DecentralisedSurrounding(DecentralisedBehavior):
     def __init__(self,
+                 potential_func: dict,
                  Cs: float = 30.0,
                  Cr: float = 2.0,
+                 Cv: float = 1.2,
                  distance_to_target: float = 125.0,
                  interagent_spacing: float = 150.0,
+                 obstacle_range: float = 40.0,
                  sensing_range: float = 700.0):
         super().__init__()
 
-        # Default values
-        self._obstacle_range = 40
-
+        self._potential_func = potential_func
         self._Cs = Cs
         self._Cr = Cr
+        self._Cv = Cv
 
         self._distance_to_target = distance_to_target
         self._interagent_spacing = interagent_spacing
+        self._obstacle_range = obstacle_range
         self._sensing_range = sensing_range
 
         self._pose = np.zeros(2)
@@ -108,7 +139,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             po = self._collision_avoidance_term(
                 gain=self._Cr,
                 qi=di, qj=dj,
-                r=spacing)
+                d=spacing)
         self._force_po = po
 
         # Velocity consensus
@@ -117,7 +148,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             sj = herd_states[neighbor_herd_idxs, :2]
             s_dot_j = herd_states[neighbor_herd_idxs, 2:4]
             pv = self._velocity_consensus(pj=s_dot_j,
-                                          gain=1.2)
+                                          gain=self._Cv)
 
         # Obstacle avoidance term
         beta_adj_vec = self._get_beta_adjacency_vector(state=state,
@@ -155,29 +186,15 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
     def _collision_avoidance_term(self, gain: float,
                                   qi: np.ndarray, qj: np.ndarray,
-                                  r: float):
-
-        def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
-                                      d: float):
-            qij = qi - qj
-            rij = np.linalg.norm(qij)
-            smoothed_rij_d = rij - d
-            c = 12
-            m = 10
-
-            fx = gain*(1 - np.exp(-smoothed_rij_d/c))
-            gx = np.tanh(smoothed_rij_d/m)
-
-            # Potential function
-            px = -fx*(gx**2)
-            return px
+                                  d: float):
 
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
             uij = qi - qj[i, :]
-            p = custom_potential_function(
-                qi=qi, qj=qj[i, :], d=r)
-            u_sum += p * utils.unit_vector(uij)
+            func_input = self._potential_func['col_avoid']
+            func_input.update({'xi': qi, 'xj': qj[i, :], 'd': d})
+            p = PotentialFunc.proposed_func(**func_input)
+            u_sum += gain * p * utils.unit_vector(uij)
         return u_sum / qj.shape[0]
 
     def _get_delta_adjacency_vector(self, herd_states: np.ndarray,
@@ -214,28 +231,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
     def _potential_edge_following(self, qi: np.ndarray, qj: np.ndarray,
                                   d: float,
                                   gain: float):
-        def custom_potential(qi: np.ndarray, qj: np.ndarray,
-                             d: float,
-                             gain: float):
-            qij = qi - qj
-            rij = np.linalg.norm(qij)
-            smoothed_rij_d = rij - d
-            c = 10
-            m = 20
-
-            fx = gain*(1 - np.exp(-smoothed_rij_d/c))
-            gx = np.tanh(smoothed_rij_d/m)
-
-            # Potential function
-            px = -fx*(gx**2)
-            return px
-
         u_sum = np.zeros(2).astype(np.float64)
         for i in range(qj.shape[0]):
             uij = qi - qj[i, :]
-            p = custom_potential(
-                qi=qi, qj=qj[i, :], d=d, gain=gain)
-            u_sum += p * utils.unit_vector(uij)
+            func_input = self._potential_func['edge_follow']
+            func_input.update({'xi': qi, 'xj': qj[i, :], 'd': d})
+            p = PotentialFunc.proposed_func(**func_input)
+            u_sum += gain * p * utils.unit_vector(uij)
         return u_sum / qj.shape[0]
 
     def _velocity_consensus(self, pj: np.ndarray, gain: float):
@@ -269,7 +271,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                             pi: np.ndarray,
                             beta_adj_vec: np.ndarray,
                             obstacle_list: list,
-                            r: float,
+                            d: float,
                             gain: float):
         def custom_potential_function(qi: np.ndarray, qj: np.ndarray,
                                       d: float):
@@ -294,9 +296,10 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 qi, pi)
             qj = beta_agent[:2]
             qij = qi - qj
-            p = custom_potential_function(
-                qi=qi, qj=qj, d=r)
-            u_sum += p * utils.unit_vector(qij)
+            func_input = self._potential_func['obs_avoid']
+            func_input.update({'xi': qi, 'xj': qj, 'd': d})
+            p = PotentialFunc.proposed_func(**func_input)
+            u_sum += gain * p * utils.unit_vector(qij)
         return u_sum
 
     def _density(self, si: np.ndarray, sj: np.ndarray, k: float, d: float):
