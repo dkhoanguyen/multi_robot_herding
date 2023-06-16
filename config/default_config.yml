@@ -16,7 +16,7 @@ entity:
     local_boundary: 30
     mass: 20.0
     min_v: 0.0
-    max_v: 3.0
+    max_v: 30.0
     configuration:
       - pose: [1400, 200]
         angle: 3.14
@@ -36,14 +36,6 @@ entity:
         angle: 3.14
       - pose: [1400, 420]
         angle: 3.14
-      # - pose: [1150, 500]
-      #   angle: 3.14
-      # - pose: [1100, 500]
-      #   angle: 3.14
-      # - pose: [1100, 540]
-      #   angle: 3.14
-      # - pose: [1150, 540]
-      #   angle: 3.14
 
   obstacle:
     sphere:
@@ -73,11 +65,6 @@ entity:
   plotting:
 
 behavior:
-  list:
-    - math_flock
-    - math_formation
-    - orbit
-
   math_flock:
     interaction:
       entity:

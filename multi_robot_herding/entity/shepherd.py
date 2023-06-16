@@ -14,9 +14,7 @@ from multi_robot_herding.entity.obstacle import Obstacle
 
 class State(Enum):
     IDLE = "dec_idle"
-    APPROACH = "dec_approach"
     SURROUND = "dec_surround"
-    FORMATION = "dec_formation"
 
     def __str__(self):
         return f"{self.value}"
@@ -98,33 +96,16 @@ class Shepherd(Autonomous):
         self._total_velocity_norm.append(total_vel_norm)
 
         if self._behavior_state == State.IDLE:
-            self._behavior_state = State.APPROACH
+            self._behavior_state = State.SURROUND
 
-        elif self._behavior_state == State.APPROACH:
-            if str(State.SURROUND) in self._behaviors.keys():
-                if self._behaviors[str(State.SURROUND)].transition(
-                        state=self.state,
-                        other_states=shepherd_in_range,
-                        herd_states=all_herd_states,
-                        consensus_states=all_consensus_states):
-                    self._behavior_state = State.SURROUND
-
-        elif self._behavior_state == State.SURROUND:
-            if str(State.APPROACH) in self._behaviors.keys():
-                if self._behaviors[str(State.APPROACH)].transition(
-                        state=self.state,
-                        other_states=shepherd_in_range,
-                        herd_states=all_herd_states,
-                        consensus_states=all_consensus_states):
-                    self._behavior_state = State.APPROACH
-
-            if str(State.FORMATION) in self._behaviors.keys():
-                if self._behaviors[str(State.FORMATION)].transition(
-                        state=self.state,
-                        other_states=shepherd_in_range,
-                        herd_states=all_herd_states,
-                        consensus_states=all_consensus_states):
-                    self._behavior_state = State.FORMATION
+        # elif self._behavior_state == State.SURROUND:
+        #     if str(State.SURROUND) in self._behaviors.keys():
+        #         if self._behaviors[str(State.SURROUND)].transition(
+        #                 state=self.state,
+        #                 other_states=shepherd_in_range,
+        #                 herd_states=all_herd_states,
+        #                 consensus_states=all_consensus_states):
+        #             self._behavior_state = State.SURROUND
         u = np.zeros(2)
 
         if self._behaviors[str(self._behavior_state)]:
@@ -133,12 +114,11 @@ class Shepherd(Autonomous):
                 other_states=shepherd_in_range,
                 herd_states=all_herd_states,
                 obstacles=self._static_obstacles,
-                consensus_states=all_consensus_states,
-                raw_states=all_shepherd_states)
+                consensus_states=all_consensus_states)
 
         if self._type == DynamicType.SingleIntegrator:
-            if np.linalg.norm(u) > 30:
-                u = 30 * utils.unit_vector(u)
+            if np.linalg.norm(u) > self._max_v:
+                u = self._max_v * utils.unit_vector(u)
 
             qdot = u.reshape((u.size,))
             self.velocity = qdot

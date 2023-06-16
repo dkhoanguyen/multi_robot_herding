@@ -61,19 +61,18 @@ class DecentralisedFormation(DecentralisedBehavior):
                other_states: np.ndarray,
                herd_states: np.ndarray,
                obstacles: list,
-               consensus_states: dict,
-               raw_states: np.ndarray):
+               consensus_states: dict):
         u = np.zeros(2)
-        all_shepherd_states = np.vstack((state, other_states))
+        # all_shepherd_states = np.vstack((state, other_states))
 
-        if not self._formation_generated:
-            ret, p_star = self._generate_formation(raw_states[:, :2])
-            if ret:
-                self._g_star = p_star
-                self._formation_generated = True
+        # if not self._formation_generated:
+        #     ret, p_star = self._generate_formation(raw_states[:, :2])
+        #     if ret:
+        #         self._g_star = p_star
+        #         self._formation_generated = True
 
-        u = self._maneuver_formation(
-            shepherd_states=raw_states, formation=self._g_star)
+        # u = self._maneuver_formation(
+        #     shepherd_states=raw_states, formation=self._g_star)
         return u
 
     def display(self, screen: pygame.Surface):
