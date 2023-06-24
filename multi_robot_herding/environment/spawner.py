@@ -22,7 +22,7 @@ class Spawner(object):
         if herd_config.pop('init_random'):
             num = herd_config.pop('num')
             x = np.random.randint(
-                700, 900, (num,1)).astype('float')
+                600, 800, (num,1)).astype('float')
             y = np.random.randint(
                 300, 500, (num,1)).astype('float')
             initial_poses = np.hstack((x, y))

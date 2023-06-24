@@ -1,7 +1,7 @@
 entity:
   herd:
     init_random: true
-    num: 20
+    num: 25
     local_perception: 100
     local_boundary: 40
     personal_space: 50
@@ -16,7 +16,7 @@ entity:
     local_boundary: 30
     mass: 20.0
     min_v: 0.0
-    max_v: 3.0
+    max_v: 30.0
     configuration:
       - pose: [1400, 200]
         angle: 3.14
@@ -36,19 +36,11 @@ entity:
         angle: 3.14
       - pose: [1400, 420]
         angle: 3.14
-      # - pose: [1150, 500]
-      #   angle: 3.14
-      # - pose: [1100, 500]
-      #   angle: 3.14
-      # - pose: [1100, 540]
-      #   angle: 3.14
-      # - pose: [1150, 540]
-      #   angle: 3.14
 
   obstacle:
     sphere:
-    # - yk: [570, 350]
-    #   Rk: 75
+    # - yk: [1000, 100]
+    #   Rk: 100
     # - yk: [1000, 510]
     #   Rk: 100
     # - yk: [1000, 240]
@@ -73,36 +65,43 @@ entity:
   plotting:
 
 behavior:
-  list:
-    - math_flock
-    - math_formation
-    - orbit
-
   math_flock:
-    interaction:
-      entity:
-        - herd
-        - shepherd
-        - obstacle
-      behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 110
-      initial_consensus: [1000, 350]
+      danger_range: 150
+      initial_consensus: [800, 350]
     constants:
       c1_alpha: 3
       c1_beta: 20
       c1_gamma: 5
       c1_delta: 20
 
-  math_formation:
-    interaction:
-      entity:
-        - herd
-        - shepherd
-        - obstacle
+  surround:
     params:
-      sensing_range: 200
-      agent_spacing: 200
-      scaled_agent_spacing: 0.5
+      Cs: 35.0
+      Cr: 4.0
+      Cv: 1.5
+      Co: 1
+      distance_to_target: 125.0
+      interagent_spacing: 150.0
+      obstacle_range: 40.0
+      sensing_range: 700.0
+
+      potential_func:
+        edge_follow:
+          attract: True
+          repulse: True
+          c: 8
+          m: 10
+        col_avoid:
+          attract: True
+          repulse: True
+          c: 12
+          m: 10
+        obs_avoid:
+          attract: False
+          repulse: True
+          c: 6
+          m: 10
+
