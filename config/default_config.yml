@@ -39,8 +39,8 @@ entity:
 
   obstacle:
     sphere:
-    # - yk: [570, 350]
-    #   Rk: 75
+    # - yk: [1000, 100]
+    #   Rk: 100
     # - yk: [1000, 510]
     #   Rk: 100
     # - yk: [1000, 240]
@@ -69,8 +69,8 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 110
-      initial_consensus: [1000, 350]
+      danger_range: 150
+      initial_consensus: [800, 350]
     constants:
       c1_alpha: 3
       c1_beta: 20
@@ -80,8 +80,8 @@ behavior:
   surround:
     params:
       Cs: 35.0
-      Cr: 6.0
-      Cv: 1.3
+      Cr: 4.0
+      Cv: 1.5
       Co: 1
       distance_to_target: 125.0
       interagent_spacing: 150.0
@@ -92,8 +92,8 @@ behavior:
         edge_follow:
           attract: True
           repulse: True
-          c: 6
-          m: 20
+          c: 8
+          m: 10
         col_avoid:
           attract: True
           repulse: True

@@ -78,7 +78,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._triggered = False
         self._voronoi = None
 
-        self._plot_force = False
+        self._plot_force = True
         self._plot_range = False
 
     def transition(self, state: np.ndarray,
@@ -164,19 +164,20 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                d=self._obstacle_range,
                                                gain=self._Co)
         u = ps + po + pv + p_avoid
+        self._force_u = u
         return u
 
     def display(self, screen: pygame.Surface):
         if self._plot_force:
-            pygame.draw.line(
-                screen, pygame.Color("white"),
-                tuple(self._pose), tuple(self._pose + 5 * (self._force_po)))
-            pygame.draw.line(
-                screen, pygame.Color("yellow"),
-                tuple(self._pose), tuple(self._pose + 5 * (self._force_ps)))
+            # pygame.draw.line(
+            #     screen, pygame.Color("white"),
+            #     tuple(self._pose), tuple(self._pose + 5 * (self._force_po)))
+            # pygame.draw.line(
+            #     screen, pygame.Color("yellow"),
+            #     tuple(self._pose), tuple(self._pose + 5 * (self._force_ps)))
             pygame.draw.line(
                 screen, pygame.Color("grey"),
-                tuple(self._pose), tuple(self._pose + 5 * (self._force_u)))
+                tuple(self._pose), tuple(self._pose + 2 * (self._force_u)))
 
         if self._plot_range:
             pygame.draw.circle(screen, pygame.Color("white"),
