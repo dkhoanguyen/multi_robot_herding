@@ -64,7 +64,7 @@ def main():
         math_flock.add_shepherd(shepherd)
 
     # Environment
-    env = Environment()
+    env = Environment(config=config)
     for entity in entities:
         env.add_entity(entity)
 
@@ -73,7 +73,8 @@ def main():
     while env.ok:
         env.run_once()
         env.render()
-
+        if env.quit():
+            env.save_data()
 
 if __name__ == '__main__':
     main()

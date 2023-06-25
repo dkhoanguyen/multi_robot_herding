@@ -7,7 +7,7 @@ entity:
     personal_space: 50
     mass: 20.0
     min_v: 0.0
-    max_v: 15.0
+    max_v: 10.0
 
   shepherd:
     init_random: false
@@ -16,7 +16,7 @@ entity:
     local_boundary: 30
     mass: 20.0
     min_v: 0.0
-    max_v: 30.0
+    max_v: 20.0
     configuration:
       - pose: [1400, 200]
         angle: 3.14
@@ -34,8 +34,8 @@ entity:
         angle: 3.14
       - pose: [1400, 460]
         angle: 3.14
-      - pose: [1400, 420]
-        angle: 3.14
+      # - pose: [1400, 420]
+      #   angle: 3.14
 
   obstacle:
     sphere:
@@ -69,7 +69,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 150
+      danger_range: 130
       initial_consensus: [800, 350]
     constants:
       c1_alpha: 3
@@ -79,9 +79,9 @@ behavior:
 
   surround:
     params:
-      Cs: 35.0
-      Cr: 4.0
-      Cv: 1.5
+      Cs: 25.0
+      Cr: 7.0
+      Cv: 2
       Co: 1
       distance_to_target: 125.0
       interagent_spacing: 150.0

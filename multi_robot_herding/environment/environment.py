@@ -1,7 +1,10 @@
 #!/usr/bin/python3
 
+import time
+import pickle
 import pygame
 import numpy as np
+
 from multi_robot_herding.utils import params
 
 from multi_robot_herding.entity.entity import Entity
@@ -13,7 +16,10 @@ class Background(object):
 
 class Environment(object):
 
-    def __init__(self, multi_threaded=False):
+    def __init__(self, config,
+                       multi_threaded=False,
+                       save_to_file=True,
+                       save_path="data/"):
         self._multi_threaded = multi_threaded
 
         # Pygame for visualisation
@@ -35,6 +41,12 @@ class Environment(object):
             self._entities[entity_name] = []
 
         self._set_static_entities = False
+        self._save_to_file = save_to_file
+        self._save_path = save_path
+
+        self._data_to_save = {}
+        self._data_to_save["configuration"] = config
+        self._data_to_save["data"] = []
 
     @property
     def ok(self):
@@ -105,10 +117,27 @@ class Environment(object):
                           ids=shepherds_id,
                           entity_states=all_states,
                           consensus_states=all_consensus_states)
-
+        
+        all_states.update({"ts": time.time()})
+        self._data_to_save["data"].append(all_states.copy())
+        
     def render(self):
         self._screen.fill(params.SIMULATION_BACKGROUND)
         self.display()
         pygame.display.flip()
         self._clock.tick(params.FPS)
         pygame.display.set_caption("fps: " + str(self._clock.get_fps()))
+
+    def quit(self):
+        for event in pygame.event.get():
+            if event.type == pygame.KEYDOWN and event.unicode.isalpha():
+                letter = event.unicode.upper()
+                if letter == 'Q':
+                    self._running = False
+                    return True
+        return False
+
+    def save_data(self):
+        path = self._save_path + "all_states_" + str(int(time.time())) + ".pickle"
+        with open(path, 'wb') as file:
+            pickle.dump(self._data_to_save, file)
