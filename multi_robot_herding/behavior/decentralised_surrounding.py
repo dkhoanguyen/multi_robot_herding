@@ -177,11 +177,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             if "distribution_evenness" not in consensus_state.keys():
                 continue
             total_variance += consensus_state["distribution_evenness"]
-            if consensus_state["distribution_evenness"] < 5:
-                total_valid += 1
-        stable = False
-        if total_valid == all_shepherd_states.shape[0]:
-            stable = True
 
         ## Control
         delta_adjacency_vector = self._get_delta_adjacency_vector(
@@ -235,10 +230,14 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                gain=self._Co)
         herd_mean = np.sum(
             herd_states[:, :2], axis=0) / herd_states.shape[0]
-        if total_variance > 0:
-            u = ps + po + pv + p_avoid + (0.7/total_variance)*(-(herd_mean - np.array([600,350])))
-        else:
-            u = ps + po + pv + p_avoid
+        tuning_ps = 1
+        tuning_po = 1
+        tuning_pv = 1
+        if (0.2/total_variance):
+            tuning_ps = 0.5
+            tuning_po = 1
+            tuning_pv = 0.4
+        u = tuning_ps*ps + tuning_po*po + tuning_pv*pv + p_avoid + (0.5/total_variance)*(-(herd_mean - np.array([1000,350])))
         self._force_u = u
         return u
 
@@ -255,7 +254,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 tuple(self._pose), tuple(self._pose + 2 * (self._force_u)))
 
         pygame.draw.circle(screen, pygame.Color("white"),
-                               tuple(np.array([600,350])), 50, 1)
+                               tuple(np.array([1000,350])), 50, 1)
         if self._plot_range:
             pygame.draw.circle(screen, pygame.Color("white"),
                                tuple(self._pose), self._distance_to_target, 1)
