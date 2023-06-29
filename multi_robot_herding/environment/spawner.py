@@ -21,10 +21,12 @@ class Spawner(object):
         herds = []
         if herd_config.pop('init_random'):
             num = herd_config.pop('num')
+            x_interval = herd_config.pop('x_interval')
+            y_interval = herd_config.pop('y_interval')
             x = np.random.randint(
-                600, 800, (num,1)).astype('float')
+                x_interval[0], x_interval[1], (num,1)).astype('float')
             y = np.random.randint(
-                300, 500, (num,1)).astype('float')
+                y_interval[0], y_interval[1], (num,1)).astype('float')
             initial_poses = np.hstack((x, y))
             
             for i in range(num):
@@ -46,6 +48,26 @@ class Spawner(object):
 
         if shepherd_config.pop('init_random'):
             shepherd_config.pop('configuration')
+            num = shepherd_config.pop('num')
+            x_interval = shepherd_config.pop('x_interval')
+            y_interval = shepherd_config.pop('y_interval')
+            x = np.random.randint(
+                x_interval[0], x_interval[1], (num,1)).astype('float')
+            y = np.random.randint(
+                y_interval[0], y_interval[1], (num,1)).astype('float')
+            initial_poses = np.hstack((x, y))
+
+            for i in range(num):
+                angle = np.pi * (2 * np.random.rand() - 1)
+                vel = shepherd_config['max_v'] * \
+                    np.array([np.cos(angle), np.sin(angle)])
+                
+                shepherd_config['pose'] = initial_poses[i, :]
+                shepherd_config['velocity'] = vel
+                shepherd_config['id'] = i
+                shepherds.append(Spawner.manual_spawn(
+                    entity=Shepherd, config=shepherd_config))
+
         else:
             shepherd_config.pop('num')
             initial_configurations = shepherd_config.pop('configuration')

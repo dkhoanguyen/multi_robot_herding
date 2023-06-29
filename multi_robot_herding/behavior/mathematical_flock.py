@@ -200,7 +200,7 @@ class MathematicalFlock(Behavior):
             qi = herd_states[idx, :2]
             u_pred = self._predator_avoidance_term(
                 si=qi, r=self._danger_range, k=4)
-            herd_states[idx, 2:4] += (u_pred + 4 * self._densities[idx,:] * np.linalg.norm(utils.unit_vector(u_pred)))
+            herd_states[idx, 2:4] += (u_pred + 5 * self._densities[idx,:] * np.linalg.norm(utils.unit_vector(u_pred)))
 
         herd_states[:, 2:4] += qdot * self._dt_sqr
         pdot = herd_states[:, 2:4]
@@ -410,9 +410,9 @@ class MathematicalFlock(Behavior):
                         gain = 1
                         robot_mean += si
                         total_predator_in_range += 1
-                # if total_predator_in_range > 0:
-                #     robot_mean = robot_mean / total_predator_in_range
-                #     avoid_vel = 2 * utils.unit_vector(cluster_mean-robot_mean)
+                if total_predator_in_range > 0:
+                    robot_mean = robot_mean / total_predator_in_range
+                    avoid_vel = 2 * utils.unit_vector(cluster_mean-robot_mean)
 
                 u_gamma = gain * self._group_objective_term(
                     c1=MathematicalFlock.C1_gamma,

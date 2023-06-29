@@ -116,7 +116,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                other_states: np.ndarray,
                herd_states: np.ndarray,
                obstacles: list,
-               consensus_states: dict,
+               consensus_states: list,
                output_consensus_state: dict):
         # Control signal
         self._pose = state[:2]
@@ -133,11 +133,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
             state,
-            r=self._distance_to_target)
+            r=self._distance_to_target + 15)
 
         neighbor_herd_idxs = delta_adjacency_vector
         d_to_nearest_edge = np.Inf
         mean_norm_r_to_sj = np.Inf
+
         if sum(neighbor_herd_idxs) > 0:
             sj = herd_states[neighbor_herd_idxs, :2]
             r_to_sj = di - sj
@@ -152,6 +153,37 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             "mean_d_to_edge": mean_norm_r_to_sj
         })
 
+        total_valid = 0
+        total_nearest_neighbor_d = 0
+        mean_nearest_neighbor_d = 0
+        variance = np.Inf
+        total_variance = 0
+        for consensus_state in consensus_states:
+            if "nearest_neighbor_d" not in consensus_state.keys():
+                continue
+            if consensus_state["nearest_neighbor_d"] == np.Inf:
+                continue
+            total_nearest_neighbor_d += consensus_state["nearest_neighbor_d"]
+            total_valid += 1
+        if total_valid > 0:
+            mean_nearest_neighbor_d = total_nearest_neighbor_d / total_valid
+            variance = (mean_nearest_neighbor_d - d_to_nearest_edge)**2 / total_valid        
+        output_consensus_state.update(
+            {"distribution_evenness": variance})
+        
+        ## Stabilise formation
+        total_valid = 0
+        for consensus_state in consensus_states:
+            if "distribution_evenness" not in consensus_state.keys():
+                continue
+            total_variance += consensus_state["distribution_evenness"]
+            if consensus_state["distribution_evenness"] < 5:
+                total_valid += 1
+        stable = False
+        if total_valid == all_shepherd_states.shape[0]:
+            stable = True
+
+        ## Control
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
             state,
@@ -170,7 +202,6 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                 qj=sj,
                                                 d=d_to_target,
                                                 gain=self._Cs)
-        self._force_ps = ps
 
         po = np.zeros(2)
         neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
@@ -202,7 +233,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                obstacle_list=obstacles,
                                                d=self._obstacle_range,
                                                gain=self._Co)
-        u = ps + po + pv + p_avoid
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+        if total_variance > 0:
+            u = ps + po + pv + p_avoid + (0.7/total_variance)*(-(herd_mean - np.array([600,350])))
+        else:
+            u = ps + po + pv + p_avoid
         self._force_u = u
         return u
 
@@ -218,6 +254,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 screen, pygame.Color("grey"),
                 tuple(self._pose), tuple(self._pose + 2 * (self._force_u)))
 
+        pygame.draw.circle(screen, pygame.Color("white"),
+                               tuple(np.array([600,350])), 50, 1)
         if self._plot_range:
             pygame.draw.circle(screen, pygame.Color("white"),
                                tuple(self._pose), self._distance_to_target, 1)
