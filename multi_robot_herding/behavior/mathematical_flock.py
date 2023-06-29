@@ -103,20 +103,21 @@ class MathematicalFlock(Behavior):
         self._dt_sqr = 0.1
 
         self._boundary = {
-            'x_min': 0,
-            'x_max': 1400,
-            'y_min': 0,
-            'y_max': 720,
+            'x_min': 200,
+            'x_max': 1200,
+            'y_min': 300,
+            'y_max': 500,
         }
 
         # For visualization
         self._contour_agents = []
         self._plot_voronoi = False
+        self._densities = None
 
         # Clusters
         self._total_clusters = 0
         self._clusters = []
-        self._plot_cluster = True
+        self._plot_cluster = False
 
         self._states = np.empty((0, 2))
 
@@ -188,19 +189,18 @@ class MathematicalFlock(Behavior):
             herd_states, self._boundary, k=1)
         # remain_in_bound_u = np.zeros((2,))
 
-        # Density
-        herd_density = self._herd_density(herd_states=herd_states,
-                                          shepherd_states=shepherd_states)
+        self._densities = self._herd_density(herd_states=herd_states,
+                                            shepherd_states=shepherd_states)
 
         qdot = local_clustering + \
             flocking + self._flocking_condition * global_clustering + \
-            (1 - self._flocking_condition) * remain_in_bound_u
+            (1 - self._flocking_condition) * remain_in_bound_u + 2 * self._densities
 
         for idx in range(herd_states.shape[0]):
             qi = herd_states[idx, :2]
             u_pred = self._predator_avoidance_term(
-                si=qi, r=self._danger_range, k=3)
-            herd_states[idx, 2:4] += u_pred
+                si=qi, r=self._danger_range, k=4)
+            herd_states[idx, 2:4] += (u_pred + 4 * self._densities[idx,:] * np.linalg.norm(utils.unit_vector(u_pred)))
 
         herd_states[:, 2:4] += qdot * self._dt_sqr
         pdot = herd_states[:, 2:4]
@@ -217,8 +217,8 @@ class MathematicalFlock(Behavior):
             herd.pose = herd_states[idx, :2]
             herd._rotate_image(herd.velocity)
 
-            herd._force = 2 * herd_density[idx, :]
-            herd._plot_force = True
+            herd._force = 10 * self._densities[idx, :]
+            herd._plot_force = False
 
         herd_mean = np.sum(
             herd_states[:, :2], axis=0) / herd_states.shape[0]
@@ -307,14 +307,14 @@ class MathematicalFlock(Behavior):
                       shepherd_states: np.ndarray):
         herd_densities = np.zeros((herd_states.shape[0], 2))
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(herd_states,
-                                                                  r=self._sensing_range)
+                                                                  r=2 * self._sensing_range)
         for idx in range(herd_states.shape[0]):
             # Density
             neighbor_idxs = alpha_adjacency_matrix[idx]
             density = self._calc_density(
                 idx=idx, neighbors_idxs=neighbor_idxs,
                 herd_states=herd_states)
-            herd_densities[idx] = density
+            herd_densities[idx] = utils.unit_vector(density)
         return herd_densities
 
     def _global_clustering(self, herd_states: np.ndarray,
@@ -373,6 +373,7 @@ class MathematicalFlock(Behavior):
             clusters.append(cluster_nodes)
             cluster_indx_list.append(cluster_indx)
 
+
         # Perform local flocking with local cluster
         all_gamma = np.zeros((herd_states.shape[0], 2))
         for cluster_indx, cluster in enumerate(clusters):
@@ -409,18 +410,21 @@ class MathematicalFlock(Behavior):
                         gain = 1
                         robot_mean += si
                         total_predator_in_range += 1
-                if total_predator_in_range > 0:
-                    robot_mean = robot_mean / total_predator_in_range
-                    avoid_vel = 4 * utils.unit_vector(cluster_mean-robot_mean)
+                # if total_predator_in_range > 0:
+                #     robot_mean = robot_mean / total_predator_in_range
+                #     avoid_vel = 2 * utils.unit_vector(cluster_mean-robot_mean)
 
                 u_gamma = gain * self._group_objective_term(
-                    c1=2 * MathematicalFlock.C1_gamma,
-                    c2=3 * MathematicalFlock.C2_gamma,
+                    c1=MathematicalFlock.C1_gamma,
+                    c2=MathematicalFlock.C2_gamma,
                     pos=target,
                     qi=qi,
                     vel=avoid_vel,
                     pi=pi
                 )
+                # if total_predator_in_range > 0:
+                #     all_gamma[this_indx, :] = u_gamma + 2 * self._densities[idx,:]
+                # else:
                 all_gamma[this_indx, :] = u_gamma
         return all_gamma
 
@@ -660,7 +664,7 @@ class MathematicalFlock(Behavior):
     def _density(self, si: np.ndarray, sj: np.ndarray, k: float):
         w_sum = np.zeros(2).astype(np.float64)
         for i in range(sj.shape[0]):
-            sij = si - sj[i, :]
+            sij = sj[i, :] - si
             w = (1/(1 + k * np.linalg.norm(sij))) * utils.unit_vector(sij)
             w_sum += w
         return w_sum
