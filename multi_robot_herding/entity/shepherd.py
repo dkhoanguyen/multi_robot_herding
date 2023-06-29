@@ -114,7 +114,8 @@ class Shepherd(Autonomous):
                 other_states=shepherd_in_range,
                 herd_states=all_herd_states,
                 obstacles=self._static_obstacles,
-                consensus_states=all_consensus_states)
+                consensus_states=all_consensus_states,
+                output_consensus_state=self._consensus_state)
 
         if self._type == DynamicType.SingleIntegrator:
             if np.linalg.norm(u) > self._max_v:

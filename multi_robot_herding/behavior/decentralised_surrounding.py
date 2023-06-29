@@ -11,7 +11,7 @@ from multi_robot_herding.utils import utils
 
 class PotentialFunc(object):
     @staticmethod
-    def proposed_func(xi: np.ndarray, xj: np.ndarray,
+    def const_attract_fuc(xi: np.ndarray, xj: np.ndarray,
                       d: float,
                       attract: bool = True,
                       repulse: bool = True,
@@ -25,6 +25,27 @@ class PotentialFunc(object):
 
         n_xij_d = xij_norm - d
         fx = a - r * np.exp(-n_xij_d/c)
+        gx = np.tanh(n_xij_d/m)
+
+        # Potential function
+        px = -fx*(gx**2)
+        return px
+    
+    @staticmethod
+    def var_attract_func(xi: np.ndarray, xj: np.ndarray,
+                      d: float,
+                      attract: bool = True,
+                      repulse: bool = True,
+                      c: float = 10,
+                      m: float = 10):
+        a = 0.3
+        r = int(repulse)
+
+        xij = xi - xj
+        xij_norm = np.linalg.norm(xij)
+
+        n_xij_d = xij_norm - d
+        fx = a*xij_norm - r * np.exp(-n_xij_d/c)
         gx = np.tanh(n_xij_d/m)
 
         # Potential function
@@ -78,7 +99,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._triggered = False
         self._voronoi = None
 
-        self._plot_force = True
+        self._plot_force = False
         self._plot_range = False
 
     def transition(self, state: np.ndarray,
@@ -95,32 +116,50 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                other_states: np.ndarray,
                herd_states: np.ndarray,
                obstacles: list,
-               consensus_states: dict):
+               consensus_states: dict,
+               output_consensus_state: dict):
         # Control signal
         self._pose = state[:2]
         u = np.zeros(2)
         all_shepherd_states = np.vstack((state, other_states))
 
+        di = state[:2]
+        d_dot_i = state[2:4]
+
         d_to_target = self._distance_to_target
         spacing = self._interagent_spacing
 
-        # herd_density = self._herd_density(herd_states=herd_states,
-        #                                   shepherd_states=all_shepherd_states,
-        #                                   r_shepherd=d_to_target)
-        # total_density = np.sum(np.linalg.norm(herd_density, axis=1))
-        # self._total_energy.append(total_density)
+        # Consensus check
+        delta_adjacency_vector = self._get_delta_adjacency_vector(
+            herd_states,
+            state,
+            r=self._distance_to_target)
+
+        neighbor_herd_idxs = delta_adjacency_vector
+        d_to_nearest_edge = np.Inf
+        mean_norm_r_to_sj = np.Inf
+        if sum(neighbor_herd_idxs) > 0:
+            sj = herd_states[neighbor_herd_idxs, :2]
+            r_to_sj = di - sj
+            norm_r_to_sj = np.linalg.norm(r_to_sj, axis=1)
+            d_to_nearest_edge = norm_r_to_sj.min()
+
+            mean_r_to_sj = np.sum(r_to_sj, axis=0) / sum(neighbor_herd_idxs)
+            mean_norm_r_to_sj = np.linalg.norm(mean_r_to_sj)
+
+        output_consensus_state.update({
+            "nearest_neighbor_d": d_to_nearest_edge,
+            "mean_d_to_edge": mean_norm_r_to_sj
+        })
 
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
             state,
-            r=self._sensing_range)
+            r=self._sensing_range) 
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
-            r=self._sensing_range)
-
-        di = state[:2]
-        d_dot_i = state[2:4]
+            r=self._interagent_spacing)
 
         neighbor_herd_idxs = delta_adjacency_vector
         ps = np.zeros(2)
@@ -169,12 +208,12 @@ class DecentralisedSurrounding(DecentralisedBehavior):
 
     def display(self, screen: pygame.Surface):
         if self._plot_force:
-            # pygame.draw.line(
-            #     screen, pygame.Color("white"),
-            #     tuple(self._pose), tuple(self._pose + 5 * (self._force_po)))
-            # pygame.draw.line(
-            #     screen, pygame.Color("yellow"),
-            #     tuple(self._pose), tuple(self._pose + 5 * (self._force_ps)))
+            pygame.draw.line(
+                screen, pygame.Color("white"),
+                tuple(self._pose), tuple(self._pose + 5 * (self._force_po)))
+            pygame.draw.line(
+                screen, pygame.Color("yellow"),
+                tuple(self._pose), tuple(self._pose + 5 * (self._force_ps)))
             pygame.draw.line(
                 screen, pygame.Color("grey"),
                 tuple(self._pose), tuple(self._pose + 2 * (self._force_u)))
@@ -183,7 +222,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             pygame.draw.circle(screen, pygame.Color("white"),
                                tuple(self._pose), self._distance_to_target, 1)
             pygame.draw.circle(screen, pygame.Color("yellow"),
-                               tuple(self._pose), self._sensing_range, 1)
+                               tuple(self._pose), self._interagent_spacing, 1)
 
         return super().display(screen)
 
@@ -196,9 +235,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             func_input = self._potential_func['col_avoid']
             func_input.update({'xi': qi, 'xj': qj[i, :], 'd': d})
-            p = PotentialFunc.proposed_func(**func_input)
+            p = PotentialFunc.const_attract_fuc(**func_input)
             u_sum += gain * p * utils.unit_vector(uij)
-        return u_sum / qj.shape[0]
+        return u_sum
 
     def _get_delta_adjacency_vector(self, herd_states: np.ndarray,
                                     shepherd_state: np.ndarray, r: float) -> np.ndarray:
@@ -239,9 +278,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             uij = qi - qj[i, :]
             func_input = self._potential_func['edge_follow']
             func_input.update({'xi': qi, 'xj': qj[i, :], 'd': d})
-            p = PotentialFunc.proposed_func(**func_input)
+            p = PotentialFunc.const_attract_fuc(**func_input)
             u_sum += gain * p * utils.unit_vector(uij)
-        return u_sum / qj.shape[0]
+        return u_sum
 
     def _velocity_consensus(self, pj: np.ndarray, gain: float):
         u_sum = np.zeros(2).astype(np.float64)
@@ -285,7 +324,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             qij = qi - qj
             func_input = self._potential_func['obs_avoid']
             func_input.update({'xi': qi, 'xj': qj, 'd': d})
-            p = PotentialFunc.proposed_func(**func_input)
+            p = PotentialFunc.const_attract_fuc(**func_input)
             u_sum += gain * p * utils.unit_vector(qij)
         return u_sum
 
