@@ -1,5 +1,6 @@
 # !/usr/bin/python3
 
+import time
 import math
 import pygame
 import numpy as np
@@ -7,16 +8,17 @@ from collections import deque
 
 from multi_robot_herding.common.decentralised_behavior import DecentralisedBehavior
 from multi_robot_herding.utils import utils
+from multi_robot_herding.entity.obstacle import Obstacle, Hyperplane
 
 
 class PotentialFunc(object):
     @staticmethod
     def const_attract_fuc(xi: np.ndarray, xj: np.ndarray,
-                      d: float,
-                      attract: bool = True,
-                      repulse: bool = True,
-                      c: float = 10,
-                      m: float = 10):
+                          d: float,
+                          attract: bool = True,
+                          repulse: bool = True,
+                          c: float = 10,
+                          m: float = 10):
         a = int(attract)
         r = int(repulse)
 
@@ -30,14 +32,14 @@ class PotentialFunc(object):
         # Potential function
         px = -fx*(gx**2)
         return px
-    
+
     @staticmethod
     def var_attract_func(xi: np.ndarray, xj: np.ndarray,
-                      d: float,
-                      attract: bool = True,
-                      repulse: bool = True,
-                      c: float = 10,
-                      m: float = 10):
+                         d: float,
+                         attract: bool = True,
+                         repulse: bool = True,
+                         c: float = 10,
+                         m: float = 10):
         a = 0.3
         r = int(repulse)
 
@@ -102,6 +104,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._plot_force = False
         self._plot_range = False
 
+        self._current_time = time.time()
+        self._wait_time = time.time() + 10
+
     def transition(self, state: np.ndarray,
                    other_states: np.ndarray,
                    herd_states: np.ndarray,
@@ -133,56 +138,101 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
             state,
-            r=self._distance_to_target + 15)
+            r=self._distance_to_target + 10)
 
         neighbor_herd_idxs = delta_adjacency_vector
-        d_to_nearest_edge = np.Inf
+        ds_to_nearest_edge = np.Inf
         mean_norm_r_to_sj = np.Inf
 
         if sum(neighbor_herd_idxs) > 0:
             sj = herd_states[neighbor_herd_idxs, :2]
             r_to_sj = di - sj
             norm_r_to_sj = np.linalg.norm(r_to_sj, axis=1)
-            d_to_nearest_edge = norm_r_to_sj.min()
+            ds_to_nearest_edge = norm_r_to_sj.min()
 
             mean_r_to_sj = np.sum(r_to_sj, axis=0) / sum(neighbor_herd_idxs)
             mean_norm_r_to_sj = np.linalg.norm(mean_r_to_sj)
 
         output_consensus_state.update({
-            "nearest_neighbor_d": d_to_nearest_edge,
-            "mean_d_to_edge": mean_norm_r_to_sj
+            "nearest_neighbor_ds": ds_to_nearest_edge,
+            "mean_ds_to_edge": mean_norm_r_to_sj
+        })
+
+        alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
+            all_shepherd_states,
+            r=self._interagent_spacing + 5)
+        neighbor_shepherd_idxs = alpha_adjacency_matrix[0]
+        dr_to_nearest_edge = np.Inf
+        mean_norm_r_to_rj = np.Inf
+
+        if sum(neighbor_shepherd_idxs) > 0:
+            rj = all_shepherd_states[neighbor_shepherd_idxs, :2]
+            r_to_rj = di - rj
+            norm_r_to_rj = np.linalg.norm(r_to_rj, axis=1)
+            if norm_r_to_rj.shape[0] > 1:
+                smallest_1, smallest_2 = np.partition(norm_r_to_rj, 1)[0:2]
+                dr_to_nearest_edge = smallest_1 + smallest_2
+            else:
+                dr_to_nearest_edge = np.Inf
+
+            mean_r_to_rj = np.sum(r_to_rj, axis=0) / \
+                sum(neighbor_shepherd_idxs)
+            mean_norm_r_to_rj = np.linalg.norm(mean_r_to_rj)
+
+        output_consensus_state.update({
+            "nearest_neighbor_2dr": dr_to_nearest_edge,
+            "mean_dr_to_edge": mean_norm_r_to_rj
         })
 
         total_valid = 0
-        total_nearest_neighbor_d = 0
-        mean_nearest_neighbor_d = 0
-        variance = np.Inf
+        total_nearest_neighbor_ds = 0
+        mean_nearest_neighbor_ds = 0
+        s_var = np.Inf
+
         total_variance = 0
         for consensus_state in consensus_states:
-            if "nearest_neighbor_d" not in consensus_state.keys():
+            if "nearest_neighbor_ds" not in consensus_state.keys():
                 continue
-            if consensus_state["nearest_neighbor_d"] == np.Inf:
+            if consensus_state["nearest_neighbor_ds"] == np.Inf:
                 continue
-            total_nearest_neighbor_d += consensus_state["nearest_neighbor_d"]
+            total_nearest_neighbor_ds += consensus_state["nearest_neighbor_ds"]
             total_valid += 1
         if total_valid > 0:
-            mean_nearest_neighbor_d = total_nearest_neighbor_d / total_valid
-            variance = (mean_nearest_neighbor_d - d_to_nearest_edge)**2 / total_valid        
+            mean_nearest_neighbor_ds = total_nearest_neighbor_ds / total_valid
+            s_var = (mean_nearest_neighbor_ds -
+                     ds_to_nearest_edge)**2 / total_valid
+
+        total_valid = 0
+        total_nearest_neighbor_dr = 0
+        mean_nearest_neighbor_dr = 0
+        r_var = np.Inf
+        for consensus_state in consensus_states:
+            if "nearest_neighbor_2dr" not in consensus_state.keys():
+                continue
+            if consensus_state["nearest_neighbor_2dr"] == np.Inf:
+                continue
+            total_nearest_neighbor_dr += consensus_state["nearest_neighbor_2dr"]
+            total_valid += 1
+        if total_valid > 0:
+            mean_nearest_neighbor_dr = total_nearest_neighbor_dr / total_valid
+            r_var = (mean_nearest_neighbor_dr -
+                     dr_to_nearest_edge)**2 / total_valid
+
         output_consensus_state.update(
-            {"distribution_evenness": variance})
-        
-        ## Stabilise formation
+            {"distribution_evenness": s_var + r_var})
+
+        # Stabilise formation
         total_valid = 0
         for consensus_state in consensus_states:
             if "distribution_evenness" not in consensus_state.keys():
                 continue
             total_variance += consensus_state["distribution_evenness"]
 
-        ## Control
+        # Control
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
             state,
-            r=self._sensing_range) 
+            r=self._sensing_range)
 
         alpha_adjacency_matrix = self._get_alpha_adjacency_matrix(
             all_shepherd_states,
@@ -217,7 +267,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             pv = self._velocity_consensus(pj=s_dot_j,
                                           gain=self._Cv)
 
-        # Obstacle avoidance term
+        # # Obstacle avoidance term
+        # if time.time() <= self._wait_time:
+        #     hyperplane = self._verical_imaginary_hyperplane(
+        #         herd_states, all_shepherd_states, 400)
+        #     obstacles = [hyperplane]
         beta_adj_vec = self._get_beta_adjacency_vector(state=state,
                                                        obstacles=obstacles,
                                                        r=self._sensing_range)
@@ -237,7 +291,8 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             tuning_ps = 0.5
             tuning_po = 1
             tuning_pv = 0.4
-        u = tuning_ps*ps + tuning_po*po + tuning_pv*pv + p_avoid + (0.5/total_variance)*(-(herd_mean - np.array([1000,350])))
+        u = tuning_ps*ps + tuning_po*po + tuning_pv*pv + p_avoid + \
+            (0.6/total_variance)*(-(herd_mean - np.array([1000, 350])))
         self._force_u = u
         return u
 
@@ -254,7 +309,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 tuple(self._pose), tuple(self._pose + 2 * (self._force_u)))
 
         pygame.draw.circle(screen, pygame.Color("white"),
-                               tuple(np.array([1000,350])), 50, 1)
+                           tuple(np.array([1000, 350])), 50, 1)
         if self._plot_range:
             pygame.draw.circle(screen, pygame.Color("white"),
                                tuple(self._pose), self._distance_to_target, 1)
@@ -408,3 +463,19 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             density = self._density(si=qi, sj=qj, k=0.375, d=r_shepherd)
             herd_densities[idx] += density
         return herd_densities
+
+    # Intitial State constraints
+    def _verical_imaginary_hyperplane(self, herd_states: np.ndarray,
+                                      shepherd_states: np.ndarray,
+                                      r: float):
+        herd_mean = np.sum(
+            herd_states[:, :2], axis=0) / herd_states.shape[0]
+        shepherd_mean = np.sum(
+            shepherd_states[:, :2], axis=0) / shepherd_states.shape[0]
+        hs = shepherd_mean - herd_mean
+        d_hs = np.linalg.norm(hs)
+        unit_hs = utils.unit_vector(hs)
+        point = herd_mean + r * unit_hs
+        hyperplane = Hyperplane(
+            ak=unit_hs, yk=point, boundary=np.array([[0, 0], [0, 0]]))
+        return hyperplane

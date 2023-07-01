@@ -16,19 +16,22 @@ class Background(object):
 
 class Environment(object):
 
-    def __init__(self, config,
+    def __init__(self, render,
+                       config,
                        multi_threaded=False,
                        save_to_file=True,
                        save_path="data/"):
         self._multi_threaded = multi_threaded
+        self._render = render
 
         # Pygame for visualisation
-        pygame.init()
-        self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
-        self._rect = self._screen.get_rect()
+        if self._render:
+            pygame.init()
+            self._screen = pygame.display.set_mode(params.SCREEN_SIZE)
+            self._rect = self._screen.get_rect()
+            self._clock = pygame.time.Clock()
         self._running = True
-        self._clock = pygame.time.Clock()
-
+        
         self._behaviors = []
         self._entities = []
         self._bodies = []
@@ -122,11 +125,12 @@ class Environment(object):
         self._data_to_save["data"].append(all_states.copy())
         
     def render(self):
-        self._screen.fill(params.SIMULATION_BACKGROUND)
-        self.display()
-        pygame.display.flip()
-        self._clock.tick(params.FPS)
-        pygame.display.set_caption("fps: " + str(self._clock.get_fps()))
+        if self._render:
+            self._screen.fill(params.SIMULATION_BACKGROUND)
+            self.display()
+            pygame.display.flip()
+            self._clock.tick(params.FPS)
+            pygame.display.set_caption("fps: " + str(self._clock.get_fps()))
 
     def quit(self):
         for event in pygame.event.get():
