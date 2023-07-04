@@ -6,7 +6,6 @@ from multi_robot_herding.entity.shepherd import Shepherd
 
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
-from multi_robot_herding.behavior.decentralised_formation import DecentralisedFormation
 
 from multi_robot_herding.environment.environment import Environment
 from multi_robot_herding.environment.spawner import Spawner
@@ -84,10 +83,12 @@ def single_iteration():
             break
         start_t += 1
 
+
 if __name__ == '__main__':
-    total_run = 10
-    multi_thread = False
-    current_run = 0
-    while current_run < total_run:
-        single_iteration()
-        current_run += 1
+    single_iteration()
+    # total_run = 10
+    # multi_thread = False
+    # current_run = 0
+    # while current_run < total_run:
+    #     single_iteration()
+    #     current_run += 1

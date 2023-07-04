@@ -1,6 +1,6 @@
 sim:
-  render: false
-  collect_data: true
+  render: true
+  collect_data: false
   max_t: 3000
   
 entity:

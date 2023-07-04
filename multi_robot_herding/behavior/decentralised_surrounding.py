@@ -267,11 +267,11 @@ class DecentralisedSurrounding(DecentralisedBehavior):
             pv = self._velocity_consensus(pj=s_dot_j,
                                           gain=self._Cv)
 
-        # # Obstacle avoidance term
-        # if time.time() <= self._wait_time:
-        #     hyperplane = self._verical_imaginary_hyperplane(
-        #         herd_states, all_shepherd_states, 400)
-        #     obstacles = [hyperplane]
+        # Obstacle avoidance term
+        if time.time() <= self._wait_time:
+            hyperplane = self._verical_imaginary_hyperplane(
+                herd_states, all_shepherd_states, 400)
+            obstacles = [hyperplane]
         beta_adj_vec = self._get_beta_adjacency_vector(state=state,
                                                        obstacles=obstacles,
                                                        r=self._sensing_range)

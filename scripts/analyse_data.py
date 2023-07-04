@@ -214,7 +214,7 @@ class DataAnalyser(object):
 
 if __name__ == '__main__':
     analyser = DataAnalyser()
-    # analyser.extract_and_plot_distribution_range()
+    analyser.extract_and_plot_distribution_range()
     # analyser.extract_and_plot_distance_to_herd_centroid()
     # analyser.extract_and_plot_distribution_eveness()
-    analyser.extract_isolate_rate()
+    # analyser.extract_isolate_rate()
