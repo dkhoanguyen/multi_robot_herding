@@ -160,7 +160,6 @@ class MathematicalFlock(Behavior):
             self._flocking_condition = 0
 
         self._flocking_condition = self._follow_cursor
-        # self._flocking_condition = 1
 
         herd: Herd
         herd_states = np.array([]).reshape((0, 4))
@@ -186,13 +185,12 @@ class MathematicalFlock(Behavior):
 
         remain_in_bound_u = self._calc_remain_in_boundary_control(
             herd_states, self._boundary, k=5.0)
-        # remain_in_bound_u = np.zeros((2,))
 
         # Density
         herd_density = self._herd_density(herd_states=herd_states,
                                           shepherd_states=shepherd_states)
 
-        qdot = local_clustering + \
+        qdot = (1 - self._flocking_condition) * local_clustering + \
             flocking + self._flocking_condition * global_clustering + \
             (1 - self._flocking_condition) * remain_in_bound_u
         herd_states[:, 2:4] += qdot * self._dt_sqr

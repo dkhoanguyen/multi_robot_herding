@@ -5,6 +5,7 @@ import yaml
 from multi_robot_herding.entity.shepherd import Shepherd
 
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
+from multi_robot_herding.behavior.decentralised_approaching import DecentralisedApproaching
 from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
 from multi_robot_herding.behavior.decentralised_formation import DecentralisedFormation
 
@@ -19,10 +20,8 @@ def main():
         config = yaml.safe_load(file)
 
     entities = []
-    # Component Config
+    # Entity related configuration
     entity_config = config['entity']
-    behavior_config = config['behavior']
-
     # Create herds
     herd_config = entity_config['herd']
     herds = Spawner.auto_spawn_herds(herd_config)
@@ -36,18 +35,23 @@ def main():
     shepherds = Spawner.auto_spawn_shepherds(shepherd_config)
 
     # Shepherd behavior
-    surround_config = behavior_config['surround']
+
     shepherd: Shepherd
     for shepherd in shepherds:
         shepherd_behaviors = {}
-        dec_surround = DecentralisedSurrounding(**surround_config['params'])
+        dec_approach = DecentralisedApproaching()
+        shepherd_behaviors["dec_approach"] = dec_approach
+        dec_surround = DecentralisedSurrounding()
         shepherd_behaviors["dec_surround"] = dec_surround
+        # dec_formation = DecentralisedFormation(id=shepherd.id)
+        # shepherd_behaviors["dec_formation"] = dec_formation
         shepherd.add_behavior(shepherd_behaviors)
 
     # Update entities list
     entities = entities + shepherds
 
     # Behavior related configuration
+    behavior_config = config['behavior']
     math_flock_config = behavior_config['math_flock']
     math_flock = MathematicalFlock(**math_flock_config['params'])
 

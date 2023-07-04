@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>multi_robot_herding</name>
+  <version>1.3.1</version>
+  <description>
+    ROS packages for cattle herding simulation (meta package)
+  </description>
+  <license>Apache 2.0</license>
+  <maintainer email="khoanguyendacdang2198@gmail.com">Khoa Nguyen</maintainer>
+  <export><metapackage/></export>
+</package>
