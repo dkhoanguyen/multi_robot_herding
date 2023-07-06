@@ -4,7 +4,6 @@ import os
 from enum import Enum
 import xml.etree.ElementTree as ET
 
-
 class Tag(Enum):
     LAUNCH = "launch"
     NODE = "node"
@@ -66,6 +65,19 @@ class Include(Element):
             self.set("ns", namespace)
 
 
+class Group(Element):
+    def __init__(self, namespace: str = None):
+        super().__init__(tag=Tag.GROUP)
+        self.set("ns", namespace)
+
+
+class Remap(Element):
+    def __init__(self, original: str, new: str):
+        super().__init__(tag=Tag.REMAP)
+        self.set("from", original)
+        self.set("to", new)
+
+
 class Node(Element):
     def __init__(self, pkg: str = None,
                  exec: str = None,
@@ -93,6 +105,8 @@ class LaunchDescription(object):
                  name="test"):
         if path is None:
             self._path = os.getcwd()
+        else:
+            self._path = path
         self._name = name
         self._launch = ET.Element("launch")
 
@@ -102,7 +116,7 @@ class LaunchDescription(object):
     def write(self):
         # Create the XML tree
         tree = ET.ElementTree(self._launch)
-        tree.write(f"{self._name}.launch")
+        tree.write(f"{self._path}/{self._name}.launch")
 
 
 if __name__ == "__main__":

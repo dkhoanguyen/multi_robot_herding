@@ -1,0 +1,68 @@
+entity:
+  herd:
+    num: 1
+    min_v: 0.0
+    max_v: 1.0
+
+  shepherd:
+    init_random: false
+    num: 20
+    local_perception: 200
+    local_boundary: 30
+    mass: 20.0
+    min_v: 0.0
+    max_v: 3.0
+    configuration:
+      - pose: [1400, 200]
+        angle: 3.14
+      - pose: [1400, 240]
+        angle: 3.14
+      - pose: [1400, 280]
+        angle: 3.14
+      - pose: [1400, 320]
+        angle: 3.14
+      - pose: [1400, 360]
+        angle: 3.14
+      - pose: [1400, 400]
+        angle: 3.14
+      - pose: [1400, 440]
+        angle: 3.14
+      - pose: [1400, 460]
+        angle: 3.14
+      - pose: [1400, 420]
+        angle: 3.14
+
+behavior:
+  list:
+    - math_flock
+    - math_formation
+    - orbit
+
+  math_flock:
+    interaction:
+      entity:
+        - herd
+        - shepherd
+        - obstacle
+      behavior:
+    params:
+      follow_cursor: false
+      sensing_range: 40
+      danger_range: 110
+      initial_consensus: [1000, 350]
+    constants:
+      c1_alpha: 3
+      c1_beta: 20
+      c1_gamma: 5
+      c1_delta: 20
+
+  math_formation:
+    interaction:
+      entity:
+        - herd
+        - shepherd
+        - obstacle
+    params:
+      sensing_range: 200
+      agent_spacing: 200
+      scaled_agent_spacing: 0.5
