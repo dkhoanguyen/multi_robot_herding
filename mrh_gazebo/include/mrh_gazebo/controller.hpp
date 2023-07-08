@@ -7,6 +7,7 @@
 #include <cmath>
 #include <algorithm>
 #include <Eigen/Dense>
+#include "eigen3/Eigen/Dense"
 
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
@@ -98,7 +99,6 @@ namespace mrh_gazebo
         const bool &evaluate_linear_if_allow_reverse,
         geometry_msgs::Twist &vel_cmd);
 
-    //! Compute transform that transforms a pose into the robot frame (base_link)
     Eigen::Matrix4d transformToBaseLink(const geometry_msgs::Pose &pose,
                                    const geometry_msgs::Pose &robot_tf);
 

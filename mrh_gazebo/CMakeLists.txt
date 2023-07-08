@@ -47,6 +47,7 @@ catkin_package(
 # Build
 ################################################################################
 link_directories(${GAZEBO_LIBRARY_DIRS})
+include_directories(/user/include/sdformat-9.10)
 
 include_directories(
   include

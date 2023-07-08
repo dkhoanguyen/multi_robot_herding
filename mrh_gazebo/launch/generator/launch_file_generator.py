@@ -4,6 +4,7 @@ import os
 from enum import Enum
 import xml.etree.ElementTree as ET
 
+
 class Tag(Enum):
     LAUNCH = "launch"
     NODE = "node"
