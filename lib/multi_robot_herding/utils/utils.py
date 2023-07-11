@@ -2,23 +2,11 @@
 
 import numpy as np
 import math
-from . import params
 
 
 def randrange(a, b):
     """Random number between a and b."""
     return a + np.random.random() * (b - a)
-
-
-def px_to_grid(px_pos):
-    """Convert pixel position to grid position."""
-    return np.array([px_pos[0] / params.COL, px_pos[1] / params.ROW])
-
-
-def grid_to_px(grid_pos):
-    """Convert grid position to pixel position."""
-    return np.array([grid_pos[0] * params.COL, grid_pos[1] * params.ROW])
-
 
 def norm(vector):
     """Compute the norm of a vector."""

@@ -12,19 +12,22 @@
 
 namespace animal
 {
-  class BehaviorInterface
+  namespace behavior
   {
-  public:
-    BehaviorInterface(){};
-    ~BehaviorInterface(){};
+    class BehaviorInterface
+    {
+    public:
+      BehaviorInterface(){};
+      ~BehaviorInterface(){};
 
-    virtual void init(ros::NodeHandlePtr _ros_node_ptr,
-                      sdf::ElementPtr _sdf) = 0;
-    virtual bool transition() = 0;
-    virtual void update(const gazebo::common::UpdateInfo &_info,
-                        gazebo::physics::WorldPtr _world_ptr,
-                        gazebo::physics::ActorPtr _actor_ptr) = 0;
-  };
+      virtual void init(ros::NodeHandlePtr _ros_node_ptr,
+                        sdf::ElementPtr _sdf) = 0;
+      virtual bool transition() = 0;
+      virtual void update(const gazebo::common::UpdateInfo &_info,
+                          gazebo::physics::WorldPtr _world_ptr,
+                          gazebo::physics::ActorPtr _actor_ptr) = 0;
+    };
+  }
 }
 
 #endif

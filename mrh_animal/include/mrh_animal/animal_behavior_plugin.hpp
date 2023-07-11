@@ -20,7 +20,7 @@
 
 namespace gazebo
 {
-  typedef std::shared_ptr<animal::BehaviorInterface> BehaviorPtr;
+  typedef std::shared_ptr<animal::behavior::BehaviorInterface> BehaviorPtr;
   class GZ_PLUGIN_VISIBLE AnimalBehaviorPlugin : public ModelPlugin
   {
   public:

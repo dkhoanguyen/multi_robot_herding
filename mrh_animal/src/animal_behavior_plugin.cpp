@@ -49,7 +49,7 @@ namespace gazebo
     ros_node_ptr_->setCallbackQueue(&ros_queue_);
     odom_pub_ = ros_node_ptr_->advertise<nav_msgs::Odometry>("/" + actor_ptr_->GetName() + "/odom", 1);
 
-    BehaviorPtr wandering_behavior(new animal::WanderingBehavior());
+    BehaviorPtr wandering_behavior(new animal::behavior::WanderingBehavior());
     wandering_behavior->init(ros_node_ptr_, sdf_ptr_);
     behaviors_map_["wandering"] = wandering_behavior;
   }

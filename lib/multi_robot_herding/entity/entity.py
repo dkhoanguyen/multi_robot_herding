@@ -27,12 +27,12 @@ class Entity(pygame.sprite.Sprite, ABC):
                  image_path: str,
                  mass: float,
                  type: EntityType = EntityType.OBSTACLE):
-        super(pygame.sprite.Sprite,self).__init__()
+        super(pygame.sprite.Sprite, self).__init__()
         if pose is None:
             pose = np.zeros(2)
         if velocity is None:
             velocity = np.zeros(2)
-        self._image_path = "/Users/khoanguyen/Projects/research/multi_robot_herding/assets/img/" + image_path
+        self._image_path = "/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/lib/multi_robot_herding/assets/img/" + image_path
         self.base_image = pygame.image.load(self._image_path)
         self.rect = self.base_image.get_rect()
         self.image = self.base_image
@@ -133,7 +133,7 @@ class Autonomous(Entity):
         # Static obstacles
         self._static_obstacles = []
 
-    def add_static_obstacle(self,obstacle):
+    def add_static_obstacle(self, obstacle):
         self._static_obstacles.append(obstacle)
 
     def display(self, screen: pygame.Surface, debug=False):

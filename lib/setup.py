@@ -11,5 +11,9 @@ setuptools.setup(
     author="Khoa Nguyen",
     author_email="khoanguyendacdang2198@gmail.com",
     packages=packages,
+    package_data={
+        '': ['assets/*/*', 'assets/*/*'],
+    },
+    include_package_data=True,
     python_requires='>=3'
 )
