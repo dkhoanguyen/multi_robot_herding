@@ -521,10 +521,11 @@ class MathematicalFlock(Behavior):
     def _gradient_term(self, c: float, qi: np.ndarray, qj: np.ndarray,
                        r: float, d: float):
         n_ij = self._get_n_ij(qi, qj)
-        return c * np.sum(MathUtils.phi_alpha(
+        output = c * np.sum(MathUtils.phi_alpha(
             MathUtils.sigma_norm(qj-qi),
             r=r,
             d=d)*n_ij, axis=0)
+        return output
 
     def _velocity_consensus_term(self, c: float, qi: np.ndarray,
                                  qj: np.ndarray, pi: np.ndarray,

@@ -46,7 +46,7 @@ namespace animal
       return true;
     }
 
-    void WanderingBehavior::update(const gazebo::common::UpdateInfo &_info,
+    Eigen::VectorXd WanderingBehavior::update(const gazebo::common::UpdateInfo &_info,
                                    gazebo::physics::WorldPtr _world_ptr,
                                    gazebo::physics::ActorPtr _actor_ptr)
     {
@@ -110,6 +110,7 @@ namespace animal
       _actor_ptr->SetScriptTime(_actor_ptr->ScriptTime() +
                                 (distance_travelled * animation_factor_));
       last_update_ = _info.simTime;
+      return Eigen::VectorXd({0,0})
     }
 
     void WanderingBehavior::chooseNewTarget(gazebo::physics::WorldPtr world)

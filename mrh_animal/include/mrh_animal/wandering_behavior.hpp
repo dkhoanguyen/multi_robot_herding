@@ -24,7 +24,7 @@ namespace animal
       void init(ros::NodeHandlePtr _ros_node_ptr,
                 sdf::ElementPtr _sdf);
       bool transition();
-      void update(const gazebo::common::UpdateInfo &_info,
+      Eigen::VectorXd update(const gazebo::common::UpdateInfo &_info,
                   gazebo::physics::WorldPtr _world_ptr,
                   gazebo::physics::ActorPtr _actor_ptr);
 

@@ -17,6 +17,7 @@
 
 #include "behavior_interface.hpp"
 #include "wandering_behavior.hpp"
+#include "saber_flocking.hpp"
 
 namespace gazebo
 {

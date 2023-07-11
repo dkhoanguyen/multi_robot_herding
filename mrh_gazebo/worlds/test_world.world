@@ -38,8 +38,8 @@
       </ode>
     </physics>
 
-    <actor name="actor1">
-      <pose>0 1 1.25 0 0 0</pose>
+    <actor name="herd0">
+      <pose>2 2 1.25 0 0 0</pose>
       <skin>
         <filename>walk.dae</filename>
         <scale>1.0</scale>
@@ -54,15 +54,18 @@
         <scale>1.000000</scale>
       </animation>
       <plugin name="actor1_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
-        <target>0 -5 1.2138</target>
-        <target_weight>1.15</target_weight>
-        <obstacle_weight>1.8</obstacle_weight>
-        <animation_factor>5.1</animation_factor>
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
         </ignore_obstacles>
       </plugin>
+    </actor>
+    <actor name="herd1">
+      <pose>0 0 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
     </actor>
   </world>
 

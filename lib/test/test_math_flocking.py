@@ -29,7 +29,6 @@ def test_get_a_ij(generate_flock):
 
 def test_get_n_ij(generate_flock):
     flock, qi, qj, pi, pj = generate_flock
-    print(qj - qi)
     result = flock._get_n_ij(qi, qj)
     assert np.allclose(result, np.array([[1.49071198, 1.49071198],
                                          [1.95180015, 1.95180015],
@@ -39,7 +38,7 @@ def test_get_n_ij(generate_flock):
 def test_gradient_term(generate_flock):
     flock, qi, qj, pi, pj = generate_flock
     result = flock._gradient_term(
-        c=MathematicalFlock.C2_alpha, qi=qi, qj=qj,
+        c=3.46410161514, qi=qi, qj=qj,
         r=MathematicalFlock.ALPHA_RANGE,
         d=MathematicalFlock.ALPHA_DISTANCE
     )
@@ -49,7 +48,7 @@ def test_gradient_term(generate_flock):
 def test_consensus_term(generate_flock):
     flock, qi, qj, pi, pj = generate_flock
     result = flock._velocity_consensus_term(
-        c=MathematicalFlock.C2_alpha,
+        c=3.46410161514,
         qi=qi, qj=qj,
         pi=pi, pj=pj,
         r=MathematicalFlock.ALPHA_RANGE)

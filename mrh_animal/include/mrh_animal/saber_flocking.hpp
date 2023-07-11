@@ -13,30 +13,59 @@ namespace animal
     class SaberFlocking : public BehaviorInterface
     {
     public:
-      SaberFlocking();
+      SaberFlocking(double sensing_range,
+                    double danger_range,
+                    Eigen::VectorXd initial_consensus);
       ~SaberFlocking();
 
       void init(ros::NodeHandlePtr _ros_node_ptr,
-                sdf::ElementPtr _sdf){};
-      bool transition(){};
-      void update(const gazebo::common::UpdateInfo &_info,
+                sdf::ElementPtr _sdf);
+      bool transition();
+      void addHerd(const std::string &name);
+      void addShepherd(const std::string &name);
+      Eigen::VectorXd update(const gazebo::common::UpdateInfo &_info,
                   gazebo::physics::WorldPtr _world_ptr,
-                  gazebo::physics::ActorPtr _actor_ptr){};
+                  gazebo::physics::ActorPtr _actor_ptr);
 
-      static animal::MathUtils::Ndarray gradientTerm(
+      static Eigen::VectorXd getAdjacencyVector(
+          const Eigen::VectorXd &qi, const Eigen::MatrixXd &qj, const double &r);
+
+      static Eigen::VectorXd gradientTerm(
           const double &gain, const Eigen::VectorXd &qi,
           const Eigen::MatrixXd &qj, const double &r, const double &d);
 
-      static animal::MathUtils::Ndarray consensusTerm(
+      static Eigen::VectorXd consensusTerm(
           const double &gain, const Eigen::VectorXd &qi, const Eigen::MatrixXd &qj,
           const Eigen::VectorXd &pi, const Eigen::MatrixXd &pj, const double &r);
+
+      static Eigen::VectorXd groupObjectiveTerm(
+          const double &gain_c1, const double &gain_c2, const Eigen::VectorXd &target,
+          const Eigen::VectorXd &qi, const Eigen::VectorXd &pi);
 
       static Eigen::VectorXd getAij(
           const Eigen::VectorXd &qi,
           const Eigen::MatrixXd &qj, const double &r);
-      static animal::MathUtils::Ndarray getNij(
+      static Eigen::MatrixXd getNij(
           const Eigen::VectorXd &qi,
           const Eigen::MatrixXd &qj);
+
+    protected:
+      double sensing_range_;
+      double danger_range_;
+      Eigen::VectorXd initial_consensus_;
+
+      bool set_animation_ = false;
+      gazebo::common::Time last_update_;
+
+      std::vector<std::string> all_herd_member_names_;
+      std::vector<std::string> all_shepherd_names_;
+
+      Eigen::MatrixXd getAllHerdStates(gazebo::physics::WorldPtr _world_ptr);
+      Eigen::MatrixXd getHerdWithinRange(gazebo::physics::WorldPtr world_ptr,
+                                         gazebo::physics::ActorPtr actor_ptr);
+
+      Eigen::VectorXd globalClustering(const Eigen::VectorXd &state);
+      Eigen::VectorXd calcFlockingControl(const Eigen::VectorXd &state, const Eigen::MatrixXd &herd_states);
     };
   }
 }

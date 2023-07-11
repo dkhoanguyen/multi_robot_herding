@@ -34,7 +34,7 @@ set(EIGEN_DIR "/usr/include/eigen3")
 include_directories(${EIGEN_DIR})
 
 set(behavior_lib_src
-    src/wandering_behavior.cpp
+    # src/wandering_behavior.cpp
     src/saber_flocking.cpp)
 add_library(behavior_list SHARED ${behavior_lib_src})
 target_link_libraries(behavior_list ${GAZEBO_LIBRARIES} ${catkin_LIBRARIES})

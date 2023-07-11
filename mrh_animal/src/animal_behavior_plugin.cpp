@@ -49,9 +49,16 @@ namespace gazebo
     ros_node_ptr_->setCallbackQueue(&ros_queue_);
     odom_pub_ = ros_node_ptr_->advertise<nav_msgs::Odometry>("/" + actor_ptr_->GetName() + "/odom", 1);
 
-    BehaviorPtr wandering_behavior(new animal::behavior::WanderingBehavior());
-    wandering_behavior->init(ros_node_ptr_, sdf_ptr_);
-    behaviors_map_["wandering"] = wandering_behavior;
+    // BehaviorPtr wandering_behavior(new animal::behavior::WanderingBehavior());
+    // wandering_behavior->init(ros_node_ptr_, sdf_ptr_);
+    // behaviors_map_["wandering"] = wandering_behavior;
+
+    double sensing_range = 40;
+    double danger_range = 110;
+    Eigen::VectorXd consensus({0, 0});
+    BehaviorPtr saber_flocking(new animal::behavior::SaberFlocking(sensing_range, danger_range, consensus));
+    saber_flocking->init(ros_node_ptr_, sdf_ptr_);
+    behaviors_map_["flocking"] = saber_flocking;
   }
 
   void AnimalBehaviorPlugin::Reset()
@@ -71,7 +78,7 @@ namespace gazebo
     }
 
     BehaviorPtr current_behavior = behaviors_map_[current_behavior_name];
-    current_behavior->update(_info, world_ptr_, actor_ptr_);
+    Eigen::VectorXd state = current_behavior->update(_info, world_ptr_, actor_ptr_);
 
     // Publish odometry
     nav_msgs::Odometry current_odom;
