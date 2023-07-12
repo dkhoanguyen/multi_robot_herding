@@ -42,7 +42,7 @@ class MrhLaunchGenerator(object):
         for i in range(num):
             yaw = np.pi * (2 * np.random.rand() - 1)
             pose = np.array([initial_poses[i, 0], initial_poses[i, 1], yaw])
-            name = f"herd_{i}"
+            name = f"robot_{i}"
             herds.append(herd_spawner.spawn_robot(name=name, pose=pose))
 
         for herd in herds:

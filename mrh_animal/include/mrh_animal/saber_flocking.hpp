@@ -2,6 +2,7 @@
 #define MRH_ANIMAL__SABER_FLOCKING_HPP_
 
 #include <Eigen/Core>
+#include <cmath>
 
 #include "behavior_interface.hpp"
 #include "math_utils.hpp"
@@ -13,7 +14,15 @@ namespace animal
     class SaberFlocking : public BehaviorInterface
     {
     public:
+      static const double C1_alpha;
+      static const double C2_alpha;
+      static const double C1_beta;
+      static const double C2_beta;
+      static const double C1_gamma;
+      static const double C2_gamma;
+
       SaberFlocking(double sensing_range,
+      double spacing,
                     double danger_range,
                     Eigen::VectorXd initial_consensus);
       ~SaberFlocking();
@@ -55,7 +64,9 @@ namespace animal
 
     protected:
       double sensing_range_;
+      double spacing_;
       double danger_range_;
+      double animation_factor_;
       Eigen::VectorXd consensus_;
 
       bool set_animation_ = false;

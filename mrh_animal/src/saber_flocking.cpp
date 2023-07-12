@@ -4,11 +4,22 @@ namespace animal
 {
   namespace behavior
   {
+    const double SaberFlocking::C1_alpha = 3;
+    const double SaberFlocking::C2_alpha = 2 * std::sqrt(SaberFlocking::C1_alpha);
+    const double SaberFlocking::C1_beta = 20;
+    const double SaberFlocking::C2_beta = 2 * std::sqrt(SaberFlocking::C1_beta);
+    const double SaberFlocking::C1_gamma = 5;
+    const double SaberFlocking::C2_gamma = 0.2 * std::sqrt(SaberFlocking::C1_gamma);
+
     SaberFlocking::SaberFlocking(double sensing_range,
+                                 double spacing,
                                  double danger_range,
                                  Eigen::VectorXd initial_consensus)
-        : sensing_range_(sensing_range), danger_range_(danger_range),
-          consensus_(initial_consensus)
+        : sensing_range_(sensing_range),
+          spacing_(spacing),
+          danger_range_(danger_range),
+          consensus_(initial_consensus),
+          animation_factor_(5.1)
     {
     }
 
@@ -89,7 +100,7 @@ namespace animal
         ignition::math::Vector3d pos = pose.Pos() - _actor_ptr->WorldPose().Pos();
         ignition::math::Angle yaw = atan2(pos.Y(), pos.X()) + 1.5707 - rpy.Z();
         yaw.Normalize();
-        pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.001);
+        pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.01);
         double distance_travelled = (pose.Pos() - _actor_ptr->WorldPose().Pos())
                                         .Length();
         if (distance_travelled > 1e-6)
@@ -103,7 +114,7 @@ namespace animal
         ignition::math::Vector3d angular;
         _actor_ptr->SetLinearVel(linear);
         _actor_ptr->SetScriptTime(_actor_ptr->ScriptTime() +
-                                  (distance_travelled * 5.1));
+                                  (distance_travelled * animation_factor_));
         return state;
       }
       state(0) = pose.Pos().X();
@@ -120,20 +131,20 @@ namespace animal
 
       // Update state
       Eigen::VectorXd pdot = state.segment(2, 2);
-      pdot = pdot + 0.075 * (0.5 * u_gamma + u_alpha);
+      pdot = pdot + 0.075 * (u_gamma + u_alpha);
       Eigen::VectorXd qdot = state.segment(0, 2);
       qdot = qdot + dt * pdot;
       state.segment(0, 2) = qdot;
       state.segment(2, 2) = dt * pdot;
       pose.Pos().X(state(0));
       pose.Pos().Y(state(1));
-      pose.Pos().Z(1.2138);
+      pose.Pos().Z(0.0);
 
       // Compute the yaw orientation
       ignition::math::Vector3d pos = pose.Pos() - _actor_ptr->WorldPose().Pos();
       ignition::math::Angle yaw = atan2(pos.Y(), pos.X()) + 1.5707 - rpy.Z();
       yaw.Normalize();
-      pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.001);
+      pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.01);
       double distance_travelled = (pose.Pos() - _actor_ptr->WorldPose().Pos())
                                       .Length();
       if (distance_travelled > 1e-6)
@@ -147,7 +158,7 @@ namespace animal
       ignition::math::Vector3d angular;
       _actor_ptr->SetLinearVel(linear);
       _actor_ptr->SetScriptTime(_actor_ptr->ScriptTime() +
-                                (distance_travelled * 5.1));
+                                (distance_travelled * animation_factor_));
       last_update_ = _info.simTime;
       last_herd_states_update_ = _info.simTime;
       pre_states_ = herd_states;
@@ -286,7 +297,7 @@ namespace animal
       Eigen::VectorXd qi = state.segment(0, 2);
       Eigen::VectorXd pi = state.segment(2, 2);
       u_gamma = animal::behavior::SaberFlocking::groupObjectiveTerm(
-          5, 0.4472135955, target, qi, pi);
+          SaberFlocking::C1_gamma, SaberFlocking::C2_gamma, target, qi, pi);
       return u_gamma;
     }
 
@@ -306,7 +317,7 @@ namespace animal
         Eigen::VectorXd qj_ith = herd_states.row(i);
         Eigen::VectorXd posej = qj_ith.segment(0, 2);
         Eigen::VectorXd d = qi - posej;
-        if (d.norm() <= 2.5 && d.norm() > 0.2)
+        if (d.norm() <= sensing_range_ && d.norm() > 0.1)
         {
           in_range_index.push_back(i);
         }
@@ -326,9 +337,9 @@ namespace animal
       Eigen::MatrixXd pj = filtered_states.middleCols(2, 2);
 
       Eigen::VectorXd alpha_grad = gradientTerm(
-          3.46410161514, qi, qj, 2, 2);
+          SaberFlocking::C2_alpha, qi, qj, spacing_, spacing_);
       Eigen::VectorXd alpha_consensus = consensusTerm(
-          3.46410161514, qi, qj, pi, pj, 2);
+          SaberFlocking::C2_alpha, qi, qj, pi, pj, spacing_);
 
       u_alpha = alpha_grad + alpha_consensus;
       return u_alpha;

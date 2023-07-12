@@ -35,6 +35,23 @@ namespace gazebo
       }
     }
 
+    // Extract parameters
+    double sensing_range = 1.65;
+    if (sdf_ptr_->HasElement("sensing_range"))
+      sensing_range = sdf_ptr_->Get<double>("sensing_range");
+
+    double spacing = 1.5;
+    if (sdf_ptr_->HasElement("spacing"))
+      spacing = sdf_ptr_->Get<double>("spacing");
+
+    double danger_range = 100;
+    if (sdf_ptr_->HasElement("danger_range"))
+      danger_range = sdf_ptr_->Get<double>("danger_range");
+
+    ignition::math::Vector3d initial_consensus;
+    if (sdf_ptr_->HasElement("initial_consensus"))
+      initial_consensus = sdf_ptr_->Get<ignition::math::Vector3d>("initial_consensus");
+
     // Initialise ROS
     ROS_INFO("Init behavior");
     if (!ros::isInitialized())
@@ -52,20 +69,16 @@ namespace gazebo
 
     odom_pub_ = ros_node_ptr_->advertise<nav_msgs::Odometry>("/" + actor_ptr_->GetName() + "/odom", 1);
     ros::SubscribeOptions so = ros::SubscribeOptions::create<geometry_msgs::Pose>(
-        "/consensus",
-        10,
-        boost::bind(&AnimalBehaviorPlugin::consensusCallback, this, _1),
+        "/consensus", 10, boost::bind(&AnimalBehaviorPlugin::consensusCallback, this, _1),
         ros::VoidPtr(), &ros_queue_);
     ros_sub_ = ros_node_ptr_->subscribe(so);
 
-    double sensing_range = 40;
-    double danger_range = 110;
     Eigen::VectorXd consensus(2);
-    consensus << 0, 0;
-    BehaviorPtr saber_flocking(new animal::behavior::SaberFlocking(sensing_range, danger_range, consensus));
+    consensus << initial_consensus.X(), initial_consensus.Y();
+    BehaviorPtr saber_flocking(new animal::behavior::SaberFlocking(
+        sensing_range, spacing, danger_range, consensus));
     saber_flocking->init(ros_node_ptr_, world_ptr_, actor_ptr_, sdf_ptr_);
     behaviors_map_["flocking"] = saber_flocking;
-    ROS_INFO("Done");
   }
 
   void AnimalBehaviorPlugin::Reset()
