@@ -22,11 +22,13 @@ namespace animal
       ~WanderingBehavior();
 
       void init(ros::NodeHandlePtr _ros_node_ptr,
+                gazebo::physics::WorldPtr _world_ptr,
+                gazebo::physics::ActorPtr _actor_ptr,
                 sdf::ElementPtr _sdf);
       bool transition();
       Eigen::VectorXd update(const gazebo::common::UpdateInfo &_info,
-                  gazebo::physics::WorldPtr _world_ptr,
-                  gazebo::physics::ActorPtr _actor_ptr);
+                             gazebo::physics::WorldPtr _world_ptr,
+                             gazebo::physics::ActorPtr _actor_ptr);
 
     protected:
       ignition::math::Vector3d target_;

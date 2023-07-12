@@ -19,13 +19,17 @@ namespace animal
       ~SaberFlocking();
 
       void init(ros::NodeHandlePtr _ros_node_ptr,
+                gazebo::physics::WorldPtr _world_ptr,
+                gazebo::physics::ActorPtr _actor_ptr,
                 sdf::ElementPtr _sdf);
       bool transition();
+      void setTarget(const Eigen::VectorXd &target);
       void addHerd(const std::string &name);
       void addShepherd(const std::string &name);
+      void setConsensusTarget(const Eigen::VectorXd &consensus);
       Eigen::VectorXd update(const gazebo::common::UpdateInfo &_info,
-                  gazebo::physics::WorldPtr _world_ptr,
-                  gazebo::physics::ActorPtr _actor_ptr);
+                             gazebo::physics::WorldPtr _world_ptr,
+                             gazebo::physics::ActorPtr _actor_ptr);
 
       static Eigen::VectorXd getAdjacencyVector(
           const Eigen::VectorXd &qi, const Eigen::MatrixXd &qj, const double &r);
@@ -52,11 +56,13 @@ namespace animal
     protected:
       double sensing_range_;
       double danger_range_;
-      Eigen::VectorXd initial_consensus_;
+      Eigen::VectorXd consensus_;
 
       bool set_animation_ = false;
       bool initialised_ = false;
       gazebo::common::Time last_update_;
+      gazebo::common::Time last_herd_states_update_;
+      gazebo::common::Time last_control_step_;
       Eigen::MatrixXd pre_states_;
       Eigen::VectorXd pre_state_;
 

@@ -8,7 +8,7 @@ namespace animal
                                  double danger_range,
                                  Eigen::VectorXd initial_consensus)
         : sensing_range_(sensing_range), danger_range_(danger_range),
-          initial_consensus_(initial_consensus)
+          consensus_(initial_consensus)
     {
     }
 
@@ -17,11 +17,23 @@ namespace animal
     }
 
     void SaberFlocking::init(ros::NodeHandlePtr _ros_node_ptr,
+                             gazebo::physics::WorldPtr _world_ptr,
+                             gazebo::physics::ActorPtr _actor_ptr,
                              sdf::ElementPtr _sdf)
     {
-      addHerd("herd1");
-      // addHerd("herd2");
+      for (unsigned int i = 0; i < _world_ptr->ModelCount(); ++i)
+      {
+        gazebo::physics::ModelPtr model = _world_ptr->ModelByIndex(i);
+        std::string name = _actor_ptr->GetName();
+        std::string model_name = model->GetName();
+        if (model_name.find("herd") != std::string::npos && model_name != name)
+        {
+          addHerd(model_name);
+        }
+      }
       last_update_ = 0;
+      last_herd_states_update_ = 0;
+      last_control_step_ = 0;
       pre_states_ = Eigen::MatrixXd(all_herd_member_names_.size(), 4);
       pre_states_.setZero();
       pre_state_ = Eigen::VectorXd(4);
@@ -42,6 +54,15 @@ namespace animal
     {
       all_shepherd_names_.push_back(name);
     }
+    void SaberFlocking::setTarget(const Eigen::VectorXd &target)
+    {
+      setConsensusTarget(target);
+    }
+
+    void SaberFlocking::setConsensusTarget(const Eigen::VectorXd &consensus)
+    {
+      consensus_ = consensus;
+    }
 
     Eigen::VectorXd SaberFlocking::update(
         const gazebo::common::UpdateInfo &_info,
@@ -57,10 +78,34 @@ namespace animal
         _actor_ptr->SetCustomTrajectory(traj);
       }
       double dt = (_info.simTime - last_update_).Double();
+      double updatet = (_info.simTime - last_herd_states_update_).Double();
       ignition::math::Pose3d pose = _actor_ptr->WorldPose();
       ignition::math::Vector3d rpy = pose.Rot().Euler();
       Eigen::VectorXd state(4);
       state.setZero();
+      if (updatet < 0.01)
+      {
+        // Compute the yaw orientation
+        ignition::math::Vector3d pos = pose.Pos() - _actor_ptr->WorldPose().Pos();
+        ignition::math::Angle yaw = atan2(pos.Y(), pos.X()) + 1.5707 - rpy.Z();
+        yaw.Normalize();
+        pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.001);
+        double distance_travelled = (pose.Pos() - _actor_ptr->WorldPose().Pos())
+                                        .Length();
+        if (distance_travelled > 1e-6)
+        {
+          _actor_ptr->SetWorldPose(pose, false, false);
+        }
+        ignition::math::Vector3d linear;
+        linear.X(state(2));
+        linear.Y(state(3));
+        linear.Z(0);
+        ignition::math::Vector3d angular;
+        _actor_ptr->SetLinearVel(linear);
+        _actor_ptr->SetScriptTime(_actor_ptr->ScriptTime() +
+                                  (distance_travelled * 5.1));
+        return state;
+      }
       state(0) = pose.Pos().X();
       state(1) = pose.Pos().Y();
       state(2) = pre_state_(2);
@@ -75,7 +120,7 @@ namespace animal
 
       // Update state
       Eigen::VectorXd pdot = state.segment(2, 2);
-      pdot = pdot + 0.1 * (u_gamma + u_alpha);
+      pdot = pdot + 0.075 * (0.5 * u_gamma + u_alpha);
       Eigen::VectorXd qdot = state.segment(0, 2);
       qdot = qdot + dt * pdot;
       state.segment(0, 2) = qdot;
@@ -91,7 +136,7 @@ namespace animal
       pose.Rot() = ignition::math::Quaterniond(1.5707, 0, rpy.Z() + yaw.Radian() * 0.001);
       double distance_travelled = (pose.Pos() - _actor_ptr->WorldPose().Pos())
                                       .Length();
-      if (distance_travelled > 1e-4)
+      if (distance_travelled > 1e-6)
       {
         _actor_ptr->SetWorldPose(pose, false, false);
       }
@@ -104,6 +149,7 @@ namespace animal
       _actor_ptr->SetScriptTime(_actor_ptr->ScriptTime() +
                                 (distance_travelled * 5.1));
       last_update_ = _info.simTime;
+      last_herd_states_update_ = _info.simTime;
       pre_states_ = herd_states;
       pre_state_ = state;
       return state;
@@ -202,6 +248,7 @@ namespace animal
           herd_states(index, 2) = herd_states(index, 0) - pre_states_(index, 0);
           herd_states(index, 3) = herd_states(index, 1) - pre_states_(index, 1);
         }
+        index++;
       }
       return herd_states;
     }
@@ -235,8 +282,7 @@ namespace animal
     Eigen::VectorXd SaberFlocking::globalClustering(const Eigen::VectorXd &state)
     {
       Eigen::VectorXd u_gamma(2);
-      Eigen::VectorXd target(2);
-      target << 0, 0;
+      Eigen::VectorXd target = consensus_;
       Eigen::VectorXd qi = state.segment(0, 2);
       Eigen::VectorXd pi = state.segment(2, 2);
       u_gamma = animal::behavior::SaberFlocking::groupObjectiveTerm(
@@ -249,15 +295,40 @@ namespace animal
     {
       Eigen::VectorXd u_alpha(2);
       u_alpha.setZero();
+
       Eigen::VectorXd qi = state.segment(0, 2);
       Eigen::VectorXd pi = state.segment(2, 2);
-      Eigen::MatrixXd qj = herd_states.leftCols(2);
-      Eigen::MatrixXd pj = herd_states.middleCols(2, 2);
+
+      // Filter
+      std::vector<int> in_range_index;
+      for (int i = 0; i < herd_states.rows(); i++)
+      {
+        Eigen::VectorXd qj_ith = herd_states.row(i);
+        Eigen::VectorXd posej = qj_ith.segment(0, 2);
+        Eigen::VectorXd d = qi - posej;
+        if (d.norm() <= 2.5 && d.norm() > 0.2)
+        {
+          in_range_index.push_back(i);
+        }
+      }
+      if (in_range_index.size() == 0)
+      {
+        return u_alpha;
+      }
+      Eigen::MatrixXd filtered_states(in_range_index.size(), 4);
+      int filtered_indx = 0;
+      for (const int &indx : in_range_index)
+      {
+        filtered_states.row(filtered_indx) = herd_states.row(indx);
+        filtered_indx++;
+      }
+      Eigen::MatrixXd qj = filtered_states.leftCols(2);
+      Eigen::MatrixXd pj = filtered_states.middleCols(2, 2);
 
       Eigen::VectorXd alpha_grad = gradientTerm(
-          3.46410161514, qi, qj, 1.5, 1.5);
+          3.46410161514, qi, qj, 2, 2);
       Eigen::VectorXd alpha_consensus = consensusTerm(
-          3.46410161514, qi, qj, pi, pj, 1.5);
+          3.46410161514, qi, qj, pi, pj, 2);
 
       u_alpha = alpha_grad + alpha_consensus;
       return u_alpha;

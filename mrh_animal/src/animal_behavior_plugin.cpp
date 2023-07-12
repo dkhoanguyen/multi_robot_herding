@@ -47,18 +47,25 @@ namespace gazebo
 
     ros_node_ptr_.reset(new ros::NodeHandle("gazebo_client"));
     ros_node_ptr_->setCallbackQueue(&ros_queue_);
-    odom_pub_ = ros_node_ptr_->advertise<nav_msgs::Odometry>("/" + actor_ptr_->GetName() + "/odom", 1);
+    ros_queue_thread_ =
+        std::thread(std::bind(&AnimalBehaviorPlugin::queueThread, this));
 
-    // BehaviorPtr wandering_behavior(new animal::behavior::WanderingBehavior());
-    // wandering_behavior->init(ros_node_ptr_, sdf_ptr_);
-    // behaviors_map_["wandering"] = wandering_behavior;
+    odom_pub_ = ros_node_ptr_->advertise<nav_msgs::Odometry>("/" + actor_ptr_->GetName() + "/odom", 1);
+    ros::SubscribeOptions so = ros::SubscribeOptions::create<geometry_msgs::Pose>(
+        "/consensus",
+        10,
+        boost::bind(&AnimalBehaviorPlugin::consensusCallback, this, _1),
+        ros::VoidPtr(), &ros_queue_);
+    ros_sub_ = ros_node_ptr_->subscribe(so);
 
     double sensing_range = 40;
     double danger_range = 110;
-    Eigen::VectorXd consensus({0, 0});
+    Eigen::VectorXd consensus(2);
+    consensus << 0, 0;
     BehaviorPtr saber_flocking(new animal::behavior::SaberFlocking(sensing_range, danger_range, consensus));
-    saber_flocking->init(ros_node_ptr_, sdf_ptr_);
+    saber_flocking->init(ros_node_ptr_, world_ptr_, actor_ptr_, sdf_ptr_);
     behaviors_map_["flocking"] = saber_flocking;
+    ROS_INFO("Done");
   }
 
   void AnimalBehaviorPlugin::Reset()
@@ -98,5 +105,22 @@ namespace gazebo
     current_odom.twist.twist.linear.y = state(3);
     current_odom.twist.twist.linear.z = 0;
     odom_pub_.publish(current_odom);
+  }
+
+  void AnimalBehaviorPlugin::queueThread()
+  {
+    static const double timeout = 0.1;
+    while (ros_node_ptr_->ok())
+    {
+      ros_queue_.callAvailable(ros::WallDuration(timeout));
+    }
+  }
+
+  void AnimalBehaviorPlugin::consensusCallback(const geometry_msgs::PoseConstPtr &_msg)
+  {
+    Eigen::VectorXd target(2);
+    target(0) = _msg->position.x;
+    target(1) = _msg->position.y;
+    behaviors_map_["flocking"]->setTarget(target);
   }
 }

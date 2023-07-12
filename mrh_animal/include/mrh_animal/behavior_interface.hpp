@@ -22,8 +22,11 @@ namespace animal
       ~BehaviorInterface(){};
 
       virtual void init(ros::NodeHandlePtr _ros_node_ptr,
+                        gazebo::physics::WorldPtr _world_ptr,
+                        gazebo::physics::ActorPtr _actor_ptr,
                         sdf::ElementPtr _sdf) = 0;
       virtual bool transition() = 0;
+      virtual void setTarget(const Eigen::VectorXd &target) = 0;
       virtual Eigen::VectorXd update(const gazebo::common::UpdateInfo &_info,
                                      gazebo::physics::WorldPtr _world_ptr,
                                      gazebo::physics::ActorPtr _actor_ptr) = 0;

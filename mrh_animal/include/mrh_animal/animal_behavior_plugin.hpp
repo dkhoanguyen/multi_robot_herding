@@ -10,13 +10,13 @@
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 #include <nav_msgs/Odometry.h>
+#include <geometry_msgs/Pose.h>
 
 #include "gazebo/common/Plugin.hh"
 #include "gazebo/physics/physics.hh"
 #include "gazebo/util/system.hh"
 
 #include "behavior_interface.hpp"
-#include "wandering_behavior.hpp"
 #include "saber_flocking.hpp"
 
 namespace gazebo
@@ -48,8 +48,11 @@ namespace gazebo
     std::thread ros_queue_thread_;
 
     ros::Publisher odom_pub_;
+    ros::Subscriber ros_sub_;
 
     void publishOdometry(double step_time);
+    void consensusCallback(const geometry_msgs::PoseConstPtr &_msg);
+    void queueThread();
 
   protected:
     std::unordered_map<std::string, BehaviorPtr> behaviors_map_;

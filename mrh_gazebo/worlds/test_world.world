@@ -49,10 +49,6 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <animation name="standing">
-        <filename>stand.dae</filename>
-        <scale>1.000000</scale>
-      </animation>
       <plugin name="actor1_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
@@ -61,18 +57,112 @@
       </plugin>
     </actor>
     <actor name="herd1">
-      <pose>0 0 1.25 0 0 0</pose>
+      <pose>0 -2 1.25 0 0 0</pose>
       <skin>
         <filename>stand.dae</filename>
         <scale>1.0</scale>
       </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor2_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
     </actor>
-    <!-- <actor name="herd2">
-      <pose>1 0 1.25 0 0 0</pose>
+    <actor name="herd2">
+      <pose>-2 -1 1.25 0 0 0</pose>
       <skin>
         <filename>stand.dae</filename>
         <scale>1.0</scale>
       </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor3_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
+    </actor>
+    <actor name="herd3">
+      <pose>-5 -0.75 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor4_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
+    </actor>
+    <actor name="herd4">
+      <pose>3 -2.5 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor5_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
+    </actor>
+    <!-- <actor name="herd5">
+      <pose>0 1.3 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor6_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
+    </actor>
+    <actor name="herd6">
+      <pose>3 3 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+      <animation name="walking">
+        <filename>walk.dae</filename>
+        <scale>1.000000</scale>
+        <interpolate_x>true</interpolate_x>
+      </animation>
+      <plugin name="actor7_plugin" filename="/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+        <ignore_obstacles>
+          <model>cafe</model>
+          <model>ground_plane</model>
+        </ignore_obstacles>
+      </plugin>
     </actor> -->
   </world>
 
