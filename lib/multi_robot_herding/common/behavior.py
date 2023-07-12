@@ -20,7 +20,7 @@ class Behavior(ABC):
                other_states: np.ndarray,
                herd_states: np.ndarray,
                consensus_states: dict,
-               raw_states: np.ndarray):
+               output_consensus_state: dict):
         '''
         '''
     @abstractmethod

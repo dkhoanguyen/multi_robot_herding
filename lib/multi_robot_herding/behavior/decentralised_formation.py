@@ -62,7 +62,7 @@ class DecentralisedFormation(DecentralisedBehavior):
                herd_states: np.ndarray,
                obstacles: list,
                consensus_states: dict,
-               raw_states: np.ndarray):
+               output_consensus_state: dict):
         u = np.zeros(2)
         all_shepherd_states = np.vstack((state, other_states))
 

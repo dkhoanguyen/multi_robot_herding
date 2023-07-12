@@ -7,13 +7,12 @@ from multi_robot_herding.entity.shepherd import Shepherd
 from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 from multi_robot_herding.behavior.decentralised_approaching import DecentralisedApproaching
 from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
-from multi_robot_herding.behavior.decentralised_formation import DecentralisedFormation
 
 from multi_robot_herding.environment.environment import Environment
 from multi_robot_herding.environment.spawner import Spawner
 
 
-def main():
+def single_iteration():
     config = 'default_config.yml'
     # Read yaml and extract configuration
     with open(f'config/{config}', 'r') as file:
@@ -68,16 +67,32 @@ def main():
         math_flock.add_shepherd(shepherd)
 
     # Environment
-    env = Environment()
+    env_config = config['sim']
+    max_t = env_config['max_t']
+    collect_data = env_config['collect_data']
+    env = Environment(render=env_config['render'],
+                      config=config)
     for entity in entities:
         env.add_entity(entity)
 
+    start_t = 0
     env.add_behaviour(math_flock)
-
     while env.ok:
         env.run_once()
         env.render()
+        if env.quit():
+            env.save_data()
+        if collect_data and start_t > max_t:
+            env.save_data()
+            break
+        start_t += 1
 
 
 if __name__ == '__main__':
-    main()
+    single_iteration()
+    # total_run = 10
+    # multi_thread = False
+    # current_run = 0
+    # while current_run < total_run:
+    #     single_iteration()
+    #     current_run += 1
