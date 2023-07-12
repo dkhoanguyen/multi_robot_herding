@@ -94,16 +94,9 @@ namespace gazebo
     current_odom.pose.pose.orientation.y = pose.Rot().Y();
     current_odom.pose.pose.orientation.z = pose.Rot().Z();
 
-    // Velocity
-    ignition::math::Vector3d linear_vel = actor_ptr_->WorldLinearVel();
-    ignition::math::Vector3d angular_vel = actor_ptr_->WorldAngularVel();
-    current_odom.twist.twist.linear.x = linear_vel.X();
-    current_odom.twist.twist.linear.y = linear_vel.Y();
-    current_odom.twist.twist.linear.z = linear_vel.Z();
-
-    current_odom.twist.twist.angular.x = angular_vel.X();
-    current_odom.twist.twist.angular.y = angular_vel.Y();
-    current_odom.twist.twist.angular.z = angular_vel.Z();
+    current_odom.twist.twist.linear.x = state(2);
+    current_odom.twist.twist.linear.y = state(3);
+    current_odom.twist.twist.linear.z = 0;
     odom_pub_.publish(current_odom);
   }
 }

@@ -55,7 +55,10 @@ namespace animal
       Eigen::VectorXd initial_consensus_;
 
       bool set_animation_ = false;
+      bool initialised_ = false;
       gazebo::common::Time last_update_;
+      Eigen::MatrixXd pre_states_;
+      Eigen::VectorXd pre_state_;
 
       std::vector<std::string> all_herd_member_names_;
       std::vector<std::string> all_shepherd_names_;

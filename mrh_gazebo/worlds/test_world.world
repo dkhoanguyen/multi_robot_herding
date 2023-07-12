@@ -67,6 +67,13 @@
         <scale>1.0</scale>
       </skin>
     </actor>
+    <!-- <actor name="herd2">
+      <pose>1 0 1.25 0 0 0</pose>
+      <skin>
+        <filename>stand.dae</filename>
+        <scale>1.0</scale>
+      </skin>
+    </actor> -->
   </world>
 
 </sdf>
