@@ -45,12 +45,12 @@ set_target_properties(animal_behavior_plugin PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
 include_directories(${GTEST_INCLUDE_DIRS})
-# catkin_add_gtest(test_math_utils
-#     test/test_math_utils.cpp)
-# target_link_libraries(test_math_utils
-#     ${catkin_LIBRARIES}
-#     ${GTEST_LIBRARIES}
-# )
+catkin_add_gtest(test_math_utils
+    test/test_math_utils.cpp)
+target_link_libraries(test_math_utils
+    ${catkin_LIBRARIES}
+    ${GTEST_LIBRARIES}
+)
 catkin_add_gtest(test_saber_flocking
     test/test_saber_flocking.cpp)
 target_link_libraries(test_saber_flocking

@@ -23,17 +23,17 @@ class MrhLaunchGenerator(object):
         herd_config = entity_config['herd']
         num = herd_config.pop('num')
         x = np.random.randint(
-            -1.5, 1.5, (num, 1)).astype('float')
+            4, 6, (num, 1)).astype('float')
         y = np.random.randint(
-            -1.5, 1.5, (num, 1)).astype('float')
+            -2, 2, (num, 1)).astype('float')
         initial_poses = np.hstack((x, y))
 
         self._launch_description = LaunchDescription(path=launch_file_dir,
                                                      name="mrh_gazebo")
         world_spawner = GazeboWorld(launch_pkg="gazebo_ros",
                                     launch_file_path="launch/empty_world.launch",
-                                    world_pkg="turtlebot3_gazebo",
-                                    world_description_file="worlds/empty.world")
+                                    world_pkg="mrh_gazebo",
+                                    world_description_file="worlds/test_world.world")
         herd_spawner = Robot(description_pkg="turtlebot3_description",
                              description_file_path="urdf/turtlebot3_burger.urdf.xacro")
 

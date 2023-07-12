@@ -1,17 +1,17 @@
 <launch>
-    <!-- <group ns="herd_0">
+    <group ns="robot_0">
         <param name="robot_description" command="$(find xacro)/xacro $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" />
         <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
             <param name="publish_frequency" type="double" value="50.0" />
-            <param name="tf_prefix" value="herd_0" />
+            <param name="tf_prefix" value="robot_0" />
         </node>
-        <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model herd_0 -x -1.0 -y -1.0 -z 0 -Y 1.9124557042441515 -param robot_description" />
+        <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model robot_0 -x 4.0 -y 0.0 -z 0 -Y -2.069073258152847 -param robot_description" />
         <node pkg="mrh_gazebo" type="controller" name="pp_controller">
-            <remap from="/odom" to="/herd_0/odom" />
-            <remap from="/cmd_vel" to="/herd_0/cmd_vel" />
-            <remap from="/path" to="/herd_0/path" />
+            <remap from="/odom" to="/robot_0/odom" />
+            <remap from="/cmd_vel" to="/robot_0/cmd_vel" />
+            <remap from="/path" to="/robot_0/path" />
         </node>
-    </group> -->
+    </group>
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name" value="$(find mrh_gazebo)/worlds/test_world.world" />
         <arg name="paused" value="false" />
@@ -19,6 +19,5 @@
         <arg name="gui" value="true" />
         <arg name="headless" value="false" />
         <arg name="debug" value="false" />
-        <arg name="output" value="screen" />
     </include>
 </launch>

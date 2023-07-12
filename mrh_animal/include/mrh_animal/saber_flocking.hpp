@@ -22,7 +22,7 @@ namespace animal
       static const double C2_gamma;
 
       SaberFlocking(double sensing_range,
-      double spacing,
+                    double spacing,
                     double danger_range,
                     Eigen::VectorXd initial_consensus);
       ~SaberFlocking();

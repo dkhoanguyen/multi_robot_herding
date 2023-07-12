@@ -56,7 +56,7 @@
         </ignore_obstacles>
         <sensing_range>1.65</sensing_range>
         <spacing>1.5</spacing>
-        <danger_range>100</danger_range>
+        <danger_range>4</danger_range>
         <initial_consensus>0 0</initial_consensus>
         <max_v>0.2</max_v>
       </plugin>
@@ -80,7 +80,7 @@
         </ignore_obstacles>
         <sensing_range>1.65</sensing_range>
         <spacing>1.5</spacing>
-        <danger_range>100</danger_range>
+        <danger_range>4</danger_range>
         <initial_consensus>0 0</initial_consensus>
         <max_v>0.2</max_v>
       </plugin>

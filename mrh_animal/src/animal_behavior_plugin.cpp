@@ -44,7 +44,7 @@ namespace gazebo
     if (sdf_ptr_->HasElement("spacing"))
       spacing = sdf_ptr_->Get<double>("spacing");
 
-    double danger_range = 100;
+    double danger_range = 4;
     if (sdf_ptr_->HasElement("danger_range"))
       danger_range = sdf_ptr_->Get<double>("danger_range");
 
