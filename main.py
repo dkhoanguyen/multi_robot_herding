@@ -85,10 +85,10 @@ def single_iteration():
 
 
 if __name__ == '__main__':
-    single_iteration()
-    # total_run = 10
-    # multi_thread = False
-    # current_run = 0
-    # while current_run < total_run:
-    #     single_iteration()
-    #     current_run += 1
+    # single_iteration()
+    total_run = 50
+    multi_thread = False
+    current_run = 0
+    while current_run < total_run:
+        single_iteration()
+        current_run += 1

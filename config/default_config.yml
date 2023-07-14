@@ -1,7 +1,7 @@
 sim:
-  render: true
-  collect_data: false
-  max_t: 3000
+  render: false
+  collect_data: true
+  max_t: 5000
   
 entity:
   herd:
