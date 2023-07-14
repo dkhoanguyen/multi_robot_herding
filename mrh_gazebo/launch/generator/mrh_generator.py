@@ -34,6 +34,9 @@ class MrhLaunchGenerator(object):
                                     launch_file_path="launch/empty_world.launch",
                                     world_pkg="mrh_gazebo",
                                     world_description_file="worlds/test_world.world")
+        world = world_spawner.spawn_world()
+        self._launch_description.add(world)
+
         herd_spawner = Robot(description_pkg="turtlebot3_description",
                              description_file_path="urdf/turtlebot3_burger.urdf.xacro")
 
@@ -47,9 +50,7 @@ class MrhLaunchGenerator(object):
 
         for herd in herds:
             self._launch_description.add(herd)
-
-        world = world_spawner.spawn_world()
-        self._launch_description.add(world)
         self._launch_description.write()
+
 
 test = MrhLaunchGenerator()

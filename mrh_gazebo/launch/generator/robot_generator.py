@@ -51,6 +51,17 @@ class Robot(object):
         node.add(remapped_cmd_vel)
         node.add(remapped_path)
         return node
+    
+    def _behavior(self, pkg: str, exec: str, robot_name:str):
+        node = Node(pkg="mrh_robot",
+                    exec="mrh_robot",
+                    name="robot_behavior")
+        remapped_odom = Remap(original="/odom", new=f"/{robot_name}/odom")
+        remapped_path = Remap(
+            original="/path", new=f"/{robot_name}/path")
+        node.add(remapped_odom)
+        node.add(remapped_path)
+        return node
 
     def spawn_robot(self, name: str, pose: np.ndarray):
         ns_group = Group(namespace=name)
@@ -59,4 +70,6 @@ class Robot(object):
         ns_group.add(self._model(name=name, pose=pose))
         ns_group.add(self._controller(pkg="mrh_gazebo",
                      exec="controller", robot_name=name))
+        ns_group.add(self._behavior(pkg="mrh_robot",
+                     exec="mrh_robot", robot_name=name))
         return ns_group

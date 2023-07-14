@@ -8,7 +8,7 @@ namespace mrh_gazebo
         goal_reached_(true), L_(0.1), allow_reverse_(false),
         reevaluate_linear_vel_(true)
   {
-    control_thread_timer_ = nh_.createTimer(ros::Duration(0.1), &Controller::controlCallback, this);
+    control_thread_timer_ = nh_.createTimer(ros::Duration(0.01), &Controller::controlCallback, this);
     odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("/odom", 10, &Controller::odomCallback, this);
     path_sub_ = nh_.subscribe<nav_msgs::Path>("/path", 10, &Controller::pathCallback, this);
     cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 10);

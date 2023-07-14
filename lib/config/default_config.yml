@@ -117,7 +117,7 @@ behavior:
       Cv: 1.5
       Co: 1.7
       distance_to_target: 130.0
-      interagent_spacing: 135.0
+      interagent_spacing: 130.0
       obstacle_range: 40.0
       sensing_range: 1000.0
 
