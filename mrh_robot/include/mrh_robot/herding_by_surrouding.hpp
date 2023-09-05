@@ -82,7 +82,11 @@ namespace robot
       std::unordered_map<std::string,std::shared_ptr<DataOdom>> animal_odom_data_;
       std::unordered_map<std::string,ros::Subscriber> animal_odom_sub_;
 
+      std::unordered_map<std::string,std::shared_ptr<DataOdom>> robot_odom_data_;
+      std::unordered_map<std::string,ros::Subscriber> robot_odom_sub_;
+
       DataOdom robot_odom_;
+      std::string robot_name_;
 
     protected:
       ros::NodeHandle nh_;
@@ -91,6 +95,7 @@ namespace robot
       ros::Subscriber odom_sub_;
 
       void registerHerdStateSubs();
+      void registerRobotStateSubs();
     };
   }
 }

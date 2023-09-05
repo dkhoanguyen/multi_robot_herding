@@ -40,7 +40,7 @@ namespace gazebo
     if (sdf_ptr_->HasElement("sensing_range"))
       sensing_range = sdf_ptr_->Get<double>("sensing_range");
 
-    double spacing = 1.5;
+    double spacing = 1;
     if (sdf_ptr_->HasElement("spacing"))
       spacing = sdf_ptr_->Get<double>("spacing");
 

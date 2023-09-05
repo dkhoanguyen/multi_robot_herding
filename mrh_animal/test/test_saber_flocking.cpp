@@ -29,7 +29,7 @@ protected:
         15, 16;
     target = Eigen::VectorXd(2);
     target << 20, 30;
-    animal::behavior::SaberFlocking flock(40, 100, target);
+    // animal::behavior::SaberFlocking flock(40, 100, target);
   }
 
   virtual void TearDown()

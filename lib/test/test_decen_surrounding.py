@@ -9,7 +9,7 @@ import yaml
 def generate_behavior():
     config = 'default_config.yml'
     # Read yaml and extract configuration
-    with open(f'/home/khoa/Work/development/ros_workspaces/mr_herding_ws/src/multi_robot_herding/lib/config/{config}', 'r') as file:
+    with open(f'/home/khoa/mr_ws/src/multi_robot_herding/lib/config/{config}', 'r') as file:
         config = yaml.safe_load(file)
     behavior_config = config['behavior']
     surround_config = behavior_config['math_formation']['params']

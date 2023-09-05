@@ -48,14 +48,15 @@
         <filename>/home/khoa/mr_ws/src/multi_robot_herding/mrh_gazebo/models/wolf/stand.dae</filename>
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
-      </animation> 
-      <plugin name="actor1_plugin" filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+      </animation>
+      <plugin name="actor1_plugin"
+        filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
         </ignore_obstacles>
         <sensing_range>1.65</sensing_range>
-        <spacing>1.5</spacing>
+        <spacing>1</spacing>
         <danger_range>4</danger_range>
         <initial_consensus>0 0</initial_consensus>
         <max_v>0.2</max_v>
@@ -73,18 +74,20 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <plugin name="actor2_plugin" filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+      <plugin name="actor2_plugin"
+        filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
         </ignore_obstacles>
         <sensing_range>1.65</sensing_range>
-        <spacing>1.5</spacing>
+        <spacing>1</spacing>
         <danger_range>4</danger_range>
         <initial_consensus>0 0</initial_consensus>
         <max_v>0.2</max_v>
       </plugin>
     </actor>
+    
     <actor name="herd2">
       <pose>-2 -1 1.25 0 0 0</pose>
       <skin>
@@ -96,14 +99,20 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <plugin name="actor3_plugin" filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+      <plugin name="actor3_plugin"
+        filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
         </ignore_obstacles>
+        <sensing_range>1.65</sensing_range>
+        <spacing>1</spacing>
+        <danger_range>4</danger_range>
+        <initial_consensus>0 0</initial_consensus>
+        <max_v>0.2</max_v>
       </plugin>
     </actor>
-    <actor name="herd3">
+    <!-- <actor name="herd3">
       <pose>-5 -0.75 1.25 0 0 0</pose>
       <skin>
         <filename>/home/khoa/mr_ws/src/multi_robot_herding/mrh_gazebo/models/wolf/stand.dae</filename>
@@ -114,7 +123,8 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <plugin name="actor4_plugin" filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+      <plugin name="actor4_plugin"
+    filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
@@ -132,13 +142,14 @@
         <scale>1.000000</scale>
         <interpolate_x>true</interpolate_x>
       </animation>
-      <plugin name="actor5_plugin" filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
+      <plugin name="actor5_plugin"
+    filename="/home/khoa/mr_ws/src/multi_robot_herding/mrh_animal/lib/libanimal_behavior_plugin.so">
         <ignore_obstacles>
           <model>cafe</model>
           <model>ground_plane</model>
         </ignore_obstacles>
       </plugin>
-    </actor>
+    </actor> -->
   </world>
 
 </sdf>
