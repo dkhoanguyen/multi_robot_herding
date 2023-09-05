@@ -116,14 +116,14 @@ namespace robot
 
       // Edge following
       Eigen::VectorXd ps = potentialEdgeFollowing(
-          cs_, distance_to_target_, qi, qj, 0.5, 0.5);
+          cs_, distance_to_target_, qi, qj, 0.5, 0.75);
 
       // Robot collision avoidance
       qj = robot_states.leftCols(2);
       pj = robot_states.middleCols(2, 2);
 
       Eigen::VectorXd po = interRCollisionAvoidance(
-          cr_, interagent_spacing_, qi, qj, 0.5, 0.5);
+          cr_, interagent_spacing_, qi, qj, 1.5, 1.5);
       
       // std::cout << po << std::endl;
 
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
   // std::cout << "Why dont you show anything" << std::endl;
   ros::NodeHandle nh;
   robot::behavior::HerdingBySurrounding controller(
-      nh, 1, 1, 1, 1, 1, 1, 1, 20);
+      nh, 1,2, 1, 1, 1.2, 2, 1, 20);
   ros::spin();
   return 0;
 }
