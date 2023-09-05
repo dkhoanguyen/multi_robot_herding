@@ -8,21 +8,23 @@
         <arg name="debug" value="false" />
     </include>
     <group ns="robot_0">
-        <param name="robot_description" command="$(find xacro)/xacro $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" />
-        <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
+        <param name="robot0"
+    command="$(find xacro)/xacro $(find multi_uav_simulator)/bigquad_description/bigquad.urdf.xacro robot_id:=1" />
+        <!-- <param name="robot_description" command="$(find xacro)/xacro $(find turtlebot3_description)/urdf/turtlebot3_burger.urdf.xacro" /> -->
+        <!-- <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" output="screen">
             <param name="publish_frequency" type="double" value="50.0" />
             <param name="tf_prefix" value="robot_0" />
-        </node>
-        <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model robot_0 -x 4.0 -y 0.0 -z 0 -Y -3.122475529680358 -param robot_description" />
+        </node> -->
+        <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf" args="-urdf -model robot_0 -x 4.0 -y 0.0 -z 0 -Y -3.122475529680358 -param robot0" />
         <node pkg="mrh_gazebo" type="controller" name="pp_controller">
+            <!-- <remap from="/odom" to="/robot_0/odom" />
+            <remap from="/cmd_vel" to="/robot_0/cmd_vel" />
+            <remap from="/path" to="/robot_0/path" /> -->
+        </node>
+        <!-- <node pkg="mrh_robot" type="mrh_robot" name="robot_behavior" output="screen">
             <remap from="/odom" to="/robot_0/odom" />
             <remap from="/cmd_vel" to="/robot_0/cmd_vel" />
             <remap from="/path" to="/robot_0/path" />
-        </node>
-        <node pkg="mrh_robot" type="mrh_robot" name="robot_behavior" output="screen">
-            <remap from="/odom" to="/robot_0/odom" />
-            <remap from="/cmd_vel" to="/robot_0/cmd_vel" />
-            <remap from="/path" to="/robot_0/path" />
-        </node>
+        </node> -->
     </group>
 </launch>
