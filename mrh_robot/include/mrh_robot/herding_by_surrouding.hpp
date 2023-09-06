@@ -12,6 +12,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <nav_msgs/Path.h>
+#include <std_msgs/Bool.h>
 
 namespace robot
 {
@@ -79,11 +80,11 @@ namespace robot
       double obstacle_range_;
       double sensing_range_;
 
-      std::unordered_map<std::string,std::shared_ptr<DataOdom>> animal_odom_data_;
-      std::unordered_map<std::string,ros::Subscriber> animal_odom_sub_;
+      std::unordered_map<std::string, std::shared_ptr<DataOdom>> animal_odom_data_;
+      std::unordered_map<std::string, ros::Subscriber> animal_odom_sub_;
 
-      std::unordered_map<std::string,std::shared_ptr<DataOdom>> robot_odom_data_;
-      std::unordered_map<std::string,ros::Subscriber> robot_odom_sub_;
+      std::unordered_map<std::string, std::shared_ptr<DataOdom>> robot_odom_data_;
+      std::unordered_map<std::string, ros::Subscriber> robot_odom_sub_;
 
       DataOdom robot_odom_;
       std::string robot_name_;
@@ -93,6 +94,9 @@ namespace robot
       ros::Timer update_thread_timer_;
       ros::Publisher path_pub_;
       ros::Subscriber odom_sub_;
+      ros::Subscriber operation_sub_;
+
+      bool status_ = false;
 
       void registerHerdStateSubs();
       void registerRobotStateSubs();

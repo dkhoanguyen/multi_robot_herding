@@ -21,15 +21,23 @@ namespace robot
           sensing_range_(sensing_range)
     {
       registerHerdStateSubs();
-      odom_sub_ = nh_.subscribe<nav_msgs::Odometry>("/odom", 10, [this](const nav_msgs::OdometryConstPtr msg)
-                                                    {
-          std::unique_lock<std::mutex> lck(robot_odom_.mtx);
-          robot_odom_.odom = *msg;
-          robot_odom_.ready = true; });
-      path_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/command/pose", 50);
+      odom_sub_ = nh_.subscribe<nav_msgs::Odometry>(
+          "/odom", 10,
+          [this](const nav_msgs::OdometryConstPtr msg)
+          {
+            std::unique_lock<std::mutex> lck(robot_odom_.mtx);
+            robot_odom_.odom = *msg;
+            robot_odom_.ready = true;
+          });
+      path_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/command/pose", 20);
       update_thread_timer_ = nh_.createTimer(ros::Duration(0.01), &HerdingBySurrounding::update, this);
       robot_name_ = nh.getNamespace();
-      std::cout << robot_name_ << std::endl;
+      operation_sub_ = nh_.subscribe<std_msgs::Bool>(
+          "/operation_status", 10,
+          [this](const std_msgs::BoolConstPtr msg)
+          {
+            status_ = msg->data;
+          });
     }
 
     HerdingBySurrounding::~HerdingBySurrounding()
@@ -116,15 +124,15 @@ namespace robot
 
       // Edge following
       Eigen::VectorXd ps = potentialEdgeFollowing(
-          cs_, distance_to_target_, qi, qj, 0.5, 0.75);
+          cs_, distance_to_target_, qi, qj, 0.7, 1.5);
 
       // Robot collision avoidance
       qj = robot_states.leftCols(2);
       pj = robot_states.middleCols(2, 2);
 
       Eigen::VectorXd po = interRCollisionAvoidance(
-          cr_, interagent_spacing_, qi, qj, 1.5, 1.5);
-      
+          cr_, interagent_spacing_, qi, qj, 1, 1.5);
+
       // std::cout << po << std::endl;
 
       nav_msgs::Path path;
@@ -133,7 +141,10 @@ namespace robot
       target.pose.position.y = odom.pose.pose.position.y + ps(1) + po(1);
       target.pose.position.z = 1;
       // std::cout << ps.transpose() << std::endl;
-      path_pub_.publish(target);
+      if (status_)
+      {
+        path_pub_.publish(target);
+      }
     }
 
     Eigen::VectorXd HerdingBySurrounding::multiConstAttraction(
@@ -250,7 +261,7 @@ int main(int argc, char **argv)
   // std::cout << "Why dont you show anything" << std::endl;
   ros::NodeHandle nh;
   robot::behavior::HerdingBySurrounding controller(
-      nh, 1,2, 1, 1, 1.2, 2, 1, 20);
+      nh, 0.5, 0.25, 1, 1, 1.5, 2, 1, 20);
   ros::spin();
   return 0;
 }

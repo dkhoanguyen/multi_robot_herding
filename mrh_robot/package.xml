@@ -17,7 +17,6 @@
     <depend>tf2</depend>
     <depend>gazebo_ros</depend>
     <depend>libeigen3-dev</depend>
-    <depend>orocos_kdl</depend>
     <exec_depend>gazebo</exec_depend>
     <export>
         <gazebo_ros gazebo_media_path="${prefix}"/>
