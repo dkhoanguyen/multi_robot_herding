@@ -1,6 +1,6 @@
 sim:
-  render: false
-  collect_data: true
+  render: true
+  collect_data: false
   max_t: 5000
   
 entity:
@@ -14,7 +14,7 @@ entity:
     personal_space: 50
     mass: 20.0
     min_v: 0.0
-    max_v: 5.0
+    max_v: 0.0
 
   shepherd:
     init_random: true
