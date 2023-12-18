@@ -107,6 +107,9 @@ class DecentralisedSurrounding(DecentralisedBehavior):
         self._current_time = time.time()
         self._wait_time = time.time() + 10
 
+        self._change_state = False
+        self._change_state_again = False
+
     def transition(self, state: np.ndarray,
                    other_states: np.ndarray,
                    herd_states: np.ndarray,
@@ -123,6 +126,7 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                obstacles: list,
                consensus_states: list,
                output_consensus_state: dict):
+        target = np.array([1000, 350])
         # Control signal
         self._pose = state[:2]
         u = np.zeros(2)
@@ -228,6 +232,39 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                 continue
             total_variance += consensus_state["distribution_evenness"]
 
+        # Get nearest distance to target
+        d_nearest_to_target = np.linalg.norm(self._pose - target)
+        output_consensus_state.update(
+            {"d_nearest_to_target": d_nearest_to_target})
+
+        if 1/total_variance:
+            self._change_state = True
+
+        tuning_ps = 1
+        tuning_po = 1
+        tuning_pv = 1
+        move_to_target = False            
+
+        if self._change_state:
+            all_d_to_target = []
+            for consensus_state in consensus_states:
+                if "d_nearest_to_target" not in consensus_state.keys():
+                    continue
+                all_d_to_target.append(consensus_state["d_nearest_to_target"])
+            all_d_to_target = np.array(all_d_to_target)
+            sorted_all_d_to_target = np.sort(all_d_to_target)
+            nearest_3 = sorted_all_d_to_target[:3]
+            
+            if np.isin(d_nearest_to_target, nearest_3):
+                return -(self._pose - np.array([1200, 350])) * 0.1
+            else:
+                tuning_ps = 0.1
+                tuning_po = 5
+                tuning_pv = 0.5
+                move_to_target = True
+                # spacing = 160
+        # print(self._change_state_again)
+
         # Control
         delta_adjacency_vector = self._get_delta_adjacency_vector(
             herd_states,
@@ -284,15 +321,13 @@ class DecentralisedSurrounding(DecentralisedBehavior):
                                                gain=self._Co)
         herd_mean = np.sum(
             herd_states[:, :2], axis=0) / herd_states.shape[0]
-        tuning_ps = 1
-        tuning_po = 1
-        tuning_pv = 1
-        if (0.2/total_variance):
-            tuning_ps = 0.5
-            tuning_po = 1
-            tuning_pv = 0.4
-        u = tuning_ps*ps + tuning_po*po + tuning_pv*pv + p_avoid + \
-            (0.6/total_variance)*(-(herd_mean - np.array([1000, 350])))
+        
+        d_from_cetroid_to_target = np.linalg.norm(herd_mean - np.array([1000, 350]))
+
+        u = tuning_ps*ps + tuning_po*po + tuning_pv*pv + p_avoid
+        if move_to_target:
+            u = u + 0.002*(-(herd_mean - np.array([1000, 350])))
+
         self._force_u = u
         return u
 
