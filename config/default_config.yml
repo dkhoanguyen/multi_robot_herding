@@ -8,7 +8,7 @@ entity:
     init_random: true
     num: 20
     x_interval: [600, 800]
-    y_interval: [300, 500]
+    y_interval: [200, 400]
     local_perception: 100
     local_boundary: 40
     personal_space: 50
