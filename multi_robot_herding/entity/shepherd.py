@@ -98,14 +98,6 @@ class Shepherd(Autonomous):
         if self._behavior_state == State.IDLE:
             self._behavior_state = State.SURROUND
 
-        # elif self._behavior_state == State.SURROUND:
-        #     if str(State.SURROUND) in self._behaviors.keys():
-        #         if self._behaviors[str(State.SURROUND)].transition(
-        #                 state=self.state,
-        #                 other_states=shepherd_in_range,
-        #                 herd_states=all_herd_states,
-        #                 consensus_states=all_consensus_states):
-        #             self._behavior_state = State.SURROUND
         u = np.zeros(2)
 
         if self._behaviors[str(self._behavior_state)]:

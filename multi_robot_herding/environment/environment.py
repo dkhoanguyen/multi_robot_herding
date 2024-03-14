@@ -39,7 +39,7 @@ class Environment(object):
         self._entities = {}
 
         # This should be a config in the future
-        entities_name = ["herd", "shepherd", "obstacle"]
+        entities_name = ["herd", "shepherd", "obstacle", "robot"]
         for entity_name in entities_name:
             self._entities[entity_name] = []
 
@@ -47,9 +47,9 @@ class Environment(object):
         self._save_to_file = save_to_file
         self._save_path = save_path
 
-        self._data_to_save = {}
-        self._data_to_save["configuration"] = config
-        self._data_to_save["data"] = []
+        # self._data_to_save = {}
+        # self._data_to_save["configuration"] = config
+        # self._data_to_save["data"] = []
 
     @property
     def ok(self):
@@ -115,14 +115,14 @@ class Environment(object):
 
         # Thread for each entity
         entity: Entity
-        for entity in self._entities["shepherd"]:
+        for entity in self._entities["robot"]:
             entity.update(events=events,
                           ids=shepherds_id,
                           entity_states=all_states,
                           consensus_states=all_consensus_states)
         
         all_states.update({"ts": time.time()})
-        self._data_to_save["data"].append(all_states.copy())
+        # self._data_to_save["data"].append(all_states.copy())
         
     def render(self):
         if self._render:
