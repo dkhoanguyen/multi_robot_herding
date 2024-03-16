@@ -1,0 +1,2 @@
+The video provides an overview for the motivation, methodology, and experiment results of the paper titled "Decentralized multi-phase formation control for cattle herding".
+The video also shows the actual herding behavior conducted using drones for a group of cows. 

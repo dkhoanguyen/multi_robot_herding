@@ -19,20 +19,20 @@ def main():
                    pose=np.array([300, 300]),
                    velocity=np.array([10, 0]),
                    local_perception=100,
-                   target_pose=np.array([600, 300]),
+                   target_pose=np.array([500, 300]),
                    mass=1.0,
                    min_v=0.0,
-                   max_v=20.0,
+                   max_v=10.0,
                    max_a=1.0)
     
     robot2 = Robot(id=2,
-                   pose=np.array([600, 300]),
+                   pose=np.array([500, 300]),
                    velocity=np.array([-10, 0]),
                    local_perception=100,
                    target_pose=np.array([300, 300]),
                    mass=1.0,
                    min_v=0.0,
-                   max_v=20.0,
+                   max_v=10.0,
                    max_a=1.0)
 
     controller1 = DecentralisedCBF(target_pos=np.array([600, 300]),
