@@ -35,7 +35,7 @@ def main():
                    max_v=10.0,
                    max_a=1.0)
 
-    controller1 = DecentralisedCBF(target_pos=np.array([600, 300]),
+    controller1 = DecentralisedCBF(target_pos=np.array([500, 300]),
                                   controller_gain=np.array([0.5, 0, 0]))
     robot1.add_behavior({"cbf": controller1})
 

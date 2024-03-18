@@ -23,7 +23,7 @@ class DecentralisedCBF(DecentralisedBehavior):
         self._target_pos = target_pos
         self._controller = SimplePController(p_gain=controller_gain[0])
 
-        self._max_u = 15
+        self._max_u = 5
         self._max_v = 2
 
     def update(self, state: np.ndarray,
@@ -40,25 +40,26 @@ class DecentralisedCBF(DecentralisedBehavior):
             u_nom = self._max_u * unit_vector(u_nom)
         u = u_nom
         # CBF Constraints
-        ri = 30
-        rj = 30
+        ri = 15
+        rj = 15
 
         # timestep
-        dt = 0.1
+        dt = 0.05
 
         xi = pose
         xj = other_states[0, :2]
-        vi = velocity
+        vi = unit_vector(u_nom) * 10
+        # vi = velocity
         vj = other_states[0, 2:4]
 
         plane = ORCA.construct_orca_plane(xi=xi, xj=xj, vi=vi, vj=vj,
                                           ri=ri, rj=rj,
                                           weight=0.5,
-                                          buffered_r=1.0,
+                                          buffered_r=0.0,
                                           time_horizon=2.0)
-
         print(np.linalg.norm(xi - xj))
         if plane is not None:
+            # print("yes")
             # planes = [plane]
             # A_orca, b_ocra = ORCA.build_constraint(planes, vi, -100)
             # A_vmax, b_vmax = VelocityConstraint.build_constraint(vi, 10.0, 1.0)
@@ -70,24 +71,27 @@ class DecentralisedCBF(DecentralisedBehavior):
             # UB = np.array([self._max_u, self._max_u, np.inf])
             # LB = np.array([-self._max_u, -self._max_u, -np.inf])
 
-            # u = solve_qp(P, q, G=A, h=b,lb=LB, ub=UB solver="osqp")  # osqp or cvxopt
+            # u = solve_qp(P, q, G=A, h=b,lb=LB, ub=UB, solver="osqp")  # osqp or cvxopt
             # u = u[:2]
 
             planes = [plane]
-            A_orca, b_ocra = ORCA.build_constraint(planes, vi, 4.0)
+            A_orca, b_ocra = ORCA.build_constraint(planes, vi, 1.2)
             A_vmax, b_vmax = VelocityConstraint.build_constraint(vi, 10.0, 4.0)
-            A = np.vstack((A_orca, A_vmax))
-            b = np.vstack((b_ocra, b_vmax))
-            P = np.identity(2)
-            # P[2, 2] = 1.0
-            q = -2 * u_nom
-            UB = np.array([self._max_u, self._max_u])
-            LB = np.array([-self._max_u, -self._max_u])
+            A = np.vstack((A_orca, ))
+            b = np.vstack((b_ocra, ))
+            P = np.identity(3) * 0.5
+            P[2, 2] = 500.0
+            q = np.append(-2 * u_nom, -1000.0)
+            UB = np.array([self._max_u, self._max_u, np.inf])
+            LB = np.array([-self._max_u, -self._max_u, -np.inf])
 
-            u = solve_qp(P, q, G=A, h=b, lb=LB, ub=UB,
+            u = solve_qp(P, q, G=A, h=b,lb=LB, ub=UB,
                          solver="osqp")  # osqp or cvxopt
 
+            # print(u[2])
+            u = u[:2]
             if u is None:
+                # print("None")
                 u = u_nom
 
         if np.linalg.norm(u) > self._max_u:

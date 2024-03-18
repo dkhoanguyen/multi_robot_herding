@@ -16,7 +16,7 @@ class ORCA():
     def construct_orca_plane(xi: np.ndarray, xj: np.ndarray,
                              vi: np.ndarray, vj: np.ndarray,
                              ri: float, rj: float,
-                             weight: float = 0.5,
+                             weight: float = 1.0,
                              buffered_r: float = 0.0,
                              time_horizon: float = 1.0):
         '''
@@ -58,7 +58,7 @@ class ORCA():
                 # print("Project on cut off circle (1)")
                 # Find normal
                 # Add offset to prevent stuck
-                if abs(alpha) <= 0.05:
+                if abs(alpha) <= 0.01:
                     w = w - 0.01 * unit_vector(np.array([x_ji[1], x_ji[0]]))
                     w_norm = np.linalg.norm(w)
                 unit_w = w / w_norm
@@ -72,6 +72,22 @@ class ORCA():
             else:
                 # print("v_ij is outside of VO cone (0)")
                 return None
+                # print("Collision")
+                # inv_time_step = 1.0 / 0.05
+                # w = v_ij - inv_time_step * x_ji
+                # w_norm = np.linalg.norm(w)
+                # if abs(alpha) <= 0.05:
+                #     w = w - 0.01 * unit_vector(np.array([x_ji[1], x_ji[0]]))
+                #     w_norm = np.linalg.norm(w)
+                # unit_w = w / w_norm
+
+                # plane.normal = unit_w.reshape((2, 1))
+
+                # # Find projected point
+                # u = (r_ij * inv_time_step - w_norm) * unit_w
+                # plane.point = (vi + weight * u).reshape((2, 1))
+
+                # return plane
         else:
             # alpha > (pi - phi)
             if w_norm <= (r_ij * inv_time_horizon):
@@ -79,7 +95,7 @@ class ORCA():
                 # Find angle between v_ij and x_ji called beta
                 beta = angle_between(v_ij, x_ji)
                 # Find angle between v_ij and projected point p called gamma
-                gamma = phi - beta
+                gamma = (np.pi/2 - phi) - beta
                 norm_p = np.cos(gamma) * np.linalg.norm(v_ij)
 
                 # Check to see if v_ij is closer to which leg
@@ -118,7 +134,7 @@ class ORCA():
                     # Find angle between v_ij and x_ji called beta
                     beta = angle_between(v_ij, x_ji)
                     # Find angle between v_ij and projected point p called gamma
-                    gamma = phi - beta
+                    gamma = (np.pi/2 - phi) - beta
                     norm_p = np.cos(gamma) * np.linalg.norm(v_ij)
 
                     # Check to see if v_ij is closer to which leg
@@ -159,7 +175,8 @@ class ORCA():
 
     @staticmethod
     def build_constraint(orca_planes: List[Plane], vi: np.ndarray, gamma: float = 1.0):
-        A = np.empty((0, 2))
+        # A = np.empty((0, 2))
+        A = np.empty((0, 3))
         b = np.empty((0, 1))
         for plane in orca_planes:
             # Obtain normal and point of the orca plane
@@ -168,17 +185,16 @@ class ORCA():
             h = gamma * (w.transpose().dot(vi.reshape((2, 1))) -
                          w.transpose().dot(n))
             h = h.reshape(1)
-            # h = 10000 * (np.exp(h) - 1)
-
-            # row_A = np.append(-w.transpose(), 1)
-            row_A = -w.transpose() 
-            A = np.vstack((A, row_A))
-            b = np.vstack([b, h])
-
-            # # Optimal decay to ensure feasibility
-            # row_A = np.append(-w.transpose(), -h[0][0])
+            # h = 100000 * (np.exp(h)) - 1
+            # print((  * np.exp(h) - 1))
+            # row_A = -w.transpose() 
             # A = np.vstack((A, row_A))
-            # b = np.vstack([b, 0])
+            # b = np.vstack([b, h])
+
+            # Optimal decay to ensure feasibility
+            row_A = np.append(-w.transpose(), -h)
+            A = np.vstack((A, row_A))
+            b = np.vstack([b, 0])
         return A, b
 
 
