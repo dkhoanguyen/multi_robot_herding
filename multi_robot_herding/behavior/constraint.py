@@ -36,7 +36,8 @@ class ORCA():
 
         # Find alpha, phi angle
         alpha = angle_between(w, -x_ji)
-        phi = np.arccos((r_ij * inv_time_horizon) / x_ji_norm * inv_time_horizon)
+        phi = np.arccos((r_ij * inv_time_horizon) /
+                        x_ji_norm * inv_time_horizon)
 
         if x_ji_norm <= r_ij:
             # print("Collision")
@@ -59,7 +60,7 @@ class ORCA():
                 # Find normal
                 # Add offset to prevent stuck
                 if abs(alpha) <= 0.01:
-                    w = w - 0.01 * unit_vector(np.array([x_ji[1], x_ji[0]]))
+                    w = w - 0.1 * unit_vector(np.array([x_ji[1], x_ji[0]]))
                     w_norm = np.linalg.norm(w)
                 unit_w = w / w_norm
                 plane.normal = unit_w.reshape((2, 1))
@@ -166,11 +167,13 @@ class ORCA():
                               buffered_r: float = 0.0,
                               time_horizon: float = 1.0):
         planes = []
-        for i in range(xj.size[0]):
-            planes.append(ORCA.construct_orca_plane(xi=xi, xj=xj[i, :], vi=vi, vj=vj[i, :],
-                                                    ri=ri, rj=rj[i], weight=weight[i],
-                                                    buffered_r=buffered_r,
-                                                    time_horizon=time_horizon))
+        for i in range(xj.shape[0]):
+            plane = ORCA.construct_orca_plane(xi=xi, xj=xj[i, :], vi=vi, vj=vj[i, :],
+                                              ri=ri, rj=rj[i], weight=weight[i],
+                                              buffered_r=buffered_r,
+                                              time_horizon=time_horizon)
+            if plane is not None:
+                planes.append(plane)
         return planes
 
     @staticmethod
@@ -185,9 +188,8 @@ class ORCA():
             h = gamma * (w.transpose().dot(vi.reshape((2, 1))) -
                          w.transpose().dot(n))
             h = h.reshape(1)
-            # h = 100000 * (np.exp(h)) - 1
-            # print((  * np.exp(h) - 1))
-            # row_A = -w.transpose() 
+
+            # row_A = -w.transpose()
             # A = np.vstack((A, row_A))
             # b = np.vstack([b, h])
 
@@ -209,15 +211,6 @@ class MaxDistance:
 class ControlConstraint:
     def __init__(self):
         pass
-
-
-class VelocityConstraint:
-    @staticmethod
-    def build_constraint(vi: np.ndarray, v_max: float ,gamma: float = 1.0):
-        unit_vi = unit_vector(vi)
-        A = unit_vi
-        b = np.array([gamma * (v_max - np.linalg.norm(vi))])
-        return A, b
 
 
 def unit_vector(v: np.ndarray):

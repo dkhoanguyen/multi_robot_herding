@@ -15,6 +15,7 @@ from multi_robot_herding.environment.environment import Environment
 
 
 def main():
+    max_v = 10.0
     robot1 = Robot(id=1,
                    pose=np.array([300, 300]),
                    velocity=np.array([10, 0]),
@@ -22,32 +23,126 @@ def main():
                    target_pose=np.array([500, 300]),
                    mass=1.0,
                    min_v=0.0,
-                   max_v=10.0,
+                   max_v=max_v,
                    max_a=1.0)
     
+    controller1 = DecentralisedCBF(target_pos=np.array([500, 300]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot1.add_behavior({"cbf": controller1})
+    
     robot2 = Robot(id=2,
-                   pose=np.array([500, 300]),
+                   pose=np.array([510, 300]),
                    velocity=np.array([-10, 0]),
                    local_perception=100,
                    target_pose=np.array([300, 300]),
                    mass=1.0,
                    min_v=0.0,
-                   max_v=10.0,
+                   max_v=max_v,
                    max_a=1.0)
 
-    controller1 = DecentralisedCBF(target_pos=np.array([500, 300]),
-                                  controller_gain=np.array([0.5, 0, 0]))
-    robot1.add_behavior({"cbf": controller1})
-
     controller2 = DecentralisedCBF(target_pos=np.array([300, 300]),
-                                  controller_gain=np.array([0.5, 0, 0]))
+                                  controller_gain=np.array([0.1, 0, 0]))
     robot2.add_behavior({"cbf": controller2})
+
+    robot3 = Robot(id=3,
+                   pose=np.array([400, 200]),
+                   velocity=np.array([0, -1.0]),
+                   local_perception=100,
+                   target_pose=np.array([400, 400]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller3 = DecentralisedCBF(target_pos=np.array([400, 400]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot3.add_behavior({"cbf": controller3})
+
+    robot4 = Robot(id=4,
+                   pose=np.array([400, 400]),
+                   velocity=np.array([0, 1.0]),
+                   local_perception=100,
+                   target_pose=np.array([400, 200]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller4 = DecentralisedCBF(target_pos=np.array([400, 200]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot4.add_behavior({"cbf": controller4})
+    
+    robot5 = Robot(id=5,
+                   pose=np.array([320, 220]),
+                   velocity=np.array([0, 1.0]),
+                   local_perception=100,
+                   target_pose=np.array([480, 380]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller5 = DecentralisedCBF(target_pos=np.array([480, 380]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot5.add_behavior({"cbf": controller5})
+    
+    robot6 = Robot(id=6,
+                   pose=np.array([480, 380]),
+                   velocity=np.array([0, 1.0]),
+                   local_perception=100,
+                   target_pose=np.array([320, 220]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller6 = DecentralisedCBF(target_pos=np.array([320, 220]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot6.add_behavior({"cbf": controller6})
+    
+    robot7 = Robot(id=7,
+                   pose=np.array([480, 220]),
+                   velocity=np.array([0, 1.0]),
+                   local_perception=100,
+                   target_pose=np.array([320, 380]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller7 = DecentralisedCBF(target_pos=np.array([320, 380]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot7.add_behavior({"cbf": controller7})
+
+    env = Environment(render=True,
+                      config={})
+    
+    robot8 = Robot(id=8,
+                   pose=np.array([320, 380]),
+                   velocity=np.array([0, 1.0]),
+                   local_perception=100,
+                   target_pose=np.array([320, 220]),
+                   mass=1.0,
+                   min_v=0.0,
+                   max_v=max_v,
+                   max_a=1.0)
+
+    controller8 = DecentralisedCBF(target_pos=np.array([480, 220]),
+                                  controller_gain=np.array([0.1, 0, 0]))
+    robot8.add_behavior({"cbf": controller8})
 
     env = Environment(render=True,
                       config={})
 
     env.add_entity(robot1)
     env.add_entity(robot2)
+    env.add_entity(robot3)
+    env.add_entity(robot4)
+    env.add_entity(robot5)
+    env.add_entity(robot6)
+    env.add_entity(robot7)
+    env.add_entity(robot8)
+    
 
     while env.ok:
         env.run_once()
