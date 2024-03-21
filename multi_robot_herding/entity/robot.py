@@ -42,6 +42,11 @@ class Robot(Autonomous):
 
         self._dt = 0.05
 
+        self._sensing_range = 1000.0
+
+        self._font = pygame.font.SysFont("comicsans", 16)
+        self._text = None
+
     def __str__(self):
         return "robot"
 
@@ -59,7 +64,7 @@ class Robot(Autonomous):
 
         for idx in range(all_robot_states.shape[0]):
             d = np.linalg.norm(self.state[:2] - all_robot_states[idx, :2])
-            if d > 0.0:
+            if d > 0.0 and d <= self._sensing_range:
                 robot_in_range = np.vstack(
                     (robot_in_range, all_robot_states[idx, :]))
         
@@ -69,18 +74,21 @@ class Robot(Autonomous):
                 other_states=robot_in_range)
         
         # Double integrator update
+        self.pose = self.pose + self.velocity * self._dt + 0.5 * u * self._dt ** 2
+
         self.velocity = self.velocity + u * self._dt
+        
         if np.linalg.norm(self.velocity) > self._max_v:
             self.velocity = self._max_v * utils.unit_vector(self.velocity)
-        self.pose = self.pose + self.velocity * self._dt
         self._rotate_image(self.velocity)
+        self._text = self._font.render(str(self._id), 1, pygame.Color("white"))
 
     def display(self, screen: pygame.Surface, debug=False):
-        # if self._behaviors[str(self._behavior_state)]:
-        #     self._behaviors[str(self._behavior_state)].display(screen)
+        if self._behaviors[str(self._behavior_state)]:
+            self._behaviors[str(self._behavior_state)].display(screen)
 
-        # if self._text:
-        #     screen.blit(self._text, tuple(self.pose - np.array([20, 20])))
+        if self._text:
+            screen.blit(self._text, tuple(self.pose - np.array([20, 20])))
 
         # if self._plot_influence:
         #     pygame.draw.circle(screen, pygame.Color("white"),

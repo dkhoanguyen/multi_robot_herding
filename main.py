@@ -26,12 +26,12 @@ def main():
                    max_v=max_v,
                    max_a=1.0)
     
-    controller1 = DecentralisedCBF(target_pos=np.array([500, 300]),
+    controller1 = DecentralisedCBF(target_pos=np.array([510, 300]),
                                   controller_gain=np.array([0.1, 0, 0]))
     robot1.add_behavior({"cbf": controller1})
     
     robot2 = Robot(id=2,
-                   pose=np.array([510, 300]),
+                   pose=np.array([500, 300]),
                    velocity=np.array([-10, 0]),
                    local_perception=100,
                    target_pose=np.array([300, 300]),

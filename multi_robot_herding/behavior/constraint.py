@@ -201,16 +201,40 @@ class ORCA():
 
 
 class MinDistance:
-    pass
+    @staticmethod
+    def build_constraint(xi: np.ndarray, xj: np.ndarray,
+                         vi: np.ndarray, vj: np.ndarray,
+                         ai: float, aj: float,
+                         d: float, gamma: float):
+        A = np.empty((0, 3))
+        # A = np.empty((0, 2))
+        b = np.empty((0, 1))
+        for idx in range(xj.shape[0]):
+            xij = xi - xj[idx, :]
+            vij = vi - vj[idx, :]
+
+            xij_norm = np.linalg.norm(xij)
+            vij_norm = np.linalg.norm(vij)
+
+            h_min = np.sqrt(2 * (ai + aj) * (xij_norm - d)
+                            ) + (xij / xij_norm).dot(vij.transpose())
+            gamma_h_min = gamma * \
+                (h_min**3) - (vij.dot(xij.transpose()))/(xij_norm**2) + \
+                vij_norm**2 + ((ai + aj) * vij.dot(xij.transpose()))/np.sqrt(
+                    2 * (ai + aj) * (xij_norm - d))
+            h_dot = xij
+            row_A = np.append(-h_dot, -gamma_h_min)
+            A = np.vstack((A, row_A))
+            b = np.vstack([b, 0])
+
+            # row_A = -h_dot
+            # A = np.vstack((A, row_A))
+            # b = np.vstack([b, gamma_h_min])
+        return A, b
 
 
 class MaxDistance:
     pass
-
-
-class ControlConstraint:
-    def __init__(self):
-        pass
 
 
 def unit_vector(v: np.ndarray):
