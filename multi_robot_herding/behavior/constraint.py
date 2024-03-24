@@ -59,9 +59,9 @@ class ORCA():
                 # print("Project on cut off circle (1)")
                 # Find normal
                 # Add offset to prevent stuck
-                if abs(alpha) <= 0.01:
-                    w = w - 0.1 * unit_vector(np.array([x_ji[1], x_ji[0]]))
-                    w_norm = np.linalg.norm(w)
+                # if abs(alpha) <= 0.01:
+                #     w = w - 0.1 * unit_vector(np.array([x_ji[1], x_ji[0]]))
+                #     w_norm = np.linalg.norm(w)
                 unit_w = w / w_norm
                 plane.normal = unit_w.reshape((2, 1))
 
@@ -179,7 +179,7 @@ class ORCA():
     @staticmethod
     def build_constraint(orca_planes: List[Plane], vi: np.ndarray, gamma: float = 1.0):
         # A = np.empty((0, 2))
-        A = np.empty((0, 3))
+        A = np.empty((0, 4))
         b = np.empty((0, 1))
         for plane in orca_planes:
             # Obtain normal and point of the orca plane
@@ -195,7 +195,9 @@ class ORCA():
 
             # Optimal decay to ensure feasibility
             row_A = np.append(-w.transpose(), -h)
+            row_A = np.append(row_A, 0.0)
             A = np.vstack((A, row_A))
+
             b = np.vstack([b, 0])
         return A, b
 
@@ -206,7 +208,7 @@ class MinDistance:
                          vi: np.ndarray, vj: np.ndarray,
                          ai: float, aj: float,
                          d: float, gamma: float):
-        A = np.empty((0, 3))
+        A = np.empty((0, 4))
         # A = np.empty((0, 2))
         b = np.empty((0, 1))
         for idx in range(xj.shape[0]):
@@ -219,11 +221,13 @@ class MinDistance:
             h_min = np.sqrt(2 * (ai + aj) * (xij_norm - d)
                             ) + (xij / xij_norm).dot(vij.transpose())
             gamma_h_min = gamma * \
-                (h_min**3) - (vij.dot(xij.transpose()))/(xij_norm**2) + \
+                (h_min**3) * xij_norm - (2 * vij.dot(xij.transpose()))/(xij_norm**2) + \
                 vij_norm**2 + ((ai + aj) * vij.dot(xij.transpose()))/np.sqrt(
                     2 * (ai + aj) * (xij_norm - d))
+            # gamma_h_min = gamma * (h_min**3)
             h_dot = xij
-            row_A = np.append(-h_dot, -gamma_h_min)
+            row_A = np.append(-h_dot, -(ai/(ai + aj))*gamma_h_min)
+            row_A = np.append(row_A, 0.0)
             A = np.vstack((A, row_A))
             b = np.vstack([b, 0])
 
@@ -234,7 +238,40 @@ class MinDistance:
 
 
 class MaxDistance:
-    pass
+    @staticmethod
+    def build_constraint(xi: np.ndarray, xj: np.ndarray,
+                         vi: np.ndarray, vj: np.ndarray,
+                         ai: float, aj: float,
+                         d: float, gamma: float):
+        A = np.empty((0, 4))
+        # A = np.empty((0, 2))
+        b = np.empty((0, 1))
+        for idx in range(xj.shape[0]):
+            xij = xi - xj[idx, :]
+            vij = vi - vj[idx, :]
+
+            xij_norm = np.linalg.norm(xij)
+            vij_norm = np.linalg.norm(vij)
+
+            sqrt_x_d = np.sqrt(2 * (ai + aj) * (d - xij_norm))
+
+            h_max = sqrt_x_d - (xij / xij_norm).dot(vij.transpose())
+
+            gamma_h_max = gamma * (h_max**3) * xij_norm \
+                        + (vij.dot(xij.transpose())) ** 2/(xij_norm**2) \
+                        - vij_norm**2 \
+                        - ((ai + aj) * vij.dot(xij.transpose()))/sqrt_x_d
+            h_dot = xij
+            row_A = np.append(h_dot, -(ai/(ai + aj))*gamma_h_max)
+            row_A = np.append(row_A, 0.0)
+            A = np.vstack((A, row_A))
+
+            b = np.vstack([b, 0.0])
+
+            # row_A = -h_dot
+            # A = np.vstack((A, row_A))
+            # b = np.vstack([b, gamma_h_min])
+        return A, b
 
 
 def unit_vector(v: np.ndarray):

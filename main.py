@@ -46,7 +46,7 @@ def main():
 
     robot3 = Robot(id=3,
                    pose=np.array([400, 200]),
-                   velocity=np.array([0, -1.0]),
+                   velocity=np.array([0, 1.0]),
                    local_perception=100,
                    target_pose=np.array([400, 400]),
                    mass=1.0,
@@ -60,7 +60,7 @@ def main():
 
     robot4 = Robot(id=4,
                    pose=np.array([400, 400]),
-                   velocity=np.array([0, 1.0]),
+                   velocity=np.array([0, -1.0]),
                    local_perception=100,
                    target_pose=np.array([400, 200]),
                    mass=1.0,
@@ -136,12 +136,12 @@ def main():
 
     env.add_entity(robot1)
     env.add_entity(robot2)
-    env.add_entity(robot3)
-    env.add_entity(robot4)
-    env.add_entity(robot5)
-    env.add_entity(robot6)
-    env.add_entity(robot7)
-    env.add_entity(robot8)
+    # env.add_entity(robot3)
+    # env.add_entity(robot4)
+    # env.add_entity(robot5)
+    # env.add_entity(robot6)
+    # env.add_entity(robot7)
+    # env.add_entity(robot8)
     
 
     while env.ok:

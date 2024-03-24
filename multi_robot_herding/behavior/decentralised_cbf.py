@@ -61,32 +61,41 @@ class DecentralisedCBF(DecentralisedBehavior):
                                             time_horizon=2.0)
 
         for i in range(xj.shape[0]):
-            if np.linalg.norm(xi - xj[i, :]) <= 60:
-                print(np.linalg.norm(xi - xj[i, :]))
+            # if np.linalg.norm(xi - xj[i, :]) <= 60:
+            print(np.linalg.norm(xi - xj[i, :]))
 
-        A = np.empty((0, 3))
+        A = np.empty((0, 4))
         b = np.empty((0, 1))
 
         A_dmin, b_dmin = MinDistance.build_constraint(
             xi=xi, xj=xj, vi=velocity, vj=vj,
             ai=self._max_u, aj=self._max_u,
-            d=60.0, gamma=1.0)
+            d=100.0, gamma=1.0)
 
         A = np.vstack((A, A_dmin))
         b = np.vstack((b, b_dmin))
+
+        A_dmax, b_dmax = MaxDistance.build_constraint(
+            xi=xi, xj=xj, vi=velocity, vj=vj,
+            ai=self._max_u, aj=self._max_u,
+            d=300.0, gamma=1.0)
+
+        A = np.vstack((A, A_dmax))
+        b = np.vstack((b, b_dmax))
 
         # if len(planes) > 0:
         #     A_orca, b_ocra = ORCA.build_constraint(planes, vi, 1.5)
         #     A = np.vstack((A, A_orca,))
         #     b = np.vstack((b, b_ocra,))
 
-        P = np.identity(3) * 0.5
-        p_omega = 75000.0
+        P = np.identity(4) * 0.5
+        p_omega = 750.0
         omega_0 = 1.0
         P[2, 2] = p_omega
-        q = -2 * np.append(np.zeros(2), omega_0 * p_omega)
-        UB = np.array([self._max_u, self._max_u, np.inf])
-        LB = np.array([-self._max_u, -self._max_u, -np.inf])
+        P[3, 3] = 1.0
+        q = -2 * np.array([0, 0, omega_0 * p_omega, 0.0])
+        UB = np.array([self._max_u, self._max_u, np.inf, np.inf])
+        LB = np.array([-self._max_u, -self._max_u, -np.inf, -np.inf])
 
         # P = np.identity(2) * 0.5
         # q = -2 * u_nom
@@ -94,11 +103,12 @@ class DecentralisedCBF(DecentralisedBehavior):
         # LB = np.array([-self._max_u, -self._max_u])
 
         u = solve_qp(P, q, G=A, h=b, lb=LB, ub=UB,
-                     solver="osqp")  # osqp or cvxopt
+                     solver="cvxopt")  # osqp or cvxopt
+        # print(u)
 
         if u is None:
             # print("None")
-            u = u_nom
+            u = np.zeros(2)
         else:
             u = u[:2]
 
