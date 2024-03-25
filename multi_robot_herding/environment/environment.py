@@ -47,9 +47,9 @@ class Environment(object):
         self._save_to_file = save_to_file
         self._save_path = save_path
 
-        # self._data_to_save = {}
-        # self._data_to_save["configuration"] = config
-        # self._data_to_save["data"] = []
+        self._data_to_save = {}
+        self._data_to_save["configuration"] = config
+        self._data_to_save["data"] = []
 
     @property
     def ok(self):
@@ -122,7 +122,7 @@ class Environment(object):
                           consensus_states=all_consensus_states)
         
         all_states.update({"ts": time.time()})
-        # self._data_to_save["data"].append(all_states.copy())
+        self._data_to_save["data"].append(all_states.copy())
         
     def render(self):
         if self._render:

@@ -55,7 +55,7 @@ def main():
                    max_a=1.0)
 
     controller3 = DecentralisedCBF(target_pos=np.array([400, 400]),
-                                  controller_gain=np.array([0.1, 0, 0]))
+                                  controller_gain=np.array([1.0, 0, 0]))
     robot3.add_behavior({"cbf": controller3})
 
     robot4 = Robot(id=4,
@@ -69,7 +69,7 @@ def main():
                    max_a=1.0)
 
     controller4 = DecentralisedCBF(target_pos=np.array([400, 200]),
-                                  controller_gain=np.array([0.1, 0, 0]))
+                                  controller_gain=np.array([1.0, 0, 0]))
     robot4.add_behavior({"cbf": controller4})
     
     robot5 = Robot(id=5,
@@ -136,17 +136,22 @@ def main():
 
     env.add_entity(robot1)
     env.add_entity(robot2)
-    # env.add_entity(robot3)
-    # env.add_entity(robot4)
-    # env.add_entity(robot5)
-    # env.add_entity(robot6)
-    # env.add_entity(robot7)
-    # env.add_entity(robot8)
+    env.add_entity(robot3)
+    env.add_entity(robot4)
+    env.add_entity(robot5)
+    env.add_entity(robot6)
+    env.add_entity(robot7)
+    env.add_entity(robot8)
     
 
-    while env.ok:
+    start_t = 0
+    max_t = 3000
+    while env.ok and start_t <= max_t:
         env.run_once()
-        env.render()
+        # env.render()
+        start_t += 1
+    # env.save_data()
+
 
 
 # def single_iteration():

@@ -59,9 +59,9 @@ class ORCA():
                 # print("Project on cut off circle (1)")
                 # Find normal
                 # Add offset to prevent stuck
-                # if abs(alpha) <= 0.01:
-                #     w = w - 0.1 * unit_vector(np.array([x_ji[1], x_ji[0]]))
-                #     w_norm = np.linalg.norm(w)
+                if abs(alpha) <= 0.01:
+                    w = w - 0.1 * unit_vector(np.array([x_ji[1], x_ji[0]]))
+                    w_norm = np.linalg.norm(w)
                 unit_w = w / w_norm
                 plane.normal = unit_w.reshape((2, 1))
 
@@ -177,7 +177,10 @@ class ORCA():
         return planes
 
     @staticmethod
-    def build_constraint(orca_planes: List[Plane], vi: np.ndarray, gamma: float = 1.0):
+    def build_constraint(orca_planes: List[Plane], 
+                         vi: np.ndarray, 
+                         ai: float, aj: float,
+                         gamma: float = 1.0):
         # A = np.empty((0, 2))
         A = np.empty((0, 4))
         b = np.empty((0, 1))
@@ -189,12 +192,8 @@ class ORCA():
                          w.transpose().dot(n))
             h = h.reshape(1)
 
-            # row_A = -w.transpose()
-            # A = np.vstack((A, row_A))
-            # b = np.vstack([b, h])
-
             # Optimal decay to ensure feasibility
-            row_A = np.append(-w.transpose(), -h)
+            row_A = np.append(-w.transpose(), -ai/(ai + aj) * h)
             row_A = np.append(row_A, 0.0)
             A = np.vstack((A, row_A))
 
