@@ -6,15 +6,15 @@ sim:
 entity:
   herd:
     init_random: true
-    num: 20
-    x_interval: [600, 800]
+    num: 1
+    x_interval: [400, 600]
     y_interval: [200, 400]
     local_perception: 100
     local_boundary: 40
     personal_space: 50
     mass: 20.0
     min_v: 0.0
-    max_v: 2.5
+    max_v: 3
 
   shepherd:
     init_random: true
@@ -78,7 +78,7 @@ behavior:
     params:
       follow_cursor: false
       sensing_range: 40
-      danger_range: 170
+      danger_range: 40
       initial_consensus: [800, 350]
     constants:
       c1_alpha: 3
@@ -95,7 +95,7 @@ behavior:
       distance_to_target: 130.0
       interagent_spacing: 130.0
       obstacle_range: 40.0
-      sensing_range: 1000.0
+      sensing_range: 2000.0
 
       potential_func:
         edge_follow:

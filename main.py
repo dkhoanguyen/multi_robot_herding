@@ -7,11 +7,11 @@ from multi_robot_herding.entity.shepherd import Shepherd
 from multi_robot_herding.entity.robot import Robot
 
 from multi_robot_herding.behavior.decentralised_cbf import DecentralisedCBF
-# from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
+from multi_robot_herding.behavior.mathematical_flock import MathematicalFlock
 # from multi_robot_herding.behavior.decentralised_surrounding import DecentralisedSurrounding
 
 from multi_robot_herding.environment.environment import Environment
-# from multi_robot_herding.environment.spawner import Spawner
+from multi_robot_herding.environment.spawner import Spawner
 
 
 def main():
@@ -130,6 +130,8 @@ def main():
     controller8 = DecentralisedCBF(target_pos=np.array([480, 220]),
                                   controller_gain=np.array([0.1, 0, 0]))
     robot8.add_behavior({"cbf": controller8})
+    
+    # Add a single animal
 
     env = Environment(render=True,
                       config={})
@@ -143,13 +145,34 @@ def main():
     env.add_entity(robot7)
     env.add_entity(robot8)
     
+    config = 'default_config.yml'
+    # Read yaml and extract configuration
+    with open(f'config/{config}', 'r') as file:
+        config = yaml.safe_load(file)
+
+    herd_config = config['entity']['herd']
+    herds = Spawner.auto_spawn_herds(herd_config)
+    for herd in herds:
+        env.add_entity(herd)
+
+    # Behavior related configuration
+    math_flock_config = config['behavior']['math_flock']
+    math_flock = MathematicalFlock(**math_flock_config['params'])
+    for herd in herds:
+        math_flock.add_herd(herd)
+    
+    math_flock.add_shepherd(robot1)
+    
+    env.add_behaviour(math_flock)
 
     start_t = 0
     max_t = 3000
     while env.ok and start_t <= max_t:
         env.run_once()
-        # env.render()
+        env.render()
         start_t += 1
+    
+    
     # env.save_data()
 
 

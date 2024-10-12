@@ -193,7 +193,7 @@ class ORCA():
             h = h.reshape(1)
 
             # Optimal decay to ensure feasibility
-            row_A = np.append(-w.transpose(), -ai/(ai + aj) * h)
+            row_A = np.append(-w.transpose(), -h)
             row_A = np.append(row_A, 0.0)
             A = np.vstack((A, row_A))
 

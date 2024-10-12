@@ -40,7 +40,7 @@ class Robot(Autonomous):
 
         self._controller = SimplePController(p_gain=1.0)
 
-        self._dt = 0.05
+        self._dt = 0.1
 
         self._sensing_range = 1000.0
 
@@ -56,10 +56,12 @@ class Robot(Autonomous):
         ids = kwargs["ids"]
 
         all_states = kwargs["entity_states"]
+        all_animal_states = all_states["herd"]
         all_robot_states = all_states["robot"]
 
         # Check which robot is within vision
         robot_in_range = np.empty((0, 6))
+        animal_in_range = np.empty((0,6))
         total_vel_norm = np.linalg.norm(self.state[2:4])
 
         for idx in range(all_robot_states.shape[0]):
@@ -67,11 +69,17 @@ class Robot(Autonomous):
             if d > 0.0 and d <= self._sensing_range:
                 robot_in_range = np.vstack(
                     (robot_in_range, all_robot_states[idx, :]))
+        for idx in range(all_animal_states.shape[0]):
+            d = np.linalg.norm(self.state[:2] - all_animal_states[idx, :2])
+            if d > 0.0 and d <= self._sensing_range:
+                animal_in_range = np.vstack(
+                    (animal_in_range, all_animal_states[idx, :]))
         
         self._behavior_state = "cbf"
         u = self._behaviors[str(self._behavior_state)].update(
                 state=self.state,
-                other_states=robot_in_range)
+                other_states=robot_in_range,
+                animals_states=animal_in_range)
         
         # Double integrator update
         self.pose = self.pose + self.velocity * self._dt + 0.5 * u * self._dt ** 2

@@ -9,4 +9,4 @@ class SimplePController:
 
     def step(self, current_x: np.ndarray,
              target_x: np.ndarray):
-        return self._p_gain * (target_x - current_x)
+        return (target_x - current_x) / np.linalg.norm(target_x - current_x)

@@ -3,6 +3,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import random
 
+
 def set_axes_equal(ax):
     """
     Make axes of 3D plot have equal scale so that spheres appear as spheres,
@@ -59,7 +60,7 @@ def graph_1d():
     # ax.set_xticks([-10, 0, 10])
     # ax.tick_params(pad=10)
     ax.set_yticks([-2,
-                0, a, a + int((10 - a)*0.5), 10])
+                   0, a, a + int((10 - a)*0.5), 10])
 
     # Annotation
     ax.axhline(color='black', linewidth=1)
@@ -72,19 +73,21 @@ def graph_1d():
     ax.set_xlabel("Distance")
     ax.set_ylabel("Force")
 
-    ax.annotate("a = 4",[29,a+0.25])
-    ax.plot([d, -d], [0,0], 'o')
-    ax.annotate("d = 10",xy=[d,0],xytext=[d+1,-1])
+    ax.annotate("a = 4", [29, a+0.25])
+    ax.plot([d, -d], [0, 0], 'o')
+    ax.annotate("d = 10", xy=[d, 0], xytext=[d+1, -1])
 
     plt.show()
-    # plt.savefig('force_func.pdf') 
+    # plt.savefig('force_func.pdf')
+
 
 def graph_2d():
     a = 4
     c = 5
     d = 10
+
     def fun(x, y):
-        xij = np.array([x,y])
+        xij = np.array([x, y])
         xij_norm = np.linalg.norm(xij)
 
         n_xij_d = xij_norm - d
@@ -98,34 +101,34 @@ def graph_2d():
         return np.linalg.norm(px)
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d',computed_zorder=False)
+    ax = fig.add_subplot(111, projection='3d', computed_zorder=False)
     # Create a meshgrid for x and z values
     y = np.linspace(-20, 20, 100)
     z = np.linspace(0, 12, 100)
     Y, Z = np.meshgrid(y, z)
     # Set y-values to a constant value of 0
-    X = np.zeros_like(Y)    
+    X = np.zeros_like(Y)
     ax.plot_surface(X, Y, Z, alpha=0.75, zorder=2)
 
     x = y = np.arange(-20.0, 20.0, 0.05)
     X, Y = np.meshgrid(x, y)
-    zs = np.array([fun(x,y) for x,y in zip(np.ravel(X), np.ravel(Y))])
+    zs = np.array([fun(x, y) for x, y in zip(np.ravel(X), np.ravel(Y))])
     Z = zs.reshape(X.shape)
 
     ax.plot_surface(X, Y, Z, zorder=1, alpha=1)
     # ax.set_xticks([])
     # ax.set_yticks([])
-    ax.set_zticks([0,12])
+    ax.set_zticks([0, 12])
     # ax.set_zticks([-2,
     #             0, a, a + int((10 - a)*0.5), 10])
-
 
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Force Magnitude')
     ax.set_aspect('equal')
-    ax.annotate("d = 10",xy=[d,0],xytext=[d+1,-1])
+    ax.annotate("d = 10", xy=[d, 0], xytext=[d+1, -1])
 
     plt.show()
 
-graph_2d()
+
+graph_1d()

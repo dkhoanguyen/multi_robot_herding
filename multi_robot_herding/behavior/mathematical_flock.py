@@ -274,9 +274,9 @@ class MathematicalFlock(Behavior):
         beta_adjacency_matrix = self._get_beta_adjacency_matrix(herd_states,
                                                                 self._obstacles,
                                                                 r=self._sensing_range)
-        delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
-                                                                  self._shepherds,
-                                                                  r=self._sensing_range)
+        # delta_adjacency_matrix = self._get_delta_adjacency_matrix(herd_states,
+        #                                                           self._shepherds,
+        #                                                           r=self._sensing_range)
 
         for idx in range(herd_states.shape[0]):
             # Flocking terms
@@ -292,15 +292,15 @@ class MathematicalFlock(Behavior):
                 beta_adj_matrix=beta_adjacency_matrix,
                 herd_states=herd_states)
 
-            # Shepherd
-            shepherd_idxs = delta_adjacency_matrix[idx]
-            u_delta = self._calc_shepherd_interaction_control(
-                idx=idx, shepherd_idxs=shepherd_idxs,
-                delta_adj_matrix=delta_adjacency_matrix,
-                herd_states=herd_states)
+            # # Shepherd
+            # shepherd_idxs = delta_adjacency_matrix[idx]
+            # u_delta = self._calc_shepherd_interaction_control(
+            #     idx=idx, shepherd_idxs=shepherd_idxs,
+            #     delta_adj_matrix=delta_adjacency_matrix,
+            #     herd_states=herd_states)
 
             # Ultimate flocking model
-            u[idx] = u_alpha + u_beta + u_delta
+            u[idx] = u_alpha + u_beta
         return u
 
     def _herd_density(self, herd_states: np.ndarray,
